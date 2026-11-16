@@ -479,12 +479,18 @@ mod tests {
 
         // Reading: whole chapters come with their headings, and part of a verse range starts mid-paragraph
         assert_eq!(biblelastic_engine::api::respond(&library, "command=contents\nedition=EN"),
-                   r#"{"ok":true,"edition":"EN","documents":[{"name":"FRT","chapters":0,"introduction":false},{"name":"JN1","chapters":4,"introduction":false}]}"#);
+                   r#"{"ok":true,"edition":"EN","documents":[{"name":"FRT","chapters":0,"introduction":false,"sections":0},{"name":"JN1","chapters":4,"introduction":false,"sections":1}]}"#);
         assert_eq!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 4"), concat!(
-            r#"{"ok":true,"edition":"EN","passage":"JN1 4","paragraphs":[{"style":"p","kind":"body","pieces":[{"v":"8"},{"t":"“God ","s":["add","nd"]},{"t":"loves "},{"t":"us.” ","s":["add"]},"#,
-            r#"{"v":"10"},{"t":"Love is good,"}]},{"style":"q1","kind":"other","pieces":[{"t":"grace and lovely truth."}]}]}"#));
+            r#"{"ok":true,"edition":"EN","passage":"JN1 4","paragraphs":[{"style":"p","kind":"body","pieces":[{"v":"8","r":"4:8"},{"t":"“God ","s":["add","nd"]},{"t":"loves "},{"t":"us.” ","s":["add"]},"#,
+            r#"{"v":"10","r":"4:10"},{"t":"Love is good,"}]},{"style":"q1","kind":"other","pieces":[{"t":"grace and lovely truth."}]}]}"#));
         assert_eq!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 4:10"),
-                   r#"{"ok":true,"edition":"EN","passage":"JN1 4:10","paragraphs":[{"style":"p","kind":"body","pieces":[{"v":"10"},{"t":"Love is good,"}]},{"style":"q1","kind":"other","pieces":[{"t":"grace and lovely truth."}]}]}"#);
+                   r#"{"ok":true,"edition":"EN","passage":"JN1 4:10","paragraphs":[{"style":"p","kind":"body","pieces":[{"v":"10","r":"4:10"},{"t":"Love is good,"}]},{"style":"q1","kind":"other","pieces":[{"t":"grace and lovely truth."}]}]}"#);
+        // Reading by section: this translation has no section headings, so its chapters are the sections, and what comes before the first one is number 0
+        let section = biblelastic_engine::api::respond(&library, "command=read\nedition=EN\nunit=section\npassage=JN1 4:10");
+        assert!(section.starts_with(r#"{"ok":true,"edition":"EN","document":"JN1","section":1,"title":"4","passage":"JN1 4:8-10","previous":{"document":"FRT","section":0},"next":null,"paragraphs":[{"style":"p","#), "{section}");
+        let front = biblelastic_engine::api::respond(&library, "command=read\nedition=EN\ndocument=FRT\nsection=0");
+        assert_eq!(front, r#"{"ok":true,"edition":"EN","document":"FRT","section":0,"title":"","passage":"FRT","previous":null,"next":{"document":"JN1","section":1},"paragraphs":[{"style":"mt1","kind":"other","pieces":[{"t":"Title"}]}]}"#);
+        assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\ndocument=JN1\nsection=2").contains("JN1 has no section 2"));
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 5").contains("doesn't have JN1 5"));
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=CM\npassage=JN1 4").contains("isn't divided into chapters"));
 

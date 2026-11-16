@@ -161,6 +161,8 @@ pub struct Document {
     pub chapters: u32,
     /// Whether there's anything before the first chapter (titles and an introduction), which is read as chapter 0
     pub introduction: bool,
+    /// How many sections it has to read (see `read_section`), not counting anything before the first one
+    pub sections: usize,
 }
 
 /// The documents of an edition, in order
@@ -176,13 +178,16 @@ pub fn contents(library: &Library, edition: &str) -> Result<Vec<Document>> {
             introduction = first < after && chapters.starts.get(first) > start;
             highest = (first..after).filter_map(|chapter| chapters.names.get(chapter as u32).parse().ok()).max().unwrap_or(0);
         }
-        Ok(Document { name: text.document_names.get(document), chapters: highest, introduction })
+        let sections = match units(&module, &chapters)? { Some(units) => units.starts.lower_bound(end) - units.starts.lower_bound(start), None => 0 };
+        Ok(Document { name: text.document_names.get(document), chapters: highest, introduction, sections })
     }).collect()
 }
 
 /// A piece of a paragraph, for displaying it
 pub enum Piece {
-    /// A verse starts here: its number as the edition gives it (which isn't always just a number)
+    /// A chapter's first verse comes next: the chapter's number
+    Chapter(String),
+    /// A verse starts here: its name as the edition gives it, e.g., `3:16`
     Verse(String),
     /// Some text, and the character styles that it has (e.g., `add`, `nd`, or `wj`)
     Text(String, Vec<String>),
@@ -234,14 +239,106 @@ pub fn read(library: &Library, edition: &str, passage: &Passage) -> Result<Readi
         }
     }
     if start >= end { return Err(format!("'{edition}' doesn't have {passage}").into()); }
+    Ok(Reading { passage: passage.to_string(), paragraphs: lay_out(&module, &text, verses, start..end)? })
+}
 
+/// What an edition is read in: its sections (from one heading to the next) if it has any, or else its chapters
+fn units(module: &crate::format::Module, chapters: &Option<Nodes>) -> Result<Option<Nodes>> {
+    if module.has("node.section.starts") { return Nodes::open(module, "section").map(Some); }
+    match chapters { Some(_) => Nodes::open(module, "chapter").map(Some), None => Ok(None) }
+}
+
+/// Which section to read
+pub enum Wanted<'a> {
+    /// The one that this passage starts in
+    At(&'a Passage),
+    /// By its number within a document: 1 is the first, and 0 is whatever comes before that (titles and an introduction)
+    Number(&'a str, usize),
+}
+
+pub struct SectionReading {
+    pub document: String,
+    /// This section's number within its document (0 for what comes before the first section)
+    pub number: usize,
+    /// Its heading (or its chapter number, in an edition without headings)
+    pub title: String,
+    /// The verses that it covers, e.g., `JHN 3:1-21` (or just the document, if it has no verses)
+    pub passage: String,
+    /// The sections before and after it, which can be in other documents
+    pub previous: Option<(String, usize)>,
+    pub next: Option<(String, usize)>,
+    pub paragraphs: Vec<Paragraph>,
+}
+
+/// One section of Scripture laid out for reading: from one section heading to the next (which can cross from one chapter into another).
+pub fn read_section(library: &Library, edition: &str, wanted: Wanted) -> Result<SectionReading> {
+    let module = library.text_module(edition)?;
+    let text = Text::open(&module)?;
+    let Some(verses) = &text.verses else { return Err(format!("'{edition}' isn't divided into verses").into()) };
+    let chapters = if module.has("node.chapter.starts") { Some(Nodes::open(&module, "chapter")?) } else { None };
+    let units = units(&module, &chapters)?.ok_or_else(|| format!("'{edition}' has neither sections nor chapters"))?;
+    let document_count = text.document_names.len();
+    let bounds = |document: usize| (text.document_starts.get(document), text.document_starts.get(document + 1));
+    // The units of a document: (the number of the first one among all the units, how many there are, whether there's anything before the first)
+    let units_of = |document: usize| {
+        let (start, end) = bounds(document);
+        let (first, after) = (units.starts.lower_bound(start), units.starts.lower_bound(end));
+        (first, after - first, end > start && (first == after || units.starts.get(first) > start))
+    };
+    let find_document = |name: &str| (0..document_count).find(|&document| text.document_names.get(document) == name).ok_or_else(|| format!("'{edition}' doesn't have {name}"));
+
+    let (document, number) = match wanted {
+        Wanted::Number(name, number) => (find_document(name)?, number),
+        Wanted::At(passage) => {
+            let document = find_document(&passage.book)?;
+            let (start, end) = bounds(document);
+            // The first verse at or after where the passage starts (or the start of the document, for a passage that's the whole of it)
+            let slot = (verses.starts.lower_bound(start)..verses.starts.lower_bound(end))
+                .find(|&verse| verses.ends.get(verse) > verses.starts.get(verse) && verse_number(&verses.names.get(verse as u32)).is_some_and(|number| number >= passage.from))
+                .map_or(start, |verse| verses.starts.get(verse));
+            let (first, _, _) = units_of(document);
+            (document, (units.starts.upper_bound(slot)).saturating_sub(first))
+        }
+    };
+    let (document_start, document_end) = bounds(document);
+    let (first, count, before) = units_of(document);
+    if number > count || (number == 0 && !before) { return Err(format!("{} has no section {number}", text.document_names.get(document)).into()); }
+    let range = if number == 0 { document_start..if count == 0 { document_end } else { units.starts.get(first) } }
+        else { units.starts.get(first + number - 1)..if number < count { units.starts.get(first + number) } else { document_end } };
+
+    // The neighbouring sections, going on into the next document (or back into the one before) at either end
+    let name = |document: usize| text.document_names.get(document);
+    let previous = if number > 1 || (number == 1 && before) { Some((name(document), number - 1)) } else {
+        (0..document).rev().map(|other| (other, units_of(other))).find(|(_, (_, count, before))| *count > 0 || *before).map(|(other, (_, count, _))| (name(other), count))
+    };
+    let next = if number < count { Some((name(document), number + 1)) } else {
+        (document + 1..document_count).map(|other| (other, units_of(other))).find(|(_, (_, count, before))| *count > 0 || *before)
+            .map(|(other, (_, _, before))| (name(other), if before { 0 } else { 1 }))
+    };
+    let inside: Vec<(u32, u32)> = (verses.starts.lower_bound(range.start)..verses.starts.lower_bound(range.end))
+        .filter(|&verse| verses.ends.get(verse) > verses.starts.get(verse)).filter_map(|verse| verse_number(&verses.names.get(verse as u32))).collect();
+    let passage = match (inside.iter().min(), inside.iter().max()) {
+        (Some(&from), Some(&to)) => Passage { book: name(document), from, to }.to_string(),
+        _ => name(document),
+    };
+    let title = if number == 0 { String::new() } else { units.names.get((first + number - 1) as u32) };
+    Ok(SectionReading { document: name(document), number, title, passage, previous, next, paragraphs: lay_out(&module, &text, verses, range)? })
+}
+
+/// Lay a range of slots out as paragraphs
+fn lay_out(module: &crate::format::Module, text: &Text, verses: &Nodes, range: std::ops::Range<u32>) -> Result<Vec<Paragraph>> {
+    let (start, end) = (range.start, range.end);
     // The character styles that overlap the passage (they're in order of where they start, and none is very long)
-    let spans = Nodes::open(&module, "span")?;
-    let overlapping: Vec<(std::ops::Range<u32>, String)> = (spans.starts.lower_bound(start.saturating_sub(2000))..spans.starts.lower_bound(end))
-        .map(|span| (spans.range(span), span)).filter(|(range, _)| range.end > start).map(|(range, span)| (range, spans.names.get(span as u32))).collect();
-    let attributes = Column::open(&module, "node.para.attributes")?;
+    let mut overlapping: Vec<(std::ops::Range<u32>, String)> = Vec::new();
+    if module.has("node.span.starts") { // (An edition needn't have any)
+        let spans = Nodes::open(module, "span")?;
+        overlapping = (spans.starts.lower_bound(start.saturating_sub(2000))..spans.starts.lower_bound(end))
+            .map(|span| (spans.range(span), span)).filter(|(range, _)| range.end > start).map(|(range, span)| (range, spans.names.get(span as u32))).collect();
+    }
+    let attributes = Column::open(module, "node.para.attributes")?;
     let mut paragraphs = Vec::new();
     let mut verse = verses.starts.lower_bound(start);
+    let mut chapter: Option<u32> = None; // Of the last verse that was laid out
     // From the first paragraph that starts in the passage, or the one before it if that runs on into the passage
     let mut first = text.paragraphs.starts.lower_bound(start);
     if first > 0 && text.paragraphs.ends.get(first - 1) > start { first -= 1; }
@@ -257,7 +354,12 @@ pub fn read(library: &Library, edition: &str, passage: &Passage) -> Result<Readi
                 if verses.starts.get(verse) == slot && verses.ends.get(verse) > slot {
                     pieces.extend(current.take().map(|(words, styles)| Piece::Text(words, styles)));
                     let name = verses.names.get(verse as u32);
-                    pieces.push(Piece::Verse(name.split_once(':').map_or(name.clone(), |(_, number)| number.to_string())));
+                    // A new chapter is marked before its first verse (but not at the start of a passage that starts part-way through a chapter)
+                    if let Some((number, verse_number)) = verse_number(&name) {
+                        if chapter.map_or(verse_number <= 1, |previous| previous != number) { pieces.push(Piece::Chapter(number.to_string())); }
+                        chapter = Some(number);
+                    }
+                    pieces.push(Piece::Verse(name));
                 }
                 verse += 1;
             }
@@ -273,7 +375,7 @@ pub fn read(library: &Library, edition: &str, passage: &Passage) -> Result<Readi
         pieces.extend(current.take().map(|(words, styles)| Piece::Text(words, styles)));
         paragraphs.push(Paragraph { style: text.paragraphs.names.get(paragraph as u32), kind, pieces });
     }
-    Ok(Reading { passage: passage.to_string(), paragraphs })
+    Ok(paragraphs)
 }
 
 /// `3:16` → (3, 16), and `3:16a` too

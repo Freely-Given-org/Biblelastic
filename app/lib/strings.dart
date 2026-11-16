@@ -16,8 +16,8 @@ class Strings {
   String get introduction => _pick(['Introduction', 'Introducción']);
   String get chooseBook => _pick(['Choose a book', 'Elija un libro']);
   String get chooseChapter => _pick(['Choose a chapter', 'Elija un capítulo']);
-  String get previousChapter => _pick(['Previous chapter', 'Capítulo anterior']);
-  String get nextChapter => _pick(['Next chapter', 'Capítulo siguiente']);
+  String get previousSection => _pick(['Previous section', 'Sección anterior']);
+  String get nextSection => _pick(['Next section', 'Sección siguiente']);
   String get noBible => _pick(['No Bible is installed yet.', 'Aún no hay ninguna Biblia instalada.']);
   String get getModules => _pick(['Get modules', 'Obtener módulos']);
   String get installAll => _pick(['Install all', 'Instalar todos']);

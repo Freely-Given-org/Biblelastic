@@ -93,6 +93,9 @@ try {
     for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: type === 'keyDown' ? '\r' : undefined }, sessionId);
     await sleep(2000);
     await shoot('4-search');
+    await tap(100, 390); // The third result (Colossians 1:5): it should open in its section, with the verse marked
+    await sleep(1500);
+    await shoot('5-landed');
     if (errors.length) { console.log(`Errors in the page:\n${errors.join('\n')}`); failed = true; }
 } catch (error) { console.log(`FAILED: ${error.message}`); failed = true; }
 finally {

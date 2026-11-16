@@ -35,6 +35,7 @@ class Book {
   int get firstChapter => chapters == 0 || introduction ? 0 : 1;
 }
 
+/// The reader shows one section at a time: from one section heading to the next, whichever chapters that covers.
 class ReaderPage extends StatefulWidget {
   const ReaderPage({super.key});
   @override
@@ -43,13 +44,14 @@ class ReaderPage extends StatefulWidget {
 
 class _ReaderPageState extends State<ReaderPage> {
   final Engine engine = Engine();
-  final ScrollController scroller = ScrollController();
   bool started = false;
   String? problem;
   List<Book> books = [];
-  String book = 'JHN';
-  int chapter = 1;
-  List<dynamic> paragraphs = [];
+  /// The section that's showing, as the engine gave it (see `read` with `unit=section` in the engine's api.rs)
+  Map<String, dynamic>? section;
+  /// A verse to bring into view and mark, e.g., `3:16` (after a search, or after choosing a chapter)
+  String? focus;
+  final GlobalKey focusKey = GlobalKey();
   final List<TapGestureRecognizer> recognisers = [];
 
   @override
@@ -61,7 +63,6 @@ class _ReaderPageState extends State<ReaderPage> {
   @override
   void dispose() {
     for (final recogniser in recognisers) { recogniser.dispose(); }
-    scroller.dispose();
     super.dispose();
   }
 
@@ -75,44 +76,54 @@ class _ReaderPageState extends State<ReaderPage> {
     }
   }
 
-  /// Find out which books are installed, then show a chapter
+  /// Find out which books are installed, then show a section
   Future<void> loadContents() async {
     try {
       final response = await engine.request({'command': 'contents', 'edition': edition});
       books = [for (final document in response['documents'] as List<dynamic>) Book(document['name'] as String, document['chapters'] as int, document['introduction'] as bool)];
-      if (!books.any((candidate) => candidate.code == book)) { book = books.first.code; chapter = books.first.firstChapter; }
-      await show(book, chapter);
+      final current = section;
+      if (current != null && books.any((book) => book.code == current['document'])) {
+        await showSection(current['document'] as String, current['section'] as int);
+      } else {
+        await showPassage(books.any((book) => book.code == 'JHN') ? 'JHN 1:1' : '${books.first.code} 1:1', mark: false);
+      }
     } on EngineException {
-      setState(() { books = []; paragraphs = []; problem = null; }); // Nothing installed yet
+      setState(() { books = []; section = null; problem = null; }); // Nothing installed yet
     }
   }
 
-  Future<void> show(String newBook, int newChapter) async {
+  Future<void> show(Map<String, String> which, String? verse) async {
     try {
-      final response = await engine.request({'command': 'read', 'edition': edition, 'passage': '$newBook $newChapter'});
-      setState(() { book = newBook; chapter = newChapter; paragraphs = response['paragraphs'] as List<dynamic>; problem = null; });
-      if (scroller.hasClients) scroller.jumpTo(0);
+      final response = await engine.request({'command': 'read', 'edition': edition, ...which});
+      setState(() { section = response; focus = verse; problem = null; });
+      // Once it's laid out, bring the wanted verse into view (or go back to the top)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final target = focusKey.currentContext;
+        if (verse != null && target != null && target.mounted) Scrollable.ensureVisible(target, alignment: 0.15);
+      });
     } catch (error) {
       setState(() => problem = '$error');
     }
   }
 
-  /// The chapter before (-1) or after (+1) this one, going on into the next book, or null at either end
-  (String, int)? neighbour(int step) {
-    final index = books.indexWhere((candidate) => candidate.code == book);
-    if (index < 0) return null;
-    final next = chapter + step;
-    if (next >= books[index].firstChapter && next <= books[index].chapters) return (book, next);
-    final other = index + step;
-    if (other < 0 || other >= books.length) return null;
-    return (books[other].code, step > 0 ? books[other].firstChapter : books[other].chapters);
+  /// The section that a passage like `JHN 3:16` starts in, with that verse in view
+  Future<void> showPassage(String passage, {bool mark = true}) {
+    final verse = RegExp(r' (\d+:\d+)').firstMatch(passage)?.group(1);
+    return show({'unit': 'section', 'passage': passage}, mark ? verse : null);
   }
+
+  /// A section by its number in a book (0 is whatever comes before the first section)
+  Future<void> showSection(String document, int number) => show({'document': document, 'section': '$number'}, null);
 
   Future<void> chooseBook() async {
     final strings = Strings(Localizations.localeOf(context));
     final chosen = await showModalBottomSheet<(String, int)>(context: context, isScrollControlled: true, showDragHandle: true, useSafeArea: true,
-        builder: (context) => BookPicker(books: books, strings: strings, current: book));
-    if (chosen != null) await show(chosen.$1, chosen.$2);
+        builder: (context) => BookPicker(books: books, strings: strings, current: section?['document'] as String? ?? ''));
+    if (chosen == null) return;
+    final (book, chapter) = chosen;
+    if (chapter > 0) return showPassage('$book $chapter:1', mark: chapter > 1); // A chapter needn't start where a section does
+    await showSection(book, 0);
+    if (problem != null) await showSection(book, 1); // Nothing comes before this book's first section
   }
 
   Future<void> openModules() async {
@@ -121,26 +132,31 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 
   Future<void> openSearch() async {
-    final chosen = await Navigator.of(context).push(MaterialPageRoute<(String, int)>(builder: (context) => SearchPage(engine: engine)));
-    if (chosen != null) await show(chosen.$1, chosen.$2);
+    final reference = await Navigator.of(context).push(MaterialPageRoute<String>(builder: (context) => SearchPage(engine: engine)));
+    if (reference != null) await showPassage(reference);
   }
 
   void showNotes(String verse) {
-    final passage = '$book $chapter:$verse';
+    final passage = '${section!['document']} $verse';
     showModalBottomSheet<void>(context: context, isScrollControlled: true, showDragHandle: true, useSafeArea: true, builder: (context) => NotesSheet(engine: engine, passage: passage));
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = Strings(Localizations.localeOf(context));
-    final previous = neighbour(-1), next = neighbour(1);
+    final current = section;
+    final previous = current?['previous'] as Map<String, dynamic>?, next = current?['next'] as Map<String, dynamic>?;
     return Scaffold(
       appBar: AppBar(
-        title: books.isEmpty ? Text(strings.appName) : TextButton(onPressed: chooseBook, child: Text(strings.passage(book, chapter), style: Theme.of(context).textTheme.titleLarge)),
+        titleSpacing: 4,
+        title: current == null ? Padding(padding: const EdgeInsets.only(left: 12), child: Text(strings.appName))
+            : TextButton(onPressed: chooseBook, child: Text(strings.reference(current['passage'] as String), style: Theme.of(context).textTheme.titleLarge, overflow: TextOverflow.ellipsis)),
         actions: [
-          if (books.isNotEmpty) IconButton(tooltip: strings.previousChapter, icon: const Icon(Icons.chevron_left), onPressed: previous == null ? null : () => show(previous.$1, previous.$2)),
-          if (books.isNotEmpty) IconButton(tooltip: strings.nextChapter, icon: const Icon(Icons.chevron_right), onPressed: next == null ? null : () => show(next.$1, next.$2)),
-          if (books.isNotEmpty) IconButton(tooltip: strings.search, icon: const Icon(Icons.search), onPressed: openSearch),
+          if (current != null) IconButton(tooltip: strings.previousSection, icon: const Icon(Icons.chevron_left),
+              onPressed: previous == null ? null : () => showSection(previous['document'] as String, previous['section'] as int)),
+          if (current != null) IconButton(tooltip: strings.nextSection, icon: const Icon(Icons.chevron_right),
+              onPressed: next == null ? null : () => showSection(next['document'] as String, next['section'] as int)),
+          if (current != null) IconButton(tooltip: strings.search, icon: const Icon(Icons.search), onPressed: openSearch),
           if (started) IconButton(tooltip: strings.modules, icon: const Icon(Icons.download), onPressed: openModules),
         ],
       ),
@@ -151,7 +167,8 @@ class _ReaderPageState extends State<ReaderPage> {
   Widget body(BuildContext context, Strings strings) {
     if (problem != null) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(problem!, style: TextStyle(color: Theme.of(context).colorScheme.error))));
     if (!started) return Center(child: Text(strings.starting));
-    if (books.isEmpty) {
+    final current = section;
+    if (current == null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Text(strings.noBible),
         const SizedBox(height: 16),
@@ -160,18 +177,28 @@ class _ReaderPageState extends State<ReaderPage> {
     }
     for (final recogniser in recognisers) { recogniser.dispose(); }
     recognisers.clear();
-    return SelectionArea(child: ListView.builder(
-      controller: scroller,
+    var inFocus = false, keyUsed = false; // Whether the verse being laid out is the one to mark (a verse can run on into the next paragraph)
+    final paragraphs = <Widget>[];
+    for (final data in (current['paragraphs'] as List<dynamic>).cast<Map<String, dynamic>>()) {
+      final (widget, hasFocus, stillInFocus) = paragraph(context, data, inFocus);
+      inFocus = stillInFocus;
+      paragraphs.add(hasFocus && !keyUsed ? KeyedSubtree(key: focusKey, child: widget) : widget);
+      keyUsed = keyUsed || hasFocus;
+    }
+    // A section is short enough to lay out whole, which lets a verse anywhere in it be scrolled to.
+    // The key makes each section start again from the top.
+    return SelectionArea(child: SingleChildScrollView(
+      key: ValueKey('${current['document']} ${current['section']}'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      itemCount: paragraphs.length + 1,
-      itemBuilder: (context, index) => index == paragraphs.length
-          ? Padding(padding: const EdgeInsets.only(top: 24), child: Text(strings.tapVerse, style: Theme.of(context).textTheme.bodySmall))
-          : Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: SizedBox(width: double.infinity, child: paragraph(context, paragraphs[index] as Map<String, dynamic>)))),
+      child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        ...paragraphs,
+        Padding(padding: const EdgeInsets.only(top: 24), child: Text(strings.tapVerse, style: Theme.of(context).textTheme.bodySmall)),
+      ]))),
     ));
   }
 
-  /// One paragraph, laid out by its style and kind
-  Widget paragraph(BuildContext context, Map<String, dynamic> data) {
+  /// One paragraph, laid out by its style and kind. Also says whether the verse to mark starts in it, and whether that verse is still going at its end.
+  (Widget, bool, bool) paragraph(BuildContext context, Map<String, dynamic> data, bool inFocus) {
     final theme = Theme.of(context);
     final style = data['style'] as String, kind = data['kind'] as String;
     var base = theme.textTheme.bodyLarge!.copyWith(height: 1.5);
@@ -190,14 +217,20 @@ class _ReaderPageState extends State<ReaderPage> {
     } else if (style == 'd') {
       base = base.copyWith(fontStyle: FontStyle.italic);
     }
+    final marked = theme.colorScheme.tertiaryContainer;
+    var hasFocus = false;
     final spans = <InlineSpan>[];
     for (final piece in data['pieces'] as List<dynamic>) {
-      if (piece['v'] != null) {
-        final verse = piece['v'] as String;
-        final recogniser = TapGestureRecognizer()..onTap = () => showNotes(verse);
+      if (piece['c'] != null) { // A chapter starts with the next verse
+        spans.add(TextSpan(text: '${piece['c']} ', style: TextStyle(fontSize: base.fontSize! * 1.5, fontWeight: FontWeight.bold, color: theme.colorScheme.primary, height: 1)));
+      } else if (piece['v'] != null) {
+        final name = piece['r'] as String;
+        inFocus = name == focus;
+        hasFocus = hasFocus || inFocus;
+        final recogniser = TapGestureRecognizer()..onTap = () => showNotes(name);
         recognisers.add(recogniser);
-        spans.add(TextSpan(text: '$verse ', recognizer: recogniser,
-            style: TextStyle(fontSize: base.fontSize! * 0.72, color: theme.colorScheme.primary, fontWeight: FontWeight.bold)));
+        spans.add(TextSpan(text: '${piece['v']} ', recognizer: recogniser,
+            style: TextStyle(fontSize: base.fontSize! * 0.72, color: theme.colorScheme.primary, fontWeight: FontWeight.bold, backgroundColor: inFocus ? marked : null)));
       } else {
         final marks = (piece['s'] as List<dynamic>? ?? const []).cast<String>();
         var text = base;
@@ -205,10 +238,11 @@ class _ReaderPageState extends State<ReaderPage> {
         if (marks.contains('add')) text = text.copyWith(color: text.color?.withValues(alpha: 0.72)); // Words added by the translators
         if (marks.contains('em') || marks.contains('it')) text = text.copyWith(fontStyle: FontStyle.italic);
         if (marks.contains('bd')) text = text.copyWith(fontWeight: FontWeight.bold);
+        if (inFocus && kind != 'heading') text = text.copyWith(backgroundColor: marked);
         spans.add(TextSpan(text: piece['t'] as String, style: text));
       }
     }
-    return Padding(padding: padding, child: Text.rich(TextSpan(children: spans, style: base), textAlign: align));
+    return (Padding(padding: padding, child: Text.rich(TextSpan(children: spans, style: base), textAlign: align)), hasFocus, inFocus);
   }
 }
 

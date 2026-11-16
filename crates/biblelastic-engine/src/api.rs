@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use crate::format::Result;
 use crate::library::Library;
-use crate::query::{self, Example, Piece};
+use crate::query::{self, Example, Paragraph, Piece, Wanted};
 use crate::reference::Passage;
 
 pub fn respond(library: &Library, request: &str) -> String {
@@ -41,21 +41,22 @@ fn answer(library: &Library, request: &str) -> Result<String> {
         }
         "contents" => { // The documents of an edition, and how many chapters each has
             let documents: Vec<String> = query::contents(library, edition)?.iter().map(|document| format!(
-                "{{\"name\":{},\"chapters\":{},\"introduction\":{}}}", quote(&document.name), document.chapters, document.introduction)).collect();
+                "{{\"name\":{},\"chapters\":{},\"introduction\":{},\"sections\":{}}}", quote(&document.name), document.chapters, document.introduction, document.sections)).collect();
             Ok(format!("\"edition\":{},\"documents\":[{}]", quote(edition), documents.join(",")))
         }
-        "read" => { // A passage laid out for reading: each paragraph is a list of verse numbers {"v"} and pieces of text {"t"} with any character styles {"s"}
-            let passage = Passage::parse(match text("passage", "") { "" => text("words", ""), given => given })?;
-            let reading = query::read(library, edition, &passage)?;
-            let paragraphs: Vec<String> = reading.paragraphs.iter().map(|paragraph| {
-                let pieces: Vec<String> = paragraph.pieces.iter().map(|piece| match piece {
-                    Piece::Verse(number) => format!("{{\"v\":{}}}", quote(number)),
-                    Piece::Text(words, styles) if styles.is_empty() => format!("{{\"t\":{}}}", quote(words)),
-                    Piece::Text(words, styles) => format!("{{\"t\":{},\"s\":[{}]}}", quote(words), styles.iter().map(|style| quote(style)).collect::<Vec<_>>().join(",")),
-                }).collect();
-                format!("{{\"style\":{},\"kind\":{},\"pieces\":[{}]}}", quote(&paragraph.style), quote(&paragraph.kind), pieces.join(","))
-            }).collect();
-            Ok(format!("\"edition\":{},\"passage\":{},\"paragraphs\":[{}]", quote(edition), quote(&reading.passage), paragraphs.join(",")))
+        "read" => { // A passage laid out for reading: each paragraph is a list of chapter numbers {"c"}, verse numbers {"v"} (with the verse's full name {"r"}),
+            // and pieces of text {"t"} with any character styles {"s"}
+            let given = match text("passage", "") { "" => text("words", ""), given => given };
+            if text("unit", "") == "section" || fields.contains_key("section") { // One section: the one a passage starts in, or by its number in a document
+                let passage = if fields.contains_key("section") { None } else { Some(Passage::parse(given)?) };
+                let wanted = match &passage { Some(passage) => Wanted::At(passage), None => Wanted::Number(text("document", ""), number("section", 0)?) };
+                let reading = query::read_section(library, edition, wanted)?;
+                let neighbour = |neighbour: &Option<(String, usize)>| neighbour.as_ref().map_or("null".to_string(), |(document, number)| format!("{{\"document\":{},\"section\":{number}}}", quote(document)));
+                return Ok(format!("\"edition\":{},\"document\":{},\"section\":{},\"title\":{},\"passage\":{},\"previous\":{},\"next\":{},\"paragraphs\":{}", quote(edition), quote(&reading.document),
+                                  reading.number, quote(&reading.title), quote(&reading.passage), neighbour(&reading.previous), neighbour(&reading.next), paragraphs(&reading.paragraphs)));
+            }
+            let reading = query::read(library, edition, &Passage::parse(given)?)?;
+            Ok(format!("\"edition\":{},\"passage\":{},\"paragraphs\":{}", quote(edition), quote(&reading.passage), paragraphs(&reading.paragraphs)))
         }
         "terms" => {
             if words.is_empty() { return Err("terms needs at least one word".into()); }
@@ -92,6 +93,19 @@ fn answer(library: &Library, request: &str) -> Result<String> {
         }
         other => Err(format!("unknown command '{other}'").into()),
     }
+}
+
+fn paragraphs(paragraphs: &[Paragraph]) -> String {
+    let paragraphs: Vec<String> = paragraphs.iter().map(|paragraph| {
+        let pieces: Vec<String> = paragraph.pieces.iter().map(|piece| match piece {
+            Piece::Chapter(number) => format!("{{\"c\":{}}}", quote(number)),
+            Piece::Verse(name) => format!("{{\"v\":{},\"r\":{}}}", quote(name.split_once(':').map_or(name.as_str(), |(_, number)| number)), quote(name)),
+            Piece::Text(words, styles) if styles.is_empty() => format!("{{\"t\":{}}}", quote(words)),
+            Piece::Text(words, styles) => format!("{{\"t\":{},\"s\":[{}]}}", quote(words), styles.iter().map(|style| quote(style)).collect::<Vec<_>>().join(",")),
+        }).collect();
+        format!("{{\"style\":{},\"kind\":{},\"pieces\":[{}]}}", quote(&paragraph.style), quote(&paragraph.kind), pieces.join(","))
+    }).collect();
+    format!("[{}]", paragraphs.join(","))
 }
 
 /// A JSON string

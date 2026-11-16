@@ -1,9 +1,11 @@
 /// The engine as a native library (crates/biblelastic-ffi), called directly.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 import 'package:http/http.dart' as http;
@@ -25,36 +27,59 @@ class NativeEngine implements Engine {
   final Directory? modulesFolder;
 
   late final Directory _folder;
-  late final _RequestDart _request;
-  late final _FreeDart _free;
+  late final SendPort _worker;
+  final Map<int, Completer<String>> _waiting = {};
+  int _nextId = 0;
 
+  /// The engine is called from an isolate of its own, so that a slow request never holds the display up
   @override
   Future<void> start() async {
-    final library = DynamicLibrary.open(libraryPath ?? (Platform.isWindows ? 'biblelastic.dll' : Platform.isMacOS ? 'libbiblelastic.dylib' : 'libbiblelastic.so'));
-    _request = library.lookupFunction<_RequestNative, _RequestDart>('biblelastic_request');
-    _free = library.lookupFunction<_FreeNative, _FreeDart>('biblelastic_free');
     _folder = modulesFolder ?? Directory('${(await getApplicationSupportDirectory()).path}/modules');
     await _folder.create(recursive: true);
+    final library = libraryPath ?? (Platform.isWindows ? 'biblelastic.dll' : Platform.isMacOS ? 'libbiblelastic.dylib' : 'libbiblelastic.so');
+    final answers = ReceivePort();
+    final ready = Completer<SendPort>();
+    answers.listen((message) {
+      if (message is SendPort) return ready.complete(message);
+      final (id, answer) = message as (int, String);
+      _waiting.remove(id)?.complete(answer);
+    });
+    await Isolate.spawn(_serve, (answers.sendPort, library, _folder.path));
+    _worker = await ready.future;
   }
 
-  // The engine is called on the app's own thread for now. Requests take milliseconds,
-  // but a slow one would hold the display up: it should move to its own isolate.
-  String _call(String text) {
-    final folder = _folder.path.toNativeUtf8();
-    final request = text.toNativeUtf8();
-    final answer = _request(folder, request, 0);
-    try {
-      return answer.toDartString();
-    } finally {
-      _free(answer);
-      malloc.free(folder);
-      malloc.free(request);
-    }
+  /// Runs in the engine's isolate: answers each (id, request) that arrives with (id, answer)
+  static void _serve((SendPort, String, String) setup) {
+    final (answers, libraryName, folderPath) = setup;
+    final library = DynamicLibrary.open(libraryName);
+    final request = library.lookupFunction<_RequestNative, _RequestDart>('biblelastic_request');
+    final free = library.lookupFunction<_FreeNative, _FreeDart>('biblelastic_free');
+    final requests = ReceivePort();
+    answers.send(requests.sendPort);
+    requests.listen((message) {
+      final (id, text) = message as (int, String);
+      final folder = folderPath.toNativeUtf8(), words = text.toNativeUtf8();
+      final answer = request(folder, words, 0);
+      try {
+        answers.send((id, answer.toDartString()));
+      } finally {
+        free(answer);
+        malloc.free(folder);
+        malloc.free(words);
+      }
+    });
+  }
+
+  Future<String> _call(String text) {
+    final id = _nextId++;
+    final answer = _waiting[id] = Completer<String>();
+    _worker.send((id, text));
+    return answer.future;
   }
 
   @override
   Future<Map<String, dynamic>> request(Map<String, String> fields) async {
-    final answer = jsonDecode(_call(fields.entries.map((field) => '${field.key}=${field.value}').join('\n'))) as Map<String, dynamic>;
+    final answer = jsonDecode(await _call(fields.entries.map((field) => '${field.key}=${field.value}').join('\n'))) as Map<String, dynamic>;
     return checked(answer['response'] as Map<String, dynamic>);
   }
 
@@ -89,12 +114,12 @@ class NativeEngine implements Engine {
       client.close();
       if (await partial.exists()) await partial.delete();
     }
-    _call('command=forget'); // So that the engine looks at the folder again
+    await _call('command=forget'); // So that the engine looks at the folder again
   }
 
   @override
   Future<void> removeAll() async {
-    _call('command=forget');
+    await _call('command=forget');
     await for (final file in _folder.list()) {
       if (file is File) await file.delete();
     }

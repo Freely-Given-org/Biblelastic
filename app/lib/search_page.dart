@@ -42,10 +42,9 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  /// Go back to the reader at the chapter of a reference like `JHN 3:16`
+  /// Go back to the reader, to show a reference like `JHN 3:16` in its section
   void open(String reference) {
-    final match = RegExp(r'^(\w{3}) (\d+):').firstMatch(reference);
-    if (match != null) Navigator.of(context).pop((match.group(1)!, int.parse(match.group(2)!)));
+    if (RegExp(r'^\w{3} \d+:\d+').hasMatch(reference)) Navigator.of(context).pop(reference);
   }
 
   @override

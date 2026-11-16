@@ -26,6 +26,15 @@ void main() {
     expect(pieces.where((piece) => piece['v'] != null).length, 36); // John 3 has 36 verses
     expect(pieces.any((piece) => (piece['s'] as List<dynamic>? ?? []).contains('wj')), isTrue);
 
+    // By section: the one that John 3:16 is in, which starts at its heading
+    final section = await engine.request({'command': 'read', 'edition': 'OET-RV', 'unit': 'section', 'passage': 'JHN 3:16'});
+    expect((section['document'], section['passage'], (section['previous'] as Map<String, dynamic>)['section']), ('JHN', 'JHN 3:1-21', (section['section'] as int) - 1));
+    expect(((section['paragraphs'] as List<dynamic>).first as Map<String, dynamic>)['kind'], 'heading');
+
+    // Several requests at once are each answered (the engine runs in its own isolate)
+    final together = await Future.wait([for (final chapter in [1, 2, 3]) engine.request({'command': 'read', 'edition': 'OET-RV', 'passage': 'JHN $chapter'})]);
+    expect(together.map((reading) => reading['passage']), ['JHN 1', 'JHN 2', 'JHN 3']);
+
     final found = await engine.request({'command': 'find', 'edition': 'OET-RV', 'words': 'grace truth'});
     expect(found['total'], 4);
     final notes = await engine.request({'command': 'about', 'passage': 'JHN 3:16', 'limit': '1'});

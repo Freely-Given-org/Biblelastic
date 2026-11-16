@@ -5,23 +5,30 @@
 //!   It returns JSON text: `{"bytesRead": …, "cachedBytes": …, "response": {…}}`, which the caller must give back to
 //! - `biblelastic_free(text)`.
 //!
-//! The opened modules are kept (for each thread) until a request names a different folder, or is `command=forget`
-//! (which an app must send after it adds or removes module files). Always call from the same thread, to keep what's been read.
+//! The opened modules are kept until a request names a different folder, or is `command=forget`
+//! (which an app must send after it adds or removes module files). Requests can come from any thread, and are answered one at a time.
 
-use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use biblelastic_engine::api;
 use biblelastic_engine::format::DEFAULT_CACHE_BYTES;
 use biblelastic_engine::library::{Folder, Library};
 
-thread_local! { static OPENED: RefCell<Option<(PathBuf, Library)>> = const { RefCell::new(None) }; }
+/// The engine isn't made for several threads (it shares its page cache by plain reference counting), so the opened modules
+/// are only ever touched by whichever thread holds this lock, and nothing that refers to them leaves `answer`.
+struct Opened(Option<(PathBuf, Library)>);
+// SAFETY: as above: every use is inside the lock, so only one thread uses the modules at a time
+unsafe impl Send for Opened {}
+
+static OPENED: Mutex<Opened> = Mutex::new(Opened(None));
 
 fn answer(folder: &str, request: &str, cache_bytes: usize) -> String {
-    OPENED.with(|opened| {
-        let mut opened = opened.borrow_mut();
+    {
+        let mut guard = OPENED.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let opened = &mut guard.0;
         let folder = PathBuf::from(folder);
         if request.lines().any(|line| line.trim() == "command=forget") {
             *opened = None;
@@ -43,7 +50,7 @@ fn answer(folder: &str, request: &str, cache_bytes: usize) -> String {
                 "{\"bytesRead\":0,\"cachedBytes\":0,\"response\":{\"ok\":false,\"error\":\"a module couldn't be read (it may be damaged or incomplete)\"}}".to_string()
             }
         }
-    })
+    }
 }
 
 /// # Safety
