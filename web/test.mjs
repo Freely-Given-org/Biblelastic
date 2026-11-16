@@ -60,15 +60,16 @@ async function inPage(path, script) {
 const REQUESTS = [
     { command: 'terms', words: 'love loves loved loving', limit: 3 },
     { command: 'find', words: 'grace truth', within: 'sentence' },
+    { command: 'find', words: 'love God', within: 'sentence' },
     { command: 'marked', words: 'pronoun_to_name', limit: 2 },
 ];
 
 // Runs in the page
-const measure = async (reader, requests) => {
+const measure = async (reader, requests, cacheBytes) => {
     const { Biblelastic } = await import('/web/biblelastic.js');
     const report = { reader, requests: [] };
     let started = performance.now();
-    const engine = await Biblelastic.start({ reader });
+    const engine = await Biblelastic.start({ reader, cacheBytes });
     report.startMs = performance.now() - started;
     if (!(await engine.list()).length) {
         const { modules } = await (await fetch('/build/modules/index.json')).json();
@@ -79,8 +80,9 @@ const measure = async (reader, requests) => {
     report.modules = await engine.list();
     await engine.forget();
     for (const fields of [...requests, ...requests]) { // The second time round, everything needed is already cached
-        const { response, bytesRead, milliseconds, memoryBytes } = await engine.request(fields);
-        report.requests.push({ command: fields.command, ok: response.ok, error: response.error, total: response.total, bytesRead, milliseconds, memoryBytes,
+        const { response, bytesRead, cachedBytes, milliseconds, memoryBytes, reading } = await engine.request(fields);
+        report.reading = reading;
+        report.requests.push({ command: fields.command, ok: response.ok, error: response.error, total: response.total, bytesRead, cachedBytes, milliseconds, memoryBytes,
                                first: response.terms?.[0]?.lemma ?? response.examples?.[0]?.reference });
     }
     report.storage = (await navigator.storage.estimate()).usage;
@@ -115,17 +117,22 @@ const usePage = async () => {
 let failed = false;
 try {
     const megabytes = bytes => (bytes / 1048576).toFixed(2) + ' MB';
-    for (const reader of ['handle', 'blob']) {
-        const report = await inPage('/blank', `() => (${measure})(${JSON.stringify(reader)}, ${JSON.stringify(REQUESTS)})`);
-        console.log(`\nReader '${reader}': started in ${report.startMs.toFixed(0)} ms; ${report.modules.length} modules installed` +
+    const SMALL = 2 << 20; // The last run allows the engine only 2 MB for the modules, and must still give the same answers
+    const totals = [];
+    for (const [reader, cacheBytes] of [['auto'], ['handle'], ['blob'], ['auto', SMALL]]) {
+        const report = await inPage('/blank', `() => (${measure})(${JSON.stringify(reader)}, ${JSON.stringify(REQUESTS)}, ${cacheBytes})`);
+        totals.push(JSON.stringify(report.requests.map(request => [request.total, request.first])));
+        if (totals.at(-1) !== totals[0]) { console.log('  DIFFERENT RESULTS'); failed = true; }
+        if (cacheBytes && report.requests.some(request => request.cachedBytes > cacheBytes)) { console.log('  OVER THE CACHE LIMIT'); failed = true; }
+        console.log(`\nReader '${reader}'${reader === 'auto' ? ` (${report.reading})` : ''}${cacheBytes ? ` with a ${megabytes(cacheBytes)} cache` : ''}: started in ${report.startMs.toFixed(0)} ms; ${report.modules.length} modules installed` +
                     (report.installMs ? ` in ${(report.installMs / 1000).toFixed(1)} s` : ' already') + `, using ${megabytes(report.storage)} of storage`);
         report.requests.forEach((request, n) => {
             console.log(`  ${n < REQUESTS.length ? 'cold' : 'warm'} ${request.command.padEnd(7)}${request.milliseconds.toFixed(1).padStart(7)} ms  read ${megabytes(request.bytesRead).padStart(9)}` +
-                        `  memory ${megabytes(request.memoryBytes).padStart(9)}  ${request.ok ? `${request.total} results, first: ${request.first}` : `FAILED: ${request.error}`}`);
+                        `  cached ${megabytes(request.cachedBytes).padStart(8)}  memory ${megabytes(request.memoryBytes).padStart(8)}  ${request.ok ? `${request.total} results, first: ${request.first}` : `FAILED: ${request.error}`}`);
             if (!request.ok || !request.total) failed = true;
         });
     }
-    for (const reader of ['handle', 'blob']) console.log(`\nTwo engines at once with reader '${reader}': ${await inPage('/blank', `() => (${together})(${JSON.stringify(reader)})`)}`);
+    for (const reader of ['auto', 'handle', 'blob']) console.log(`\nTwo engines at once with reader '${reader}': ${await inPage('/blank', `() => (${together})(${JSON.stringify(reader)})`)}`);
     const page = await inPage('/web/', usePage);
     console.log('\nTest page:', page);
     if (page.status !== 'The engine is running.' || !page.results) failed = true;

@@ -30,6 +30,9 @@ Options:
   --within TYPE           For find: sentence, verse, para, section, or chapter (default: sentence)
   --examples N            For terms: how many example verses to show for each term (default: 1)
   --limit N               How many results to show (default: 20)
+  --cache N               How many megabytes of the modules may be kept in memory (default: 16)
+  --page-bits N           For compile: store sections as pages of 2^N bytes (default: 14, i.e., 16 kB)
+  --no-compress           For compile: don't compress anything
 ";
 
 struct Arguments {
@@ -40,14 +43,19 @@ struct Arguments {
     within: String,
     examples: usize,
     limit: usize,
+    page_bits: u8,
+    compress: bool,
+    cache: usize,
 }
 
 fn parse(arguments: &[String]) -> Result<Arguments, String> {
     let mut parsed = Arguments { words: Vec::new(), intermediate: "build/intermediate".into(), modules: "build/modules".into(),
-                                 edition: "OET-RV".into(), within: "sentence".into(), examples: 1, limit: 20 };
+                                 edition: "OET-RV".into(), within: "sentence".into(), examples: 1, limit: 20,
+                                 page_bits: compile::Options::default().page_bits, compress: true, cache: biblelastic_engine::format::DEFAULT_CACHE_BYTES >> 20 };
     let mut iterator = arguments.iter();
     while let Some(argument) = iterator.next() {
         if !argument.starts_with("--") { parsed.words.push(argument.clone()); continue; }
+        if argument == "--no-compress" { parsed.compress = false; continue; }
         let value = iterator.next().ok_or_else(|| format!("{argument} needs a value"))?;
         let number = || value.parse::<usize>().map_err(|_| format!("{argument} needs a number, not '{value}'"));
         match argument.as_str() {
@@ -57,6 +65,8 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
             "--within" => parsed.within = value.clone(),
             "--examples" => parsed.examples = number()?,
             "--limit" => parsed.limit = number()?,
+            "--page-bits" => parsed.page_bits = number()?.clamp(3, 24) as u8,
+            "--cache" => parsed.cache = number()?,
             _ => return Err(format!("unknown option {argument}")),
         }
     }
@@ -78,7 +88,7 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
     let started = Instant::now();
     match command {
         "compile" => {
-            let written = compile::compile(&arguments.intermediate, &arguments.modules)?;
+            let written = compile::compile(&arguments.intermediate, &arguments.modules, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?;
             let total: u64 = written.iter().map(|module| module.bytes).sum();
             for module in &written { println!("{:<28}{:>10}  {} sections", module.name, size(module.bytes), module.sections); }
             println!("{} modules, {} (from {} of intermediate files) in {:.1}s -- output in {}", written.len(), size(total),
@@ -88,18 +98,19 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
             Some(name) => {
                 let module = Module::open_file(&arguments.modules.join(format!("{name}.blm")))?;
                 for entry in module.entries() {
-                    println!("{:<34}{:<9}{:>10}  {} items{}", entry.name, format!("{:?}", entry.encoding), size(entry.length), entry.count,
-                             if entry.bits > 0 { format!(" of {} bits", entry.bits) } else { String::new() });
+                    println!("{:<34}{:<9}{:>10}{:>12}  {} items{}", entry.name, format!("{:?}", entry.encoding), size(entry.length),
+                             if entry.length < entry.raw_length { format!("({:.0}%)", 100.0 * entry.length as f64 / entry.raw_length as f64) } else { String::new() },
+                             entry.count, if entry.bits > 0 { format!(" of {} bits", entry.bits) } else { String::new() });
                 }
             }
-            None => for installed in Library::open(&Folder(arguments.modules.clone()))?.modules {
+            None => for installed in Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?.modules {
                 let description = if installed.kind == "alignment" { format!("{} → {}", installed.from, installed.to) } else { format!("{} {}", installed.edition, installed.layer) };
                 println!("{:<28}{:<11}{}", installed.name, installed.kind, description);
             }
         },
         "terms" => {
             if arguments.words.is_empty() { return Err("terms needs at least one word".into()); }
-            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
             let result = query::original_terms(&library, &arguments.edition, &arguments.words, arguments.examples)?;
             let occurrences: usize = result.forms.values().sum();
             println!("{} matched {} words: {}", arguments.edition, occurrences, result.forms.iter().map(|(form, count)| format!("{form} ({count})")).collect::<Vec<_>>().join(", "));
@@ -113,7 +124,7 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
         }
         "find" => {
             if arguments.words.is_empty() { return Err("find needs at least one word".into()); }
-            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
             let found = query::find_together(&library, &arguments.edition, &arguments.words, &arguments.within, arguments.limit)?;
             println!("{} matched: {}", arguments.edition, found.forms.iter().map(|(form, count)| format!("{form} ({count})")).collect::<Vec<_>>().join(", "));
             println!("{} {} nodes contain all of them:\n", found.total, arguments.within);
@@ -123,7 +134,7 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
         }
         "marked" => {
             let reason = arguments.words.first().ok_or("marked needs a reason, e.g., pronoun_to_name, name_to_pronoun, reworded, measure, number")?;
-            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
             let found = query::find_spans(&library, &arguments.edition, "add", "reason", reason, arguments.limit)?;
             let mut forms: Vec<(&String, &usize)> = found.forms.iter().collect();
             forms.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
@@ -134,7 +145,7 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
             println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
         }
         "request" => {
-            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
             println!("{}", biblelastic_engine::api::respond(&library, &arguments.words.join("\n")));
         }
         _ => return Err(format!("unknown command '{command}'\n\n{USAGE}").into()),

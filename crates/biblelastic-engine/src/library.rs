@@ -4,12 +4,13 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 use std::rc::Rc;
 
-use crate::format::{Module, Packed, Result, Strings};
+use crate::format::{Module, PageCache, Packed, Result, Strings, DEFAULT_CACHE_BYTES};
 
 /// Where modules come from (a folder natively; browser storage later)
 pub trait ModuleSource {
     fn names(&self) -> Result<Vec<String>>;
-    fn open(&self, name: &str) -> Result<Module>;
+    /// Open one module, which must use this page cache
+    fn open(&self, name: &str, cache: &Rc<PageCache>) -> Result<Module>;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -26,7 +27,7 @@ impl ModuleSource for Folder {
         names.sort();
         Ok(names)
     }
-    fn open(&self, name: &str) -> Result<Module> { Module::open_file(&self.0.join(format!("{name}.blm"))) }
+    fn open(&self, name: &str, cache: &Rc<PageCache>) -> Result<Module> { Module::open_file_with(&self.0.join(format!("{name}.blm")), cache) }
 }
 
 pub struct Installed {
@@ -44,18 +45,24 @@ pub struct Installed {
 /// Every installed module, with only its header and table of contents read so far
 pub struct Library {
     pub modules: Vec<Installed>,
+    /// The pages that have been read from all the modules: this is nearly all of the memory that the engine uses
+    pub cache: Rc<PageCache>,
 }
 
 impl Library {
-    pub fn open(source: &dyn ModuleSource) -> Result<Library> {
+    pub fn open(source: &dyn ModuleSource) -> Result<Library> { Library::open_with(source, DEFAULT_CACHE_BYTES) }
+
+    /// `cache_bytes` limits how much of the modules is kept in memory
+    pub fn open_with(source: &dyn ModuleSource, cache_bytes: usize) -> Result<Library> {
+        let cache = PageCache::new(cache_bytes);
         let mut modules = Vec::new();
         for name in source.names()? {
-            let module = source.open(&name)?;
+            let module = source.open(&name, &cache)?;
             let field = |section: &str| if module.has(section) { module.text(section) } else { Ok(String::new()) };
             modules.push(Installed { kind: field("module.kind")?, edition: field("module.edition")?, layer: field("module.layer")?,
                                      from: field("module.from")?, to: field("module.to")?, name, module: Rc::new(module) });
         }
-        Ok(Library { modules })
+        Ok(Library { modules, cache })
     }
 
     pub fn bytes_read(&self) -> u64 { self.modules.iter().map(|installed| installed.module.bytes_read()).sum() }
@@ -91,7 +98,7 @@ impl Column {
     pub fn open(module: &Module, prefix: &str) -> Result<Column> {
         Ok(Column { dictionary: module.strings(&format!("{prefix}.dict"))?, ids: module.packed(&format!("{prefix}.ids"))? })
     }
-    pub fn get(&self, slot: u32) -> &str { self.dictionary.get(self.ids.get(slot as usize) as usize) }
+    pub fn get(&self, slot: u32) -> String { self.dictionary.get(self.ids.get(slot as usize) as usize) }
 }
 
 /// One type of node: ranges of slots, in order of where they start
@@ -145,20 +152,20 @@ impl Text {
                 if !rendered.is_empty() && !rendered.ends_with(' ') { rendered.push(' '); }
                 paragraph += 1;
             }
-            rendered.push_str(self.before.get(slot));
-            rendered.push_str(self.text.get(slot));
-            rendered.push_str(self.after.get(slot));
+            rendered.push_str(&self.before.get(slot));
+            rendered.push_str(&self.text.get(slot));
+            rendered.push_str(&self.after.get(slot));
         }
         rendered
     }
 
-    pub fn document(&self, slot: u32) -> &str { self.document_names.get(self.document_starts.upper_bound(slot) - 1) }
+    pub fn document(&self, slot: u32) -> String { self.document_names.get(self.document_starts.upper_bound(slot) - 1) }
 
     /// e.g., `JHN 3:16` (or just `JHN` for text that's not in a verse)
     pub fn reference(&self, slot: u32) -> String {
         match self.verses.containing(slot) {
             Some(verse) => format!("{} {}", self.document(slot), self.verses.names.get(verse as u32)),
-            None => self.document(slot).to_string(),
+            None => self.document(slot),
         }
     }
 }

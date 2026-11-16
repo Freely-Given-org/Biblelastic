@@ -4,15 +4,17 @@
 // synchronous file access (to the Origin Private File System, OPFS) inside workers.
 // Each installed module is kept open, and the engine asks for byte ranges of it as it needs them.
 //
-// There are two ways to read, chosen when starting:
-//   'blob'    FileReaderSync on slices of the file. Works in every browser, and in several tabs at once.
-//   'handle'  A FileSystemSyncAccessHandle. Locks the file, so only one tab can have the modules open.
+// There are three ways to read, chosen when starting:
+//   'auto'    (The default.) Shared read-only access handles where the browser has them, or else 'blob'.
+//   'blob'    FileReaderSync on slices of the file. Works in every browser, and in several tabs at once, but each read is slow.
+//   'handle'  An exclusive FileSystemSyncAccessHandle. Locks the file, so only one tab can have the modules open.
 
 const FOLDER = 'modules';
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 let engine = null;   // The WebAssembly module's exports
 let files = [];      // { name, file } or { name, handle }; the index is the engine's file number
-let reader = 'blob';
+let reader = 'auto';
+let reading = 'blob'; // What 'auto' turned out to be
 const fileReader = new FileReaderSync();
 
 const imports = { biblelastic: {
@@ -46,8 +48,17 @@ async function openModules() {
     for await (const [name, handle] of (await folder()).entries())
         if (handle.kind === 'file' && name.endsWith('.blm')) found.push([name.slice(0, -4), handle]);
     found.sort((a, b) => a[0] < b[0] ? -1 : 1);
+    reading = reader;
+    if (reader === 'auto') { // A browser that doesn't know about read-only handles gives an exclusive one, so a second one can't be opened
+        reading = 'blob';
+        if (found.length) try {
+            const first = await found[0][1].createSyncAccessHandle({ mode: 'read-only' });
+            try { (await found[0][1].createSyncAccessHandle({ mode: 'read-only' })).close(); reading = 'shared'; } catch { /* Exclusive */ } finally { first.close(); }
+        } catch { /* Open elsewhere, or no access handles at all */ }
+    }
     for (const [name, fileHandle] of found) {
-        files.push(reader === 'handle' ? { name, handle: await fileHandle.createSyncAccessHandle() } : { name, file: await fileHandle.getFile() });
+        files.push(reading === 'blob' ? { name, file: await fileHandle.getFile() }
+                                      : { name, handle: await fileHandle.createSyncAccessHandle(reading === 'shared' ? { mode: 'read-only' } : undefined) });
         withText(name, (pointer, length) => engine.add_module(pointer, length, files.length - 1));
     }
 }
@@ -55,11 +66,12 @@ async function openModules() {
 const list = () => files.map(file => ({ name: file.name, bytes: file.handle ? file.handle.getSize() : file.file.size }));
 
 const actions = {
-    async start({ wasm, reader: wanted }) {
+    async start({ wasm, reader: wanted, cacheBytes }) {
         reader = wanted ?? reader;
         const response = await fetch(wasm);
         if (!response.ok) throw new Error(`${wasm}: ${response.status}`);
         engine = (await WebAssembly.instantiate(await response.arrayBuffer(), imports)).instance.exports;
+        if (cacheBytes) engine.set_cache_bytes(cacheBytes); // How much of the modules the engine may keep in memory
         await openModules();
         return list();
     },
@@ -108,7 +120,7 @@ const actions = {
             return decoder.decode(new Uint8Array(engine.memory.buffer, result + 4, size));
         });
         const milliseconds = performance.now() - started;
-        return { ...JSON.parse(json), milliseconds, memoryBytes: engine.memory.buffer.byteLength };
+        return { ...JSON.parse(json), milliseconds, memoryBytes: engine.memory.buffer.byteLength, reading };
     },
 };
 

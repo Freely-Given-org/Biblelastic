@@ -4,15 +4,18 @@
 //! The host provides one function, `storage_read`, and calls:
 //! - `allocate` / `release`, to pass text in
 //! - `add_module`, once for each installed module file (and `clear_modules` before starting again)
+//! - `set_cache_bytes`, to limit how much of the modules is kept in memory
 //! - `request`, with a request for `biblelastic_engine::api`. It returns a pointer to a 4-byte length
-//!   and then that many bytes of JSON: `{"bytesRead": …, "response": {…}}`. That's valid until the next call.
+//!   and then that many bytes of JSON: `{"bytesRead": …, "cachedBytes": …, "response": {…}}`. That's valid until the next call.
 
 #![cfg(target_arch = "wasm32")]
 
 use std::cell::RefCell;
 
 use biblelastic_engine::api;
-use biblelastic_engine::format::{Module, Result, Storage};
+use std::rc::Rc;
+
+use biblelastic_engine::format::{Module, PageCache, Result, Storage, DEFAULT_CACHE_BYTES};
 use biblelastic_engine::library::{Library, ModuleSource};
 
 #[link(wasm_import_module = "biblelastic")]
@@ -37,9 +40,9 @@ struct Files(Vec<(String, u32)>);
 
 impl ModuleSource for Files {
     fn names(&self) -> Result<Vec<String>> { Ok(self.0.iter().map(|(name, _)| name.clone()).collect()) }
-    fn open(&self, name: &str) -> Result<Module> {
+    fn open(&self, name: &str, cache: &Rc<PageCache>) -> Result<Module> {
         let file = self.0.iter().find(|(known, _)| known == name).ok_or_else(|| format!("no module '{name}'"))?.1;
-        Module::open(Box::new(File(file)))
+        Module::open_with(Box::new(File(file)), cache)
     }
 }
 
@@ -49,6 +52,8 @@ struct State {
     /// Opened at the first request, then kept so that what's been read stays cached
     library: Option<Library>,
     response: Vec<u8>,
+    /// How much of the modules may be kept in memory (0: the default)
+    cache_bytes: usize,
 }
 
 thread_local! { static STATE: RefCell<State> = RefCell::default(); }
@@ -78,6 +83,10 @@ pub unsafe extern "C" fn add_module(pointer: *const u8, length: u32, file: u32) 
     STATE.with_borrow_mut(|state| { state.files.push((name, file)); state.library = None; });
 }
 
+/// Takes effect the next time the modules are opened
+#[no_mangle]
+pub extern "C" fn set_cache_bytes(bytes: u32) { STATE.with_borrow_mut(|state| { state.cache_bytes = bytes as usize; state.library = None; }); }
+
 #[no_mangle]
 pub extern "C" fn clear_modules() { STATE.with_borrow_mut(|state| { state.files.clear(); state.library = None; }); }
 
@@ -91,13 +100,13 @@ pub unsafe extern "C" fn request(pointer: *const u8, length: u32) -> *const u8 {
         let mut before = 0;
         let json = match &state.library {
             Some(library) => { before = library.bytes_read(); Ok(()) }
-            None => Library::open(&Files(state.files.clone())).map(|library| state.library = Some(library)),
+            None => Library::open_with(&Files(state.files.clone()), if state.cache_bytes > 0 { state.cache_bytes } else { DEFAULT_CACHE_BYTES }).map(|library| state.library = Some(library)),
         };
         let json = match (json, &state.library) {
             (Ok(()), Some(library)) if request.trim() == "command=forget" => format!("{{\"bytesRead\":{},\"response\":{{\"ok\":true}}}}", library.bytes_read()),
             (Ok(()), Some(library)) => {
                 let response = api::respond(library, request);
-                format!("{{\"bytesRead\":{},\"response\":{response}}}", library.bytes_read() - before)
+                format!("{{\"bytesRead\":{},\"cachedBytes\":{},\"response\":{response}}}", library.bytes_read() - before, library.cache.bytes())
             }
             (Err(error), _) => format!("{{\"bytesRead\":0,\"response\":{{\"ok\":false,\"error\":{}}}}}", api::quote(&error.to_string())),
             (Ok(()), None) => unreachable!(),

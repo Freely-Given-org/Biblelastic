@@ -9,6 +9,6 @@ repository.workspace = true
 [lib]
 crate-type = ["cdylib"]
 
-# No wasm-bindgen: the interface is five plain functions (see web/engine-worker.js), so no extra tools are needed to build it.
+# No wasm-bindgen: the interface is six plain functions (see web/engine-worker.js), so no extra tools are needed to build it.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 biblelastic-engine = { path = "../biblelastic-engine" }

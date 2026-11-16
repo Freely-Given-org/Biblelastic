@@ -12,3 +12,4 @@ path = "src/main.rs"
 
 [dependencies]
 biblelastic-engine = { path = "../biblelastic-engine" }
+zstd = "0.14.4"

@@ -4,9 +4,26 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use biblelastic_engine::format::ModuleWriter;
+use biblelastic_engine::format::{ModuleWriter, DEFAULT_PAGE_BITS};
 
 type Result<T> = std::result::Result<T, String>;
+
+#[derive(Clone, Copy)]
+pub struct Options {
+    /// Pages are 2^this bytes
+    pub page_bits: u8,
+    /// Compress the sections that it helps (with zstd)
+    pub compress: bool,
+}
+
+impl Default for Options { fn default() -> Self { Options { page_bits: DEFAULT_PAGE_BITS, compress: true } } }
+
+impl Options {
+    fn writer(self) -> ModuleWriter {
+        // Each page is a frame of its own, so that any page can be read without the others
+        ModuleWriter::with(self.page_bits, self.compress.then(|| Box::new(|page: &[u8]| zstd::bulk::compress(page, 19).expect("zstd compression")) as _))
+    }
+}
 
 /// Which module each token column goes into, and whether it gets a search index.
 /// (Provisional: this should come from the source registry rather than being fixed here.)
@@ -121,7 +138,7 @@ const BOOK_ORDER: &[&str] = &[
     "TOB", "JDT", "ESG", "WIS", "SIR", "BAR", "LJE", "DAG", "PAZ", "SUS", "BEL", "MA1", "MA2", "MA3", "MA4", "ES1", "ES2", "MAN", "PS2", "PSS", "ODE", "LAO",
 ];
 
-fn compile_edition(folder: &Path, output: &Path) -> Result<Edition> {
+fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edition> {
     let id = file_name(folder);
     let manifest = fs::read(folder.join("manifest.json")).map_err(|error| format!("{id}: manifest.json: {error}"))?;
     let mut documents: Vec<String> = fs::read_dir(folder.join("documents")).map_err(|error| format!("{id}: {error}"))?.flatten()
@@ -166,7 +183,7 @@ fn compile_edition(folder: &Path, output: &Path) -> Result<Edition> {
     let slots = *starts.last().unwrap() as usize;
 
     let new_module = |layer: &str, kind: &str| {
-        let mut writer = ModuleWriter::new();
+        let mut writer = options.writer();
         writer.raw("module.kind", kind.as_bytes());
         writer.raw("module.edition", id.as_bytes());
         writer.raw("module.layer", layer.as_bytes());
@@ -209,7 +226,7 @@ fn compile_edition(folder: &Path, output: &Path) -> Result<Edition> {
     Ok(Edition { document_starts: documents.into_iter().zip(starts).collect(), id, written, slots })
 }
 
-fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path) -> Result<Option<Written>> {
+fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path, options: Options) -> Result<Option<Written>> {
     let name = file_name(folder);
     let (from_id, to_id) = name.split_once("--").ok_or_else(|| format!("alignment folder '{name}' isn't named FROM--TO"))?;
     let (Some(from), Some(to)) = (editions.iter().find(|edition| edition.id == from_id), editions.iter().find(|edition| edition.id == to_id)) else { return Ok(None) };
@@ -226,7 +243,7 @@ fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path) -> Resu
             links.push((number(&row[0])? + from_start, number(&row[1])? + to_start));
         }
     }
-    let mut writer = ModuleWriter::new();
+    let mut writer = options.writer();
     writer.raw("module.kind", b"alignment");
     writer.raw("module.from", from_id.as_bytes());
     writer.raw("module.to", to_id.as_bytes());
@@ -242,17 +259,17 @@ fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path) -> Resu
 }
 
 /// Compile everything in the intermediate folder. Editions are compiled in parallel.
-pub fn compile(intermediate: &Path, output: &Path) -> Result<Vec<Written>> {
+pub fn compile(intermediate: &Path, output: &Path, options: Options) -> Result<Vec<Written>> {
     fs::create_dir_all(output).map_err(|error| format!("{}: {error}", output.display()))?;
     let edition_folders: Vec<PathBuf> = subfolders(intermediate).into_iter().filter(|folder| folder.join("documents").is_dir()).collect();
     if edition_folders.is_empty() { return Err(format!("no editions found in {} (run the ingest first)", intermediate.display())); }
     let editions: Vec<Edition> = std::thread::scope(|scope| {
-        let handles: Vec<_> = edition_folders.iter().map(|folder| scope.spawn(move || compile_edition(folder, output))).collect();
+        let handles: Vec<_> = edition_folders.iter().map(|folder| scope.spawn(move || compile_edition(folder, output, options))).collect();
         handles.into_iter().map(|handle| handle.join().map_err(|_| "a compile thread failed".to_string())?).collect::<Result<Vec<_>>>()
     })?;
     let alignments: Vec<Written> = std::thread::scope(|scope| {
         let editions = &editions;
-        let handles: Vec<_> = subfolders(&intermediate.join("alignments")).into_iter().map(|folder| scope.spawn(move || compile_alignment(&folder, editions, output))).collect();
+        let handles: Vec<_> = subfolders(&intermediate.join("alignments")).into_iter().map(|folder| scope.spawn(move || compile_alignment(&folder, editions, output, options))).collect();
         handles.into_iter().map(|handle| handle.join().map_err(|_| "a compile thread failed".to_string())?).collect::<Result<Vec<_>>>()
     })?.into_iter().flatten().collect();
     let written: Vec<Written> = editions.into_iter().flat_map(|edition| edition.written).chain(alignments).collect();
@@ -295,7 +312,7 @@ mod tests {
         write(&intermediate, "GR/layers/OET/JN1.features.tsv", "gloss\ttags\nGod\tPGod;Y30\nloves\tY30\nlove\t\n\t\n");
         write(&intermediate, "alignments/EN--GR/JN1.links.tsv", "from\tto\n0\t0\n1\t1\n3\t2\n4\t2\n8\t3\n");
 
-        let written = super::compile(&intermediate, &folder.join("modules")).unwrap();
+        let written = super::compile(&intermediate, &folder.join("modules"), super::Options { page_bits: 5, compress: true }).unwrap(); // Tiny pages, so that plenty of things cross them
         assert_eq!(written.iter().map(|module| module.name.as_str()).collect::<Vec<_>>(), ["EN.text", "GR.text", "GR.morph", "GR.OET", "EN--GR.align"]);
         let library = Library::open(&Folder(folder.join("modules"))).unwrap();
 

@@ -8,8 +8,9 @@ export class Biblelastic {
     #worker; #pending = new Map(); #nextId = 1;
 
     /** Start the engine, opening whichever modules are already installed in this browser.
-     *  reader: 'blob' (the default) or 'handle': see engine-worker.js. */
-    static async start({ worker = new URL('engine-worker.js', import.meta.url), wasm = new URL('biblelastic.wasm', import.meta.url), reader } = {}) {
+     *  reader: 'auto' (the default), 'blob' or 'handle': see engine-worker.js.
+     *  cacheBytes: how much of the modules the engine may keep in memory (the default is 16 MB). */
+    static async start({ worker = new URL('engine-worker.js', import.meta.url), wasm = new URL('biblelastic.wasm', import.meta.url), reader, cacheBytes } = {}) {
         const engine = new Biblelastic();
         engine.#worker = new Worker(worker);
         engine.#worker.onmessage = ({ data: { id, result, error, progress } }) => {
@@ -19,7 +20,7 @@ export class Biblelastic {
             if (error === undefined) pending.resolve(result); else pending.reject(new Error(error));
         };
         engine.#worker.onerror = event => { for (const pending of engine.#pending.values()) pending.reject(new Error(event.message)); engine.#pending.clear(); };
-        await engine.#call('start', { wasm: String(wasm), reader });
+        await engine.#call('start', { wasm: String(wasm), reader, cacheBytes });
         return engine;
     }
 
@@ -41,7 +42,7 @@ export class Biblelastic {
     remove(names) { return this.#call('remove', { names }); }
 
     /** Ask the engine something, e.g. { command: 'terms', words: 'love loves' }.
-     *  Resolves to { response, bytesRead, milliseconds, memoryBytes }. */
+     *  Resolves to { response, bytesRead, cachedBytes, milliseconds, memoryBytes }. */
     request(fields) { return this.#call('request', { text: Object.entries(fields).map(([key, value]) => `${key}=${value}`).join('\n') }); }
 
     /** Stop the engine, and let go of the module files. */

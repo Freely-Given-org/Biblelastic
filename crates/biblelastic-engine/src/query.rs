@@ -68,10 +68,11 @@ pub fn original_terms(library: &Library, edition: &str, words: &[String], exampl
         for (&target, &slot) in &targets { groups.entry(lemmas.ids.get(target as usize)).or_default().push((target, slot)); }
         for (lemma_id, occurrences) in groups {
             let first_target = occurrences[0].0;
-            let mut gloss_counts: HashMap<&str, usize> = HashMap::new();
+            let mut gloss_counts: HashMap<String, usize> = HashMap::new();
             if let Some(glosses) = &glosses {
                 for &(target, _) in &occurrences {
-                    let gloss = match (glosses.get(target), &context_glosses) { ("", Some(column)) => column.get(target), (gloss, _) => gloss };
+                    let mut gloss = glosses.get(target);
+                    if let (true, Some(column)) = (gloss.is_empty(), &context_glosses) { gloss = column.get(target); }
                     if !gloss.is_empty() { *gloss_counts.entry(gloss).or_default() += 1; }
                 }
             }
@@ -82,8 +83,8 @@ pub fn original_terms(library: &Library, edition: &str, words: &[String], exampl
                 edition: alignment.to.clone(),
                 lemma: lemmas.dictionary.get(lemma_id as usize).to_string(),
                 transliteration: transliterations.as_ref().map_or(String::new(), |column| column.get(first_target).to_string()),
-                strong: strongs.as_ref().map_or(String::new(), |column| base_strong(column.get(first_target))),
-                gloss: gloss_counts.into_iter().max_by_key(|&(gloss, count)| (count, std::cmp::Reverse(gloss))).map_or(String::new(), |(gloss, _)| gloss.to_string()),
+                strong: strongs.as_ref().map_or(String::new(), |column| base_strong(&column.get(first_target))),
+                gloss: gloss_counts.into_iter().max_by(|a, b| a.1.cmp(&b.1).then_with(|| b.0.cmp(&a.0))).map_or(String::new(), |(gloss, _)| gloss),
                 count: occurrences.len(),
                 verses: verse_slots.len(),
                 examples: verse_slots.iter().take(example_count).map(|&slot| example(&text, &text.verses, slot)).collect(),
@@ -132,12 +133,14 @@ pub fn find_spans(library: &Library, edition: &str, marker: &str, attribute: &st
     let wanted = format!("\"{attribute}\": \"{value}\""); // As the ingest writes its JSON
     let matching: BTreeSet<u32> = (0..attributes.len()).filter(|&id| attributes.get(id).contains(&wanted)).map(|id| id as u32).collect();
     let (mut total, mut forms, mut examples) = (0, BTreeMap::new(), Vec::new());
+    let Some(marker_id) = spans.names.dictionary.find(marker) else { return Ok(Found { total, forms, examples }) };
     for span in 0..spans.starts.len() {
-        if !matching.contains(&attribute_ids.get(span)) || spans.names.get(span as u32) != marker { continue; }
+        if !matching.contains(&attribute_ids.get(span)) || spans.names.ids.get(span) as usize != marker_id { continue; }
         total += 1;
         let range = spans.range(span);
         // Just the words, without the punctuation before the first one or after the last one
         let (opening, closing) = (text.before.get(range.start), text.after.get(range.end - 1));
+        let (opening, closing) = (opening.as_str(), closing.as_str());
         let whole = text.render_exact(range.clone());
         let words = &whole[opening.len()..whole.len() - closing.len()];
         *forms.entry(words.to_lowercase()).or_default() += 1;
