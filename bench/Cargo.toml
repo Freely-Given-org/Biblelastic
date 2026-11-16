@@ -1,0 +1,18 @@
+[package]
+name = "biblelastic-bench"
+description = "Measurements that compare Biblelastic's own index structures with the alternatives (not part of the engine)"
+version = "0.0.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+publish = false
+
+# A workspace of its own, so that these heavy dependencies never reach the engine's lock file or builds
+[workspace]
+
+[dependencies]
+biblelastic-engine = { path = "../crates/biblelastic-engine" }
+bitpacking = "0.9.3"
+fst = { version = "0.4.7", features = ["levenshtein"] }
+levenshtein_automata = "0.2.1"
+tantivy = "0.27.0"
+zstd = "0.14.4"
