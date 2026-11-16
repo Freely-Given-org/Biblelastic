@@ -30,7 +30,7 @@ The engine refuses any module whose format version it doesn't know.
 
 ## Slots
 
-Every word of an edition has a *slot* number: the documents are put in order (currently alphabetical by book code),
+Every word of an edition has a *slot* number: the documents are put in order (front matter, New Testament, Old Testament, then the deuterocanonical and other books),
 and the words are numbered consecutively from zero right through them.
 A slot is also a position, so an index of slots is automatically a positional index.
 All the modules of one edition use the same slot numbers.

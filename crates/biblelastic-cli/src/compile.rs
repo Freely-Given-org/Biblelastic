@@ -110,12 +110,23 @@ fn save(output: &Path, name: &str, writer: ModuleWriter) -> Result<Written> {
     Ok(Written { name: name.to_string(), bytes: bytes.len() as u64, sections })
 }
 
+/// The order that documents (and so search results) come in: front matter, New Testament, Old Testament,
+/// then the deuterocanonical and other books. Anything not listed comes last, in alphabetical order.
+const BOOK_ORDER: &[&str] = &[
+    "FRT", "INT",
+    "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "CO1", "CO2", "GAL", "EPH", "PHP", "COL", "TH1", "TH2", "TI1", "TI2", "TIT", "PHM", "HEB", "JAM", "PE1", "PE2",
+    "JN1", "JN2", "JN3", "JDE", "REV",
+    "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "SA1", "SA2", "KI1", "KI2", "CH1", "CH2", "EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG",
+    "ISA", "JER", "LAM", "EZE", "DAN", "HOS", "JOL", "AMO", "OBA", "JNA", "MIC", "NAH", "HAB", "ZEP", "HAG", "ZEC", "MAL",
+    "TOB", "JDT", "ESG", "WIS", "SIR", "BAR", "LJE", "DAG", "PAZ", "SUS", "BEL", "MA1", "MA2", "MA3", "MA4", "ES1", "ES2", "MAN", "PS2", "PSS", "ODE", "LAO",
+];
+
 fn compile_edition(folder: &Path, output: &Path) -> Result<Edition> {
     let id = file_name(folder);
     let manifest = fs::read(folder.join("manifest.json")).map_err(|error| format!("{id}: manifest.json: {error}"))?;
     let mut documents: Vec<String> = fs::read_dir(folder.join("documents")).map_err(|error| format!("{id}: {error}"))?.flatten()
         .filter_map(|entry| file_name(&entry.path()).strip_suffix(".tokens.tsv").map(str::to_string)).collect();
-    documents.sort();
+    documents.sort_by_key(|document| (BOOK_ORDER.iter().position(|book| book == document).unwrap_or(usize::MAX), document.clone()));
     let layer_folders = subfolders(&folder.join("layers"));
 
     let mut token_header: Vec<String> = Vec::new();
@@ -270,8 +281,8 @@ mod tests {
         let intermediate = folder.join("intermediate");
         // A two-document translation, so that slot numbers aren't the same as the per-document word indexes
         write(&intermediate, "EN/manifest.json", "{}");
-        write(&intermediate, "EN/documents/AAA.tokens.tsv", "before\ttext\tafter\tnorm\trow\n\tTitle\t\ttitle\t\n");
-        write(&intermediate, "EN/documents/AAA.nodes.tsv", "type\tstart\tend\tname\tattributes\npara\t0\t1\tmt1\t\n");
+        write(&intermediate, "EN/documents/FRT.tokens.tsv", "before\ttext\tafter\tnorm\trow\n\tTitle\t\ttitle\t\n");
+        write(&intermediate, "EN/documents/FRT.nodes.tsv", "type\tstart\tend\tname\tattributes\npara\t0\t1\tmt1\t\n");
         write(&intermediate, "EN/documents/JN1.tokens.tsv", "before\ttext\tafter\tnorm\trow\n\
             “\tGod\t \tgod\t2\n\tloves\t \tloves\t3\n\tus\t.” \tus\t\n\tLove\t \tlove\t5\n\tis\t \tis\t5\n\tgood\t,\tgood\t\n\tgrace\t \tgrace\t\n\tand\t \tand\t\n\tlovely\t \tlovely\t9\n\ttruth\t.\ttruth\t\n");
         write(&intermediate, "EN/documents/JN1.nodes.tsv", "type\tstart\tend\tname\tattributes\n\
@@ -291,7 +302,7 @@ mod tests {
         // Text is resynthesised, with a space where the second paragraph starts
         let text = Text::open(&library.text_module("EN").unwrap()).unwrap();
         assert_eq!(text.render(4..11), "Love is good, grace and lovely truth.");
-        assert_eq!((text.reference(2), text.reference(4), text.reference(0)), ("JN1 4:8".to_string(), "JN1 4:10".to_string(), "AAA".to_string()));
+        assert_eq!((text.reference(2), text.reference(4), text.reference(0)), ("JN1 4:8".to_string(), "JN1 4:10".to_string(), "FRT".to_string()));
 
         // "love*" matches loves, love and lovely; "is" shares its Greek word with "love"
         let result = query::original_terms(&library, "EN", &["LOVE*".to_string()], 1).unwrap();
