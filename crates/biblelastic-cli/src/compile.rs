@@ -1,0 +1,316 @@
+//! Compiles the intermediate format (docs/IntermediateFormat.md) into modules (docs/ModuleFormat.md).
+
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use biblelastic_engine::format::ModuleWriter;
+
+type Result<T> = std::result::Result<T, String>;
+
+/// Which module each token column goes into, and whether it gets a search index.
+/// (Provisional: this should come from the source registry rather than being fixed here.)
+#[derive(Clone, Copy, PartialEq)]
+enum Index { None, Whole, Split(char) }
+
+fn token_column_plan(column: &str) -> Option<(&'static str, Index)> {
+    match column {
+        "before" | "text" | "after" => Some(("text", Index::None)),
+        "norm" => Some(("text", Index::Whole)),
+        "row" | "oet_row" => None, // Only needed for building the alignments
+        "lemma" | "strong" | "morph" | "cons" | "translit" | "lemma_translit" => Some(("morph", Index::Whole)),
+        _ => Some(("morph", Index::None)),
+    }
+}
+
+fn layer_column_plan(column: &str) -> Index { if column == "tags" { Index::Split(';') } else { Index::None } }
+
+/// A feature column while it's being read: each distinct value is given a number as it's first seen
+#[derive(Default)]
+struct Interned {
+    numbers: HashMap<String, u32>,
+    ids: Vec<u32>,
+}
+
+impl Interned {
+    fn push(&mut self, value: &str) {
+        let next = self.numbers.len() as u32;
+        let id = match self.numbers.get(value) { Some(&id) => id, None => { self.numbers.insert(value.to_string(), next); next } };
+        self.ids.push(id);
+    }
+
+    /// Writes `<prefix>.dict` (sorted) and `<prefix>.ids`, and any index that was asked for
+    fn write(self, writer: &mut ModuleWriter, prefix: &str, index: Index) {
+        let mut dictionary: Vec<(String, u32)> = self.numbers.into_iter().collect();
+        dictionary.sort();
+        let mut new_ids = vec![0u32; dictionary.len()];
+        for (new_id, (_, old_id)) in dictionary.iter().enumerate() { new_ids[*old_id as usize] = new_id as u32; }
+        let ids: Vec<u32> = self.ids.iter().map(|&old_id| new_ids[old_id as usize]).collect();
+        let strings: Vec<&str> = dictionary.iter().map(|(string, _)| string.as_str()).collect();
+        writer.strings(&format!("{prefix}.dict"), &strings);
+        writer.packed(&format!("{prefix}.ids"), &ids);
+        match index {
+            Index::None => {}
+            Index::Whole => {
+                let mut lists = vec![Vec::new(); strings.len()];
+                for (slot, &id) in ids.iter().enumerate() { lists[id as usize].push(slot as u32); }
+                writer.postings(&format!("{prefix}.post"), &lists);
+            }
+            Index::Split(separator) => { // An index of the separate values, e.g., of each tag
+                let mut lists: BTreeMap<&str, Vec<u32>> = BTreeMap::new();
+                for (slot, &id) in ids.iter().enumerate() {
+                    let parts: BTreeSet<&str> = strings[id as usize].split(separator).filter(|part| !part.is_empty()).collect();
+                    for part in parts { lists.entry(part).or_default().push(slot as u32); }
+                }
+                let index_prefix = prefix.replacen("col.", "idx.", 1);
+                writer.strings(&format!("{index_prefix}.dict"), &lists.keys().collect::<Vec<_>>());
+                writer.postings(&format!("{index_prefix}.post"), &lists.into_values().collect::<Vec<_>>());
+            }
+        }
+    }
+}
+
+fn read_tsv(path: &Path) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+    let content = fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mut lines = content.strip_suffix('\n').unwrap_or(&content).split('\n'); // A row can be an empty line (one empty field)
+    let header: Vec<String> = lines.next().ok_or_else(|| format!("{} is empty", path.display()))?.split('\t').map(str::to_string).collect();
+    let rows: Vec<Vec<String>> = lines.map(|line| line.split('\t').map(str::to_string).collect()).collect();
+    if let Some(row) = rows.iter().position(|row| row.len() != header.len()) {
+        return Err(format!("{} row {} has {} fields, not {}", path.display(), row + 1, rows[row].len(), header.len()));
+    }
+    Ok((header, rows))
+}
+
+fn subfolders(folder: &Path) -> Vec<PathBuf> {
+    let mut found: Vec<PathBuf> = fs::read_dir(folder).into_iter().flatten().flatten().map(|entry| entry.path()).filter(|path| path.is_dir()).collect();
+    found.sort();
+    found
+}
+
+fn file_name(path: &Path) -> String { path.file_name().unwrap_or_default().to_string_lossy().into_owned() }
+
+pub struct Written {
+    pub name: String,
+    pub bytes: u64,
+    pub sections: usize,
+}
+
+struct Edition {
+    id: String,
+    document_starts: HashMap<String, u32>,
+    written: Vec<Written>,
+    slots: usize,
+}
+
+fn save(output: &Path, name: &str, writer: ModuleWriter) -> Result<Written> {
+    let bytes = writer.finish();
+    let sections = biblelastic_engine::format::Module::open(Box::new(bytes.clone())).map_err(|error| error.to_string())?.entries().len();
+    let path = output.join(format!("{name}.blm"));
+    fs::write(&path, &bytes).map_err(|error| format!("{}: {error}", path.display()))?;
+    Ok(Written { name: name.to_string(), bytes: bytes.len() as u64, sections })
+}
+
+fn compile_edition(folder: &Path, output: &Path) -> Result<Edition> {
+    let id = file_name(folder);
+    let manifest = fs::read(folder.join("manifest.json")).map_err(|error| format!("{id}: manifest.json: {error}"))?;
+    let mut documents: Vec<String> = fs::read_dir(folder.join("documents")).map_err(|error| format!("{id}: {error}"))?.flatten()
+        .filter_map(|entry| file_name(&entry.path()).strip_suffix(".tokens.tsv").map(str::to_string)).collect();
+    documents.sort();
+    let layer_folders = subfolders(&folder.join("layers"));
+
+    let mut token_header: Vec<String> = Vec::new();
+    let mut token_columns: Vec<Interned> = Vec::new();
+    let mut layer_headers: Vec<Vec<String>> = vec![Vec::new(); layer_folders.len()];
+    let mut layer_columns: Vec<Vec<Interned>> = layer_folders.iter().map(|_| Vec::new()).collect();
+    let mut nodes: BTreeMap<String, (Vec<u32>, Vec<u32>, Interned, Interned)> = BTreeMap::new();
+    let mut starts = vec![0u32];
+    for document in &documents {
+        let start = *starts.last().unwrap();
+        let (header, rows) = read_tsv(&folder.join("documents").join(format!("{document}.tokens.tsv")))?;
+        if token_header.is_empty() { token_columns = header.iter().map(|_| Interned::default()).collect(); token_header = header; }
+        else if header != token_header { return Err(format!("{id} {document}: token columns differ from the other documents")); }
+        for row in &rows { for (column, value) in token_columns.iter_mut().zip(row) { column.push(value); } }
+
+        for (n, layer_folder) in layer_folders.iter().enumerate() {
+            let path = layer_folder.join(format!("{document}.features.tsv"));
+            if !path.exists() { continue; } // e.g., a layer that only has variants
+            let (header, layer_rows) = read_tsv(&path)?;
+            if layer_rows.len() != rows.len() { return Err(format!("{}: {} rows for {} tokens", path.display(), layer_rows.len(), rows.len())); }
+            if layer_headers[n].is_empty() { layer_columns[n] = header.iter().map(|_| Interned::default()).collect(); layer_headers[n] = header; }
+            if layer_columns[n][0].ids.len() != start as usize { return Err(format!("{}: earlier documents are missing from this layer", path.display())); }
+            for row in &layer_rows { for (column, value) in layer_columns[n].iter_mut().zip(row) { column.push(value); } }
+        }
+
+        let (_, node_rows) = read_tsv(&folder.join("documents").join(format!("{document}.nodes.tsv")))?;
+        for row in &node_rows { // type, start, end, name, attributes
+            let number = |field: &String| field.parse::<u32>().map(|value| value + start).map_err(|_| format!("{id} {document}: bad node position '{field}'"));
+            let entry = nodes.entry(row[0].clone()).or_default();
+            entry.0.push(number(&row[1])?);
+            entry.1.push(number(&row[2])?);
+            entry.2.push(&row[3]);
+            entry.3.push(&row[4]);
+        }
+        starts.push(start + rows.len() as u32);
+    }
+    let slots = *starts.last().unwrap() as usize;
+
+    let new_module = |layer: &str, kind: &str| {
+        let mut writer = ModuleWriter::new();
+        writer.raw("module.kind", kind.as_bytes());
+        writer.raw("module.edition", id.as_bytes());
+        writer.raw("module.layer", layer.as_bytes());
+        writer.raw("manifest", &manifest);
+        writer.strings("documents.names", &documents);
+        writer.packed("documents.starts", &starts);
+        writer
+    };
+    let mut written = Vec::new();
+
+    let mut text = new_module("text", "text");
+    let mut morph = new_module("morph", "features");
+    let mut has_morph = false;
+    for (name, column) in token_header.iter().zip(token_columns) {
+        match token_column_plan(name) {
+            Some(("text", index)) => column.write(&mut text, &format!("col.{name}"), index),
+            Some((_, index)) => { column.write(&mut morph, &format!("col.{name}"), index); has_morph = true; }
+            None => {}
+        }
+    }
+    for (node_type, (node_starts, node_ends, names, attributes)) in nodes {
+        text.packed(&format!("node.{node_type}.starts"), &node_starts);
+        text.packed(&format!("node.{node_type}.ends"), &node_ends);
+        names.write(&mut text, &format!("node.{node_type}.name"), Index::None);
+        attributes.write(&mut text, &format!("node.{node_type}.attributes"), Index::None);
+    }
+    written.push(save(output, &format!("{id}.text"), text)?);
+    if has_morph { written.push(save(output, &format!("{id}.morph"), morph)?); }
+
+    for ((layer_folder, header), columns) in layer_folders.iter().zip(layer_headers).zip(layer_columns) {
+        if header.is_empty() { continue; }
+        let layer = file_name(layer_folder);
+        let mut writer = new_module(&layer, "features");
+        for (name, column) in header.iter().zip(columns) {
+            if column.ids.len() != slots { return Err(format!("{id} layer {layer}: {} rows for {slots} tokens", column.ids.len())); }
+            column.write(&mut writer, &format!("col.{name}"), layer_column_plan(name));
+        }
+        written.push(save(output, &format!("{id}.{layer}"), writer)?);
+    }
+    Ok(Edition { document_starts: documents.into_iter().zip(starts).collect(), id, written, slots })
+}
+
+fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path) -> Result<Option<Written>> {
+    let name = file_name(folder);
+    let (from_id, to_id) = name.split_once("--").ok_or_else(|| format!("alignment folder '{name}' isn't named FROM--TO"))?;
+    let (Some(from), Some(to)) = (editions.iter().find(|edition| edition.id == from_id), editions.iter().find(|edition| edition.id == to_id)) else { return Ok(None) };
+    let mut links: Vec<(u32, u32)> = Vec::new();
+    let mut files: Vec<PathBuf> = fs::read_dir(folder).map_err(|error| error.to_string())?.flatten().map(|entry| entry.path()).collect();
+    files.sort();
+    for path in files {
+        let Some(document) = file_name(&path).strip_suffix(".links.tsv").map(str::to_string) else { continue };
+        let (Some(&from_start), Some(&to_start)) = (from.document_starts.get(&document), to.document_starts.get(&document)) else {
+            return Err(format!("{name}: {document} isn't in both editions"));
+        };
+        for row in read_tsv(&path)?.1 {
+            let number = |field: &String| field.parse::<u32>().map_err(|_| format!("{name} {document}: bad link '{field}'"));
+            links.push((number(&row[0])? + from_start, number(&row[1])? + to_start));
+        }
+    }
+    let mut writer = ModuleWriter::new();
+    writer.raw("module.kind", b"alignment");
+    writer.raw("module.from", from_id.as_bytes());
+    writer.raw("module.to", to_id.as_bytes());
+    writer.packed("module.slots", &[from.slots as u32, to.slots as u32]);
+    links.sort_unstable();
+    links.dedup();
+    writer.packed("links.from", &links.iter().map(|link| link.0).collect::<Vec<_>>());
+    writer.packed("links.to", &links.iter().map(|link| link.1).collect::<Vec<_>>());
+    links.sort_unstable_by_key(|link| (link.1, link.0)); // And the same links for looking up in the other direction
+    writer.packed("rlinks.to", &links.iter().map(|link| link.1).collect::<Vec<_>>());
+    writer.packed("rlinks.from", &links.iter().map(|link| link.0).collect::<Vec<_>>());
+    save(output, &format!("{name}.align"), writer).map(Some)
+}
+
+/// Compile everything in the intermediate folder. Editions are compiled in parallel.
+pub fn compile(intermediate: &Path, output: &Path) -> Result<Vec<Written>> {
+    fs::create_dir_all(output).map_err(|error| format!("{}: {error}", output.display()))?;
+    let edition_folders: Vec<PathBuf> = subfolders(intermediate).into_iter().filter(|folder| folder.join("documents").is_dir()).collect();
+    if edition_folders.is_empty() { return Err(format!("no editions found in {} (run the ingest first)", intermediate.display())); }
+    let editions: Vec<Edition> = std::thread::scope(|scope| {
+        let handles: Vec<_> = edition_folders.iter().map(|folder| scope.spawn(move || compile_edition(folder, output))).collect();
+        handles.into_iter().map(|handle| handle.join().map_err(|_| "a compile thread failed".to_string())?).collect::<Result<Vec<_>>>()
+    })?;
+    let alignments: Vec<Written> = std::thread::scope(|scope| {
+        let editions = &editions;
+        let handles: Vec<_> = subfolders(&intermediate.join("alignments")).into_iter().map(|folder| scope.spawn(move || compile_alignment(&folder, editions, output))).collect();
+        handles.into_iter().map(|handle| handle.join().map_err(|_| "a compile thread failed".to_string())?).collect::<Result<Vec<_>>>()
+    })?.into_iter().flatten().collect();
+    Ok(editions.into_iter().flat_map(|edition| edition.written).chain(alignments).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use biblelastic_engine::library::{find_terms, Folder, Library, Text};
+    use biblelastic_engine::query;
+
+    fn write(folder: &std::path::Path, name: &str, content: &str) {
+        let path = folder.join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    }
+
+    #[test]
+    fn compile_then_query() {
+        let folder = std::env::temp_dir().join(format!("biblelastic-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        let intermediate = folder.join("intermediate");
+        // A two-document translation, so that slot numbers aren't the same as the per-document word indexes
+        write(&intermediate, "EN/manifest.json", "{}");
+        write(&intermediate, "EN/documents/AAA.tokens.tsv", "before\ttext\tafter\tnorm\trow\n\tTitle\t\ttitle\t\n");
+        write(&intermediate, "EN/documents/AAA.nodes.tsv", "type\tstart\tend\tname\tattributes\npara\t0\t1\tmt1\t\n");
+        write(&intermediate, "EN/documents/JN1.tokens.tsv", "before\ttext\tafter\tnorm\trow\n\
+            “\tGod\t \tgod\t2\n\tloves\t \tloves\t3\n\tus\t.” \tus\t\n\tLove\t \tlove\t5\n\tis\t \tis\t5\n\tgood\t,\tgood\t\n\tgrace\t \tgrace\t\n\tand\t \tand\t\n\tlovely\t \tlovely\t9\n\ttruth\t.\ttruth\t\n");
+        write(&intermediate, "EN/documents/JN1.nodes.tsv", "type\tstart\tend\tname\tattributes\n\
+            para\t0\t6\tp\t{\"kind\": \"body\"}\nverse\t0\t3\t4:8\t\nsentence\t0\t3\t\t\nverse\t3\t3\t4:9\t\nverse\t3\t10\t4:10\t\nsentence\t3\t10\t\t\npara\t6\t10\tq1\t\n\
+            span\t0\t1\tadd\t{\"reason\": \"pronoun_to_name\", \"uncertain\": true}\nspan\t2\t3\tadd\t{\"reason\": \"object\"}\nspan\t0\t1\tnd\t\n");
+        write(&intermediate, "GR/manifest.json", "{}");
+        write(&intermediate, "GR/documents/JN1.tokens.tsv", "before\ttext\tafter\tnorm\tlemma\tstrong\tlemma_translit\toet_row\n\
+            \tθεὸς\t \tθεοσ\tθεός\tG2316\ttheos\t2\n\tἀγαπᾷ\t \tαγαπα\tἀγαπάω\tG0025\tagapaō\t3\n\tἀγάπη\t \tαγαπη\tἀγάπη\tG0026\tagapaʸ\t5\n\tκαλή\t.\tκαλη\tκαλός\tG2570\tkalos\t9\n");
+        write(&intermediate, "GR/documents/JN1.nodes.tsv", "type\tstart\tend\tname\tattributes\npara\t0\t4\tp\t\nverse\t0\t4\t4:8\t\n");
+        write(&intermediate, "GR/layers/OET/JN1.features.tsv", "gloss\ttags\nGod\tPGod;Y30\nloves\tY30\nlove\t\n\t\n");
+        write(&intermediate, "alignments/EN--GR/JN1.links.tsv", "from\tto\n0\t0\n1\t1\n3\t2\n4\t2\n8\t3\n");
+
+        let written = super::compile(&intermediate, &folder.join("modules")).unwrap();
+        assert_eq!(written.iter().map(|module| module.name.as_str()).collect::<Vec<_>>(), ["EN.text", "GR.text", "GR.morph", "GR.OET", "EN--GR.align"]);
+        let library = Library::open(&Folder(folder.join("modules"))).unwrap();
+
+        // Text is resynthesised, with a space where the second paragraph starts
+        let text = Text::open(&library.text_module("EN").unwrap()).unwrap();
+        assert_eq!(text.render(4..11), "Love is good, grace and lovely truth.");
+        assert_eq!((text.reference(2), text.reference(4), text.reference(0)), ("JN1 4:8".to_string(), "JN1 4:10".to_string(), "AAA".to_string()));
+
+        // "love*" matches loves, love and lovely; "is" shares its Greek word with "love"
+        let result = query::original_terms(&library, "EN", &["LOVE*".to_string()], 1).unwrap();
+        assert_eq!(result.forms.into_iter().collect::<Vec<_>>(), [("love".to_string(), 1), ("lovely".to_string(), 1), ("loves".to_string(), 1)]);
+        assert_eq!(result.linked, 3);
+        let terms: Vec<_> = result.terms.iter().map(|term| (term.lemma.as_str(), term.transliteration.as_str(), term.gloss.as_str(), term.count)).collect();
+        assert_eq!(terms, [("καλός", "kalos", "", 1), ("ἀγάπη", "agapaʸ", "love", 1), ("ἀγαπάω", "agapaō", "loves", 1)]);
+        assert_eq!(result.terms[2].examples[0].reference, "JN1 4:8");
+        assert_eq!(result.terms[2].examples[0].text, "“God loves us.”");
+
+        // Both words in one sentence, but not in one paragraph
+        let together = query::find_together(&library, "EN", &["grace".to_string(), "love".to_string()], "sentence", 5).unwrap();
+        assert_eq!((together.total, together.examples[0].reference.as_str()), (1, "JN1 4:10"));
+        assert_eq!(query::find_together(&library, "EN", &["grace".to_string(), "love".to_string()], "para", 5).unwrap().total, 0);
+
+        // Where the translators marked a change
+        let marked = query::find_spans(&library, "EN", "add", "reason", "pronoun_to_name", 5).unwrap();
+        assert_eq!((marked.total, marked.examples[0].reference.as_str(), marked.examples[0].text.as_str()), (1, "JN1 4:8", "“[God] loves us.”"));
+        assert_eq!(query::find_spans(&library, "EN", "add", "reason", "measure", 5).unwrap().total, 0);
+
+        // Each tag is indexed separately
+        let layer = library.column_module("GR", "tags").unwrap();
+        assert_eq!(find_terms(&layer, "idx.tags", &["Y30".to_string()]).unwrap().0, [0, 1]);
+        assert_eq!(find_terms(&layer, "idx.tags", &["P*".to_string()]).unwrap().0, [0]);
+        std::fs::remove_dir_all(&folder).unwrap();
+    }
+}

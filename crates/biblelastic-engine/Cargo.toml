@@ -1,0 +1,10 @@
+[package]
+name = "biblelastic-engine"
+description = "The Biblelastic search engine: reads compiled modules and answers queries"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Deliberately no dependencies: the engine must stay small and build for WebAssembly as well as natively.
+[dependencies]

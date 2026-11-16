@@ -1,0 +1,187 @@
+//! A set of installed modules, and typed views of what's inside them.
+
+use std::collections::BTreeMap;
+use std::ops::Range;
+use std::rc::Rc;
+
+use crate::format::{Module, Packed, Result, Strings};
+
+/// Where modules come from (a folder natively; browser storage later)
+pub trait ModuleSource {
+    fn names(&self) -> Result<Vec<String>>;
+    fn open(&self, name: &str) -> Result<Module>;
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub struct Folder(pub std::path::PathBuf);
+
+#[cfg(not(target_arch = "wasm32"))]
+impl ModuleSource for Folder {
+    fn names(&self) -> Result<Vec<String>> {
+        let mut names = Vec::new();
+        for entry in std::fs::read_dir(&self.0).map_err(|error| format!("{}: {error}", self.0.display()))? {
+            let name = entry?.file_name().to_string_lossy().into_owned();
+            if let Some(stem) = name.strip_suffix(".blm") { names.push(stem.to_string()); }
+        }
+        names.sort();
+        Ok(names)
+    }
+    fn open(&self, name: &str) -> Result<Module> { Module::open_file(&self.0.join(format!("{name}.blm"))) }
+}
+
+pub struct Installed {
+    pub name: String,
+    /// `text`, `features`, or `alignment`
+    pub kind: String,
+    pub edition: String,
+    pub layer: String,
+    /// For alignments: the two editions that are linked
+    pub from: String,
+    pub to: String,
+    pub module: Rc<Module>,
+}
+
+/// Every installed module, with only its header and table of contents read so far
+pub struct Library {
+    pub modules: Vec<Installed>,
+}
+
+impl Library {
+    pub fn open(source: &dyn ModuleSource) -> Result<Library> {
+        let mut modules = Vec::new();
+        for name in source.names()? {
+            let module = source.open(&name)?;
+            let field = |section: &str| if module.has(section) { module.text(section) } else { Ok(String::new()) };
+            modules.push(Installed { kind: field("module.kind")?, edition: field("module.edition")?, layer: field("module.layer")?,
+                                     from: field("module.from")?, to: field("module.to")?, name, module: Rc::new(module) });
+        }
+        Ok(Library { modules })
+    }
+
+    pub fn bytes_read(&self) -> u64 { self.modules.iter().map(|installed| installed.module.bytes_read()).sum() }
+
+    pub fn text_module(&self, edition: &str) -> Result<Rc<Module>> {
+        self.modules.iter().find(|installed| installed.kind == "text" && installed.edition == edition).map(|installed| installed.module.clone())
+            .ok_or_else(|| format!("no text module is installed for '{edition}'").into())
+    }
+
+    /// Whichever of an edition's modules has this feature column
+    pub fn column_module(&self, edition: &str, column: &str) -> Option<Rc<Module>> {
+        let section = format!("col.{column}.ids");
+        self.modules.iter().find(|installed| installed.edition == edition && installed.module.has(&section)).map(|installed| installed.module.clone())
+    }
+
+    pub fn column(&self, edition: &str, column: &str) -> Result<Option<Column>> {
+        self.column_module(edition, column).map(|module| Column::open(&module, &format!("col.{column}"))).transpose()
+    }
+
+    pub fn alignments_from(&self, edition: &str) -> Vec<&Installed> {
+        self.modules.iter().filter(|installed| installed.kind == "alignment" && installed.from == edition).collect()
+    }
+}
+
+/// A dictionary-encoded feature: one value for every slot
+pub struct Column {
+    pub dictionary: Strings,
+    pub ids: Packed,
+}
+
+impl Column {
+    /// `prefix` is e.g. `col.lemma` or `node.verse.name`
+    pub fn open(module: &Module, prefix: &str) -> Result<Column> {
+        Ok(Column { dictionary: module.strings(&format!("{prefix}.dict"))?, ids: module.packed(&format!("{prefix}.ids"))? })
+    }
+    pub fn get(&self, slot: u32) -> &str { self.dictionary.get(self.ids.get(slot as usize) as usize) }
+}
+
+/// One type of node: ranges of slots, in order of where they start
+pub struct Nodes {
+    pub starts: Packed,
+    pub ends: Packed,
+    pub names: Column,
+}
+
+impl Nodes {
+    pub fn open(module: &Module, node_type: &str) -> Result<Nodes> {
+        Ok(Nodes { starts: module.packed(&format!("node.{node_type}.starts"))?, ends: module.packed(&format!("node.{node_type}.ends"))?,
+                   names: Column::open(module, &format!("node.{node_type}.name"))? })
+    }
+    pub fn range(&self, index: usize) -> Range<u32> { self.starts.get(index)..self.ends.get(index) }
+
+    /// The node that contains this slot (for node types that don't overlap themselves, like verses and sentences)
+    pub fn containing(&self, slot: u32) -> Option<usize> {
+        let after = self.starts.upper_bound(slot);
+        (after.saturating_sub(4)..after).rev().find(|&index| self.ends.get(index) > slot) // Steps back over any empty nodes
+    }
+}
+
+/// What's needed to display an edition's text and say where it's from
+pub struct Text {
+    pub before: Column,
+    pub text: Column,
+    pub after: Column,
+    pub document_names: Strings,
+    pub document_starts: Packed,
+    pub verses: Nodes,
+    pub paragraphs: Nodes,
+}
+
+impl Text {
+    pub fn open(module: &Module) -> Result<Text> {
+        Ok(Text { before: Column::open(module, "col.before")?, text: Column::open(module, "col.text")?, after: Column::open(module, "col.after")?,
+                  document_names: module.strings("documents.names")?, document_starts: module.packed("documents.starts")?,
+                  verses: Nodes::open(module, "verse")?, paragraphs: Nodes::open(module, "para")? })
+    }
+
+    /// Resynthesise the text of a range of slots (as one line, with a space where a new paragraph or line of poetry starts)
+    pub fn render(&self, range: Range<u32>) -> String { self.render_exact(range).trim_end().to_string() }
+
+    /// The same, but keeping any space after the last word
+    pub fn render_exact(&self, range: Range<u32>) -> String {
+        let mut rendered = String::new();
+        let mut paragraph = self.paragraphs.starts.upper_bound(range.start);
+        for slot in range {
+            while paragraph < self.paragraphs.starts.len() && self.paragraphs.starts.get(paragraph) <= slot {
+                if !rendered.is_empty() && !rendered.ends_with(' ') { rendered.push(' '); }
+                paragraph += 1;
+            }
+            rendered.push_str(self.before.get(slot));
+            rendered.push_str(self.text.get(slot));
+            rendered.push_str(self.after.get(slot));
+        }
+        rendered
+    }
+
+    pub fn document(&self, slot: u32) -> &str { self.document_names.get(self.document_starts.upper_bound(slot) - 1) }
+
+    /// e.g., `JHN 3:16` (or just `JHN` for text that's not in a verse)
+    pub fn reference(&self, slot: u32) -> String {
+        match self.verses.containing(slot) {
+            Some(verse) => format!("{} {}", self.document(slot), self.verses.names.get(verse as u32)),
+            None => self.document(slot).to_string(),
+        }
+    }
+}
+
+/// Look up words in an index (`prefix` is e.g. `col.norm` or `idx.tags`). A trailing `*` matches any ending.
+/// Returns the slots (ascending) and how many times each matching form occurs.
+pub fn find_terms(module: &Module, prefix: &str, words: &[String]) -> Result<(Vec<u32>, BTreeMap<String, usize>)> {
+    let dictionary = module.strings(&format!("{prefix}.dict"))?;
+    let mut ids = Vec::new();
+    for word in words {
+        match word.strip_suffix('*') {
+            Some(prefix) => ids.extend(dictionary.find_prefix(prefix)),
+            None => ids.extend(dictionary.find(word)),
+        }
+    }
+    ids.sort_unstable();
+    ids.dedup();
+    let (mut slots, mut forms) = (Vec::new(), BTreeMap::new());
+    for id in ids {
+        let list = module.postings(&format!("{prefix}.post"), id)?;
+        forms.insert(dictionary.get(id).to_string(), list.len());
+        slots.extend(list);
+    }
+    slots.sort_unstable();
+    Ok((slots, forms))
+}

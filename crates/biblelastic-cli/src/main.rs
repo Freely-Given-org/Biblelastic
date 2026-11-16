@@ -1,0 +1,150 @@
+//! `biblelastic`: compile modules and run the first queries from the command line.
+
+mod compile;
+
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+use std::time::Instant;
+
+use biblelastic_engine::format::Module;
+use biblelastic_engine::library::{Folder, Library};
+use biblelastic_engine::query;
+
+const USAGE: &str = "\
+Usage: biblelastic <command> [options]
+
+Commands:
+  compile                 Compile the intermediate files into modules
+  info [MODULE]           List the installed modules, or the sections of one of them
+  terms WORD...           Find the original-language terms that these words translate, e.g., terms love loves loved loving
+  find WORD...            Find where all of these words occur together, e.g., find grace truth --within sentence
+  marked REASON           Find where the translators marked an addition or change, e.g., marked pronoun_to_name
+
+A word can end with * to match any ending, e.g., lov*
+
+Options:
+  --intermediate DIR      Where the ingest wrote its files (default: build/intermediate)
+  --modules DIR           Where the modules are (default: build/modules)
+  --edition ID            The edition to search (default: OET-RV)
+  --within TYPE           For find: sentence, verse, para, section, or chapter (default: sentence)
+  --examples N            For terms: how many example verses to show for each term (default: 1)
+  --limit N               How many results to show (default: 20)
+";
+
+struct Arguments {
+    words: Vec<String>,
+    intermediate: PathBuf,
+    modules: PathBuf,
+    edition: String,
+    within: String,
+    examples: usize,
+    limit: usize,
+}
+
+fn parse(arguments: &[String]) -> Result<Arguments, String> {
+    let mut parsed = Arguments { words: Vec::new(), intermediate: "build/intermediate".into(), modules: "build/modules".into(),
+                                 edition: "OET-RV".into(), within: "sentence".into(), examples: 1, limit: 20 };
+    let mut iterator = arguments.iter();
+    while let Some(argument) = iterator.next() {
+        if !argument.starts_with("--") { parsed.words.push(argument.clone()); continue; }
+        let value = iterator.next().ok_or_else(|| format!("{argument} needs a value"))?;
+        let number = || value.parse::<usize>().map_err(|_| format!("{argument} needs a number, not '{value}'"));
+        match argument.as_str() {
+            "--intermediate" => parsed.intermediate = value.into(),
+            "--modules" => parsed.modules = value.into(),
+            "--edition" => parsed.edition = value.clone(),
+            "--within" => parsed.within = value.clone(),
+            "--examples" => parsed.examples = number()?,
+            "--limit" => parsed.limit = number()?,
+            _ => return Err(format!("unknown option {argument}")),
+        }
+    }
+    Ok(parsed)
+}
+
+fn size(bytes: u64) -> String {
+    if bytes >= 1_048_576 { format!("{:.1} MB", bytes as f64 / 1_048_576.0) } else { format!("{:.1} kB", bytes as f64 / 1024.0) }
+}
+
+fn folder_size(folder: &Path) -> u64 {
+    std::fs::read_dir(folder).into_iter().flatten().flatten().map(|entry| {
+        let path = entry.path();
+        if path.is_dir() { folder_size(&path) } else { entry.metadata().map_or(0, |metadata| metadata.len()) }
+    }).sum()
+}
+
+fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Error>> {
+    let started = Instant::now();
+    match command {
+        "compile" => {
+            let written = compile::compile(&arguments.intermediate, &arguments.modules)?;
+            let total: u64 = written.iter().map(|module| module.bytes).sum();
+            for module in &written { println!("{:<28}{:>10}  {} sections", module.name, size(module.bytes), module.sections); }
+            println!("{} modules, {} (from {} of intermediate files) in {:.1}s -- output in {}", written.len(), size(total),
+                     size(folder_size(&arguments.intermediate)), started.elapsed().as_secs_f64(), arguments.modules.display());
+        }
+        "info" => match arguments.words.first() {
+            Some(name) => {
+                let module = Module::open_file(&arguments.modules.join(format!("{name}.blm")))?;
+                for entry in module.entries() {
+                    println!("{:<34}{:<9}{:>10}  {} items{}", entry.name, format!("{:?}", entry.encoding), size(entry.length), entry.count,
+                             if entry.bits > 0 { format!(" of {} bits", entry.bits) } else { String::new() });
+                }
+            }
+            None => for installed in Library::open(&Folder(arguments.modules.clone()))?.modules {
+                let description = if installed.kind == "alignment" { format!("{} → {}", installed.from, installed.to) } else { format!("{} {}", installed.edition, installed.layer) };
+                println!("{:<28}{:<11}{}", installed.name, installed.kind, description);
+            }
+        },
+        "terms" => {
+            if arguments.words.is_empty() { return Err("terms needs at least one word".into()); }
+            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            let result = query::original_terms(&library, &arguments.edition, &arguments.words, arguments.examples)?;
+            let occurrences: usize = result.forms.values().sum();
+            println!("{} matched {} words: {}", arguments.edition, occurrences, result.forms.iter().map(|(form, count)| format!("{form} ({count})")).collect::<Vec<_>>().join(", "));
+            println!("{} of them are linked to original-language words, of {} different terms:\n", result.linked, result.terms.len());
+            for term in result.terms.iter().take(arguments.limit) {
+                println!("{:>5}× {}  {}  {}  ‘{}’  in {} verses", term.count, term.lemma, term.transliteration, term.strong, term.gloss, term.verses);
+                for example in &term.examples { println!("          {}: {}", example.reference, example.text); }
+            }
+            if result.terms.len() > arguments.limit { println!("   … and {} more (use --limit)", result.terms.len() - arguments.limit); }
+            println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
+        }
+        "find" => {
+            if arguments.words.is_empty() { return Err("find needs at least one word".into()); }
+            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            let found = query::find_together(&library, &arguments.edition, &arguments.words, &arguments.within, arguments.limit)?;
+            println!("{} matched: {}", arguments.edition, found.forms.iter().map(|(form, count)| format!("{form} ({count})")).collect::<Vec<_>>().join(", "));
+            println!("{} {} nodes contain all of them:\n", found.total, arguments.within);
+            for example in &found.examples { println!("{}: {}", example.reference, example.text); }
+            if found.total > found.examples.len() { println!("… and {} more (use --limit)", found.total - found.examples.len()); }
+            println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
+        }
+        "marked" => {
+            let reason = arguments.words.first().ok_or("marked needs a reason, e.g., pronoun_to_name, name_to_pronoun, reworded, measure, number")?;
+            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            let found = query::find_spans(&library, &arguments.edition, "add", "reason", reason, arguments.limit)?;
+            let mut forms: Vec<(&String, &usize)> = found.forms.iter().collect();
+            forms.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+            println!("{} has {} places marked ‘{reason}’. Most common: {}\n", arguments.edition, found.total,
+                     forms.iter().take(10).map(|(form, count)| format!("{form} ({count})")).collect::<Vec<_>>().join(", "));
+            for example in &found.examples { println!("{}: {}", example.reference, example.text); }
+            if found.total > found.examples.len() { println!("… and {} more (use --limit)", found.total - found.examples.len()); }
+            println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
+        }
+        _ => return Err(format!("unknown command '{command}'\n\n{USAGE}").into()),
+    }
+    Ok(())
+}
+
+fn main() -> ExitCode {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    let Some(command) = arguments.first().filter(|command| !matches!(command.as_str(), "help" | "--help" | "-h")) else {
+        print!("{USAGE}");
+        return ExitCode::SUCCESS;
+    };
+    match parse(&arguments[1..]).map_err(Into::into).and_then(|parsed| run(command, parsed)) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => { eprintln!("biblelastic: {error}"); ExitCode::FAILURE }
+    }
+}
