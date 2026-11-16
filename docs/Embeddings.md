@@ -20,6 +20,7 @@ Nothing here is part of the engine yet: the scripts are in `bench/embeddings/` a
 - **Comparing a query with every passage is quick enough without an index structure**: 100,000 passages took 21 ms here.
 - **How to run the model on the device isn't settled.** A pure-Rust runtime (tract) works inside WebAssembly, but adds 14 MB to the engine and is much slower than ONNX Runtime
     (33 ms a query in a desktop browser, against about 2 ms natively). On an Android phone with 4 GB of memory, a query took 0.55 s with the 8-bit model and 0.64 s with the full-precision one, which is too slow.
+    ONNX Runtime's WebAssembly build took 0.24 s on the same phone: better, but still slow, and much less of an improvement than on the desktop.
 
 ## What was tested
 
@@ -148,6 +149,24 @@ So desktop timings, even slowed down, don't predict a phone's well, and each can
 
 Comparing with the passages is fine for one Bible (about 20 ms for 8,725 passages), but 100,000 passages would want the bits-first shortlist or compiled code instead of plain JavaScript.
 
+### ONNX Runtime in the browser
+
+ONNX Runtime's own WebAssembly build (the `onnxruntime-web` package, version 1.31.1, MIT licence) was then tried on the same queries, on one thread (`bench/embed-query/web/ort.html`).
+It's 14.8 MB (3.8 MB gzipped) plus 0.4 MB of JavaScript, so about the same size as tract.
+
+| A query with the 8-bit model | Desktop Chrome | Slowed six times | The phone |
+| --- | --- | --- | --- |
+| tract, padded to 32 word pieces | 101 ms | 648 ms | 548 ms |
+| ONNX Runtime, padded to 32 word pieces | 17 ms | 100 ms | 344 ms |
+| ONNX Runtime, at the query's own length (11 on average) | 10 ms | 61 ms | 237 ms |
+| Loading the runtime and the model (ONNX Runtime) | 0.3 s | 1.4 s | 3.3 s |
+
+On the desktop, ONNX Runtime is six times faster than tract. On the phone it's only 1.6 times faster, and a query still takes about a quarter of a second, after three seconds to load.
+That's usable for a search that the user has asked for, but not for searching as they type.
+With the full-precision model on the desktop it took 32 ms padded and 17 ms at the query's own length, the same as tract.
+
+Not padding matters: the queries average 11 word pieces, and running them at their own length saved about a third on the phone.
+
 **Comparing with every passage**, as bytes, in plain JavaScript: 5 ms for 8,725 passages and 21 ms for 100,000 (23 ms and 128 ms with the processor slowed six times).
 So no approximate index (such as HNSW) is needed at this size.
 
@@ -155,16 +174,17 @@ So no approximate index (such as HNSW) is needed at this size.
 
 1. Build the vectors from each passage with its section heading, with `bge-small-en-v1.5` for English, stored as one byte for each dimension in an optional module.
 1. Keep word matching as the main search, and add the meaning-based results to it (leaving word matching out only when the query's language isn't the text's).
-1. Choose the on-device runtime next. tract is too slow on a phone with either model. That leaves ONNX Runtime
-    (fast, but a separate native library for each platform and a JavaScript package for browsers), or writing the model's arithmetic into the engine
-    (about twelve layers of matrix multiplication: no dependency, but it must be made fast).
+1. The on-device runtime is still open. tract is too slow on a phone with either model. ONNX Runtime is the fastest that was tried (a quarter of a second for a query on the phone, in a browser),
+    but it's a separate native library for each platform and a JavaScript package for browsers. Its native Android library, which can use more of the processor than WebAssembly can, is likely to be faster, and should be measured before deciding.
+    The other choice is writing the model's arithmetic into the engine (about twelve layers of matrix multiplication: no dependency, but it must be made fast).
+1. Whatever runs the model, give it each query at its own length, load it only when a meaning-based search is first asked for, and show the word-matching results first.
 1. For Spanish, either cut `multilingual-e5-small` down to English and Spanish word pieces and test it again, or wait for a smaller multilingual model.
     Test it against a Spanish Bible, not just the English one.
 
 ## Not done
 
 - **Only one phone was measured, and it has more memory than the target.** `bench/embed-query/web/` is the test page.
-- **ONNX Runtime wasn't tried in a browser**, so there's no figure for the fastest way of running the model there.
+- **ONNX Runtime was only tried in a browser, on one thread.** Its native Android library, more threads, and WebGPU weren't tried.
 - **The questions are few and were written by one person** (with the lists of right passages from memory), and the passages are from one translation.
 - **Commentaries and dictionaries weren't embedded.** By size, the study notes (17,478 entries) would need about 7 MB of vectors, and the dictionary (about 31,000 paragraphs) about 12 MB.
 - **Longer and shorter passages weren't compared**, nor other ways of dividing the text.
@@ -178,4 +198,6 @@ So no approximate index (such as HNSW) is needed at this size.
     build/embeddings/venv/bin/python bench/embeddings/evaluate.py         # Without the headings (downloads the models: about 6 GB)
     build/embeddings/venv/bin/python bench/embeddings/evaluate.py --headed
     cd bench/embeddings && ../../build/embeddings/venv/bin/python quantised.py && ../../build/embeddings/venv/bin/python export_queries.py && cd ../..
-    bench/embed-query/build.sh && node bench/embed-query/test.mjs
+    bench/embed-query/build.sh
+    mkdir -p build/embeddings/ort && cd build/embeddings/ort && npm pack onnxruntime-web && tar -xzf onnxruntime-web-*.tgz && cd ../../..
+    node bench/embed-query/test.mjs                                       # tract, then ONNX Runtime, in headless Chrome

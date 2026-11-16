@@ -9,7 +9,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.wasm': 'application/wasm' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm' };
 const server = createServer((request, response) => {
     let path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
     if (path.endsWith('/')) path += 'index.html';
@@ -40,26 +40,41 @@ const send = (method, params = {}, sessionId) => new Promise((resolve, reject) =
     socket.send(JSON.stringify({ id, method, params, sessionId }));
 });
 
+// Open a page, slow the processor down, run its trial, and return what it measured
+async function trial(page, slowdown, ...parameters) {
+    const { targetId } = await send('Target.createTarget', { url: `${origin}/bench/embed-query/web/${page}` });
+    const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
+    for (let n = 0; n < 100; n++) {
+        const { result } = await send('Runtime.evaluate', { expression: `typeof window.runTrial === 'function'` }, sessionId);
+        if (result.value) break;
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    await send('Emulation.setCPUThrottlingRate', { rate: slowdown }, sessionId);
+    const { result, exceptionDetails } = await send('Runtime.evaluate', { expression: `window.runTrial(${parameters.map(parameter => JSON.stringify(parameter)).join(', ')})`, awaitPromise: true, returnByValue: true }, sessionId);
+    await send('Target.closeTarget', { targetId });
+    if (exceptionDetails) throw new Error(exceptionDetails.exception?.description ?? exceptionDetails.text);
+    return result.value;
+}
+
 let failed = false;
 try {
+    console.log('tract:');
     for (const [model, slowdown, tokens] of [['float32', 1, 32], ['int8', 1, 32], ['float32', 1, 16], ['float32', 6, 32], ['int8', 6, 32]]) {
-        const { targetId } = await send('Target.createTarget', { url: `${origin}/bench/embed-query/web/` });
-        const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
-        for (let n = 0; n < 100; n++) {
-            const { result } = await send('Runtime.evaluate', { expression: `typeof window.runTrial === 'function'` }, sessionId);
-            if (result.value) break;
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-        await send('Emulation.setCPUThrottlingRate', { rate: slowdown }, sessionId);
-        const { result, exceptionDetails } = await send('Runtime.evaluate', { expression: `window.runTrial(${JSON.stringify(model)}, ${tokens})`, awaitPromise: true, returnByValue: true }, sessionId);
-        await send('Target.closeTarget', { targetId });
-        if (exceptionDetails) { console.log(`${model}: FAILED: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`); failed = true; continue; }
-        const trial = result.value;
-        console.log(`${model.padEnd(8)} ${tokens} tokens, processor ${slowdown}× slower: model loads in ${trial.loadMs.toFixed(0).padStart(5)} ms, uses ${(trial.memoryBytes / 1048576).toFixed(0).padStart(4)} MB;` +
-                    ` a query takes ${trial.queryMs.toFixed(0).padStart(4)} ms (slowest ${trial.slowestQueryMs.toFixed(0)}); agreement ${trial.agreement.toFixed(4)};` +
-                    ` comparing with 8,725 passages ${trial.scanMs[8725].toFixed(0)} ms, with 100,000 ${trial.scanMs[100000].toFixed(0)} ms`);
-        if (trial.agreement < 0.99) failed = true;
+        const measured = await trial('', slowdown, model, tokens);
+        console.log(`${model.padEnd(8)} ${tokens} tokens, processor ${slowdown}× slower: model loads in ${measured.loadMs.toFixed(0).padStart(5)} ms, uses ${(measured.memoryBytes / 1048576).toFixed(0).padStart(4)} MB;` +
+                    ` a query takes ${measured.queryMs.toFixed(0).padStart(4)} ms (slowest ${measured.slowestQueryMs.toFixed(0)}); agreement ${measured.agreement.toFixed(4)};` +
+                    ` comparing with 8,725 passages ${measured.scanMs[8725].toFixed(0)} ms, with 100,000 ${measured.scanMs[100000].toFixed(0)} ms`);
+        if (measured.agreement < 0.99) failed = true;
     }
+    if (existsSync(join(root, 'build/embeddings/ort/package/dist/ort.wasm.min.mjs'))) {
+        console.log('\nONNX Runtime (one thread):');
+        for (const [model, slowdown] of [['int8', 1], ['float32', 1], ['int8', 6], ['float32', 6]]) {
+            const measured = await trial('ort.html', slowdown, model);
+            console.log(`${model.padEnd(8)} processor ${slowdown}× slower: runtime and model load in ${measured.loadMs.toFixed(0).padStart(5)} ms; a query takes ${measured.paddedMs.toFixed(1).padStart(6)} ms padded to 32 tokens,` +
+                        ` ${measured.queryMs.toFixed(1).padStart(6)} ms at its own length (slowest ${measured.queryMsSlowest.toFixed(0)}); agreement ${measured.queryMsAgreement.toFixed(4)}`);
+            if (measured.queryMsAgreement < 0.99) failed = true;
+        }
+    } else console.log('\n(ONNX Runtime not tried: unpack the onnxruntime-web package into build/embeddings/ort/ first)');
 } catch (error) { console.log(`FAILED: ${error.message}`); failed = true; }
 finally {
     socket.close(); chrome.kill(); server.close();

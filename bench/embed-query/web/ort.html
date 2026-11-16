@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblelastic embedding trial: ONNX Runtime</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 0 auto; padding: 1rem; }
+  h1 { font-size: 1.3rem; } button, select { font: inherit; padding: .4rem .8rem; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<h1>Biblelastic embedding trial: ONNX Runtime</h1>
+<p>The same measurement as <a href="./">the first trial page</a>, but with ONNX Runtime's WebAssembly build running the model (on one thread) in place of tract.</p>
+<p><select id="model"><option value="int8">8-bit model (32 MB)</option><option value="float32">Full-precision model (127 MB)</option></select>
+  <button id="run">Run</button></p>
+<pre id="log"></pre>
+<script type="module">
+// The onnxruntime-web package from npm, unpacked into build/embeddings/ort/ (see docs/Embeddings.md)
+const ORT = new URL('../../../build/embeddings/ort/package/dist/', location.href);
+const FILES = new URL('../../../build/embeddings/rust/', location.href);
+const DIMENSIONS = 384;
+const log = text => { document.getElementById('log').textContent += text + '\n'; };
+const pause = () => new Promise(resolve => setTimeout(resolve, 30));
+const median = values => [...values].sort((a, b) => a - b)[values.length >> 1];
+
+async function run(which) {
+    const results = { model: which, device: navigator.userAgent, threads: navigator.hardwareConcurrency, deviceMemoryGB: navigator.deviceMemory };
+    log(`${results.device}\n${results.threads} processors, ${results.deviceMemoryGB ?? '?'} GB of memory reported\n`);
+    let started = performance.now();
+    const ort = await import(new URL('ort.wasm.min.mjs', ORT));
+    ort.env.wasm.wasmPaths = ORT.href;
+    ort.env.wasm.numThreads = 1; // More threads need special server headers, and the engine's worker has one thread anyway
+    const session = await ort.InferenceSession.create(new URL(`bge-small-en-v1.5.${which}.onnx`, FILES).href, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
+    results.loadMs = performance.now() - started;
+    log(`Runtime and ${which} model fetched and loaded in ${results.loadMs.toFixed(0)} ms`); await pause();
+
+    const lines = (await (await fetch(new URL('queries.tsv', FILES))).text()).trim().split('\n').map(line => line.split('\t').map(field => field.split(' ').map(Number)));
+    const embed = async (ids, mask) => {
+        const tensor = values => new ort.Tensor('int64', BigInt64Array.from(values, BigInt), [1, values.length]);
+        const feeds = { input_ids: tensor(ids), attention_mask: tensor(mask), token_type_ids: tensor(ids.map(() => 0)) };
+        const states = (await session.run(Object.fromEntries(session.inputNames.map(name => [name, feeds[name]]))))[session.outputNames[0]].data;
+        const first = states.slice(0, DIMENSIONS); // The first token's vector is the embedding
+        const norm = Math.hypot(...first);
+        return first.map(value => value / norm);
+    };
+    await embed(lines[0][0], lines[0][1]); // The first run includes setting up
+    // Padded to 32 tokens (to compare with the tract page), then at each query's own length (as the engine would do it)
+    for (const [label, key, trim] of [['padded to 32 tokens', 'paddedMs', false], ['at their own length', 'queryMs', true]]) {
+        const times = []; let worst = 1, tokens = 0;
+        for (const [ids, mask, expected] of lines) {
+            const length = trim ? mask.reduce((a, b) => a + b) : ids.length;
+            started = performance.now();
+            const vector = await embed(ids.slice(0, length), mask.slice(0, length));
+            times.push(performance.now() - started);
+            tokens += length;
+            worst = Math.min(worst, vector.reduce((sum, value, n) => sum + value * expected[n], 0));
+        }
+        Object.assign(results, { [key]: median(times), [key + 'Slowest']: Math.max(...times), [key + 'Agreement']: worst });
+        log(`${times.length} queries ${label} (${(tokens / times.length).toFixed(0)} on average): ${results[key].toFixed(1)} ms each (median; slowest ${Math.max(...times).toFixed(0)} ms); agreement at least ${worst.toFixed(4)}`);
+        await pause();
+    }
+    log('\nDone. Please send these lines back.');
+    return results;
+}
+window.runTrial = run;
+document.getElementById('run').onclick = async event => {
+    event.target.disabled = true;
+    document.getElementById('log').textContent = '';
+    try { await run(document.getElementById('model').value); } catch (error) { log(`FAILED: ${error.message ?? error}`); }
+    event.target.disabled = false;
+};
+</script>
+</body>
+</html>
