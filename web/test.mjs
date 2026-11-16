@@ -62,6 +62,8 @@ const REQUESTS = [
     { command: 'find', words: 'grace truth', within: 'sentence' },
     { command: 'find', words: 'love God', within: 'sentence' },
     { command: 'marked', words: 'pronoun_to_name', limit: 2 },
+    { command: 'about', passage: 'JHN 3:16', limit: 3 },
+    { command: 'entry', words: 'aaron', limit: 3 },
 ];
 
 // Runs in the page
@@ -83,7 +85,7 @@ const measure = async (reader, requests, cacheBytes) => {
         const { response, bytesRead, cachedBytes, milliseconds, memoryBytes, reading } = await engine.request(fields);
         report.reading = reading;
         report.requests.push({ command: fields.command, ok: response.ok, error: response.error, total: response.total, bytesRead, cachedBytes, milliseconds, memoryBytes,
-                               first: response.terms?.[0]?.lemma ?? response.examples?.[0]?.reference });
+                               first: response.terms?.[0]?.lemma ?? response.examples?.[0]?.reference ?? (response.comments ?? response.entries)?.[0]?.locator });
     }
     report.storage = (await navigator.storage.estimate()).usage;
     engine.stop();

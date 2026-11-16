@@ -105,7 +105,8 @@ and checked periodically for updated versions.
 ### Current status
 
 There's no app yet—only the start of the build pipeline and engine, used from the command line or from a test page in a browser.
-Four editions (OET-RV, OET-LV, SR-GNT, and UHB) can be converted and compiled, and two of the example searches above already work:
+Four Bible editions (OET-RV, OET-LV, SR-GNT, and UHB), one commentary (Tyndale Open Study Notes), and one dictionary (Tyndale Open Bible Dictionary)
+can be converted and compiled, and two of the example searches above already work:
 
     cd pipeline && python3 -m biblelastic_ingest && cd ..      # Source texts → build/intermediate/
     cargo build --release
@@ -113,6 +114,8 @@ Four editions (OET-RV, OET-LV, SR-GNT, and UHB) can be converted and compiled, a
     target/release/biblelastic terms love loves loved loving   # The Hebrew and Greek terms behind these words
     target/release/biblelastic find grace truth --within sentence
     target/release/biblelastic marked pronoun_to_name          # Where the OET-RV has a name in place of a pronoun
+    target/release/biblelastic about JHN 3:16                  # What the commentary and dictionary say about a passage
+    target/release/biblelastic entry aaron                     # Look up a dictionary entry
 
 (The ingest expects the source texts to be in folders alongside this one, as listed in `pipeline/sources.toml`.)
 See [docs/IntermediateFormat.md](docs/IntermediateFormat.md) and [docs/ModuleFormat.md](docs/ModuleFormat.md) for the details.
@@ -139,8 +142,8 @@ Rather than a relational database, the texts will be stored in a compact, read-o
 - **Nodes** are ranges of words: verses, chapters, paragraphs, sections, sentences, clauses, etc.
 - **Alignments** link the words of a translation to the original-language words that they translate.
 - Each edition declares its own versification, which is mapped to a common reference scheme when the module is built.
-- Non-Bible works use the same model, with paragraphs as the main unit, their own location schemes
-    (e.g., volume/chapter/section, or dictionary headword), and a record of which Bible passages each paragraph refers to.
+- Non-Bible works use the same model, with their own location schemes (e.g., volume/chapter/section, or dictionary headword),
+    and a record of which Bible passages each entry is about and which ones it cites.
 
 Nothing in the engine assumes a 66-‘book’ Bible—a ‘book’ is just a document in a collection.
 
@@ -179,8 +182,8 @@ can download only what they need. The engine works with whichever modules are in
 1. **Fetch**: download and cache the source materials, recording their versions and licences.
 1. **Ingest**: Python scripts convert the many source formats into one common
     [intermediate format](docs/IntermediateFormat.md) of words, ranges of words, notes, and word alignments.
-    (This is working for the OET-RV, OET-LV, SR-GNT, and UHB, and more will be added.)
-1. **Compile**: a Rust tool creates and indexes the [modules](docs/ModuleFormat.md). (Compression and more checks will be added.)
+    (This is working for the OET-RV, OET-LV, SR-GNT, UHB, and the two Tyndale works, and more will be added.)
+1. **Compile**: a Rust tool creates, indexes, and compresses the [modules](docs/ModuleFormat.md). (More checks will be added.)
 1. **Publish**: copy the redistributable modules and the catalogue to the server.
 
 ### Frontends

@@ -34,6 +34,8 @@ pub struct Installed {
     pub name: String,
     /// `text`, `features`, or `alignment`
     pub kind: String,
+    /// What the edition is: `scripture`, `commentary`, or `dictionary` (empty for an alignment)
+    pub work: String,
     pub edition: String,
     pub layer: String,
     /// For alignments: the two editions that are linked
@@ -59,13 +61,18 @@ impl Library {
         for name in source.names()? {
             let module = source.open(&name, &cache)?;
             let field = |section: &str| if module.has(section) { module.text(section) } else { Ok(String::new()) };
-            modules.push(Installed { kind: field("module.kind")?, edition: field("module.edition")?, layer: field("module.layer")?,
+            modules.push(Installed { kind: field("module.kind")?, work: field("module.work")?, edition: field("module.edition")?, layer: field("module.layer")?,
                                      from: field("module.from")?, to: field("module.to")?, name, module: Rc::new(module) });
         }
         Ok(Library { modules, cache })
     }
 
     pub fn bytes_read(&self) -> u64 { self.modules.iter().map(|installed| installed.module.bytes_read()).sum() }
+
+    /// The text modules of the commentaries, dictionaries, and so on (of just one edition, if one is named)
+    pub fn item_modules<'a>(&'a self, edition: Option<&'a str>) -> impl Iterator<Item = &'a Installed> {
+        self.modules.iter().filter(move |installed| installed.kind == "text" && installed.module.has("node.entry.starts") && edition.is_none_or(|edition| installed.edition == edition))
+    }
 
     pub fn text_module(&self, edition: &str) -> Result<Rc<Module>> {
         self.modules.iter().find(|installed| installed.kind == "text" && installed.edition == edition).map(|installed| installed.module.clone())
@@ -129,7 +136,10 @@ pub struct Text {
     pub after: Column,
     pub document_names: Strings,
     pub document_starts: Packed,
-    pub verses: Nodes,
+    /// Only Scripture has verses
+    pub verses: Option<Nodes>,
+    /// Only commentaries, dictionaries, and so on have entries
+    pub entries: Option<Nodes>,
     pub paragraphs: Nodes,
 }
 
@@ -137,7 +147,7 @@ impl Text {
     pub fn open(module: &Module) -> Result<Text> {
         Ok(Text { before: Column::open(module, "col.before")?, text: Column::open(module, "col.text")?, after: Column::open(module, "col.after")?,
                   document_names: module.strings("documents.names")?, document_starts: module.packed("documents.starts")?,
-                  verses: Nodes::open(module, "verse")?, paragraphs: Nodes::open(module, "para")? })
+                  verses: optional_nodes(module, "verse")?, entries: optional_nodes(module, "entry")?, paragraphs: Nodes::open(module, "para")? })
     }
 
     /// Resynthesise the text of a range of slots (as one line, with a space where a new paragraph or line of poetry starts)
@@ -161,12 +171,59 @@ impl Text {
 
     pub fn document(&self, slot: u32) -> String { self.document_names.get(self.document_starts.upper_bound(slot) - 1) }
 
-    /// e.g., `JHN 3:16` (or just `JHN` for text that's not in a verse)
+    /// The slots of the verse that this slot is in
+    pub fn verse(&self, slot: u32) -> Option<Range<u32>> {
+        let verses = self.verses.as_ref()?;
+        verses.containing(slot).map(|verse| verses.range(verse))
+    }
+
+    /// Where a slot is: e.g., `JHN 3:16` in Scripture, `Articles Aaron` in a dictionary (the document, then the entry's name),
+    /// or just the document for text that's in neither a verse nor an entry
     pub fn reference(&self, slot: u32) -> String {
-        match self.verses.containing(slot) {
-            Some(verse) => format!("{} {}", self.document(slot), self.verses.names.get(verse as u32)),
-            None => self.document(slot),
+        for nodes in [&self.verses, &self.entries].into_iter().flatten() {
+            if let Some(node) = nodes.containing(slot) { return format!("{} {}", self.document(slot), nodes.names.get(node as u32)); }
         }
+        self.document(slot)
+    }
+
+    /// The text of a range of slots, cut short (with an ellipsis) once it's longer than `length` characters
+    pub fn excerpt(&self, range: Range<u32>, length: usize) -> String {
+        let (mut rendered, mut next) = (String::new(), range.start);
+        while next < range.end && rendered.chars().count() <= length { // A few words at a time, so that a long article isn't all read
+            let end = range.end.min(next + 16);
+            if !rendered.is_empty() && !rendered.ends_with(' ') && self.paragraphs.starts.lower_bound(next) < self.paragraphs.starts.upper_bound(next) { rendered.push(' '); }
+            rendered.push_str(&self.render_exact(next..end));
+            next = end;
+        }
+        let rendered = rendered.trim_end();
+        if rendered.chars().count() <= length { return rendered.to_string(); }
+        let cut: String = rendered.chars().take(length).collect();
+        format!("{}…", cut.rsplit_once(' ').map_or(cut.as_str(), |(kept, _)| kept).trim_end_matches([',', ';', ':', ' ', '(']))
+    }
+}
+
+fn optional_nodes(module: &Module, node_type: &str) -> Result<Option<Nodes>> {
+    if module.has(&format!("node.{node_type}.starts")) { Nodes::open(module, node_type).map(Some) } else { Ok(None) }
+}
+
+/// The Scripture passages that the entries of a commentary or dictionary are about (kind 0) or cite (kind 1), in passage order
+pub struct Anchors {
+    /// The codes of the books that there are anchors for: a book's number here is its number in `from` and `to`
+    pub books: Strings,
+    /// Packed positions (see `reference::pack`), with `to` included
+    pub from: Packed,
+    pub to: Packed,
+    pub kind: Packed,
+    /// The slots of the whole entry (for kind 0) or of the words that cite the passage (for kind 1)
+    pub start: Packed,
+    pub end: Packed,
+    pub entry: Packed,
+}
+
+impl Anchors {
+    pub fn open(module: &Module) -> Result<Anchors> {
+        Ok(Anchors { books: module.strings("anchor.books")?, from: module.packed("anchor.from")?, to: module.packed("anchor.to")?, kind: module.packed("anchor.kind")?,
+                     start: module.packed("anchor.start")?, end: module.packed("anchor.end")?, entry: module.packed("anchor.entry")? })
     }
 }
 

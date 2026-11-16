@@ -15,6 +15,9 @@ The engine refuses any module whose format version it doesn't know, so modules m
     target/release/biblelastic terms love loves loved loving   # The original-language terms behind these words
     target/release/biblelastic find grace truth --within sentence
     target/release/biblelastic marked pronoun_to_name          # Where the translators marked an addition or change
+    target/release/biblelastic about JHN 3:16                  # What the commentaries and dictionaries say about a passage
+    target/release/biblelastic entry aaron                     # Look up a dictionary entry by its title
+    target/release/biblelastic find covenant grace --edition TOSN --within para   # A commentary's own words are searched like any other text
     target/release/biblelastic request command=find 'words=grace truth'   # The same as JSON, as an app gets it
     cargo test
 
@@ -53,6 +56,10 @@ All the modules of one edition use the same slot numbers.
 
 The first four editions compile to twelve modules totalling about 42 MB (from 142 MB of intermediate files, and 63 MB before compression).
 The smallest useful download, `OET-RV.text.blm`, is 6.4 MB.
+
+A commentary or a dictionary is an edition too, and so far each is a single `text` module:
+`TOSN.text.blm` (Tyndale Open Study Notes) is 7.6 MB and `TOBD.text.blm` (Tyndale Open Bible Dictionary) is 8.9 MB.
+That makes fourteen modules and 58 MB altogether.
 
 ## File layout
 
@@ -106,6 +113,7 @@ In every module:
 | Section | Encoding | Content |
 | --- | --- | --- |
 | `module.kind` | Raw | `text`, `features`, or `alignment` |
+| `module.work` | Raw | For text and features modules: what the edition is (`scripture`, `commentary`, or `dictionary`) |
 | `module.edition`, `module.layer` | Raw | For text and features modules |
 | `module.from`, `module.to` | Raw | For alignment modules |
 | `manifest` | Raw | The edition's intermediate-format manifest (JSON), including its copyright and licence details |
@@ -131,6 +139,29 @@ For each node type `T` (e.g., `verse`, `para`, `sentence`), in the text module, 
 
 Finding the verse or sentence that contains a slot is a binary search of `starts`—there's no join.
 
+In the text module of a commentary or dictionary (see *Commentaries and dictionaries* in the [intermediate format](IntermediateFormat.md)):
+
+| Section | Encoding | Content |
+| --- | --- | --- |
+| `node.entry.starts`, `node.entry.ends` | Packed | The slot range of each entry (study note, article, etc.), in slot order. An entry's number is its position in these |
+| `node.entry.name.…`, `node.entry.type.…`, `node.entry.title.…` | | Each entry's name within its document, its type, and its title (each a dictionary and ids, like a column) |
+| `idx.entry.dict`, `idx.entry.post.…` | | A dictionary of the words of the titles, and postings of the entries (not slots) that have each word |
+| `anchor.books` | Strings | The codes of the Bible books that there are anchors for, sorted |
+| `anchor.from`, `anchor.to` | Packed | The passage of each Scripture anchor, sorted by `from` (see below) |
+| `anchor.kind` | Packed | 0 if the entry is about the passage, or 1 if it cites it |
+| `anchor.start`, `anchor.end` | Packed | The slots of the whole entry (kind 0) or of the citing words (kind 1) |
+| `anchor.entry` | Packed | The number of the entry that the anchor is in |
+| `link.start`, `link.end` | Packed | The slots of each link to another entry, sorted by `start` |
+| `link.kind`, `link.target` | Packed | 0 for a link or 1 for an included entry, and the number of the entry that it leads to |
+
+A position in Scripture is packed into one number so that positions sort in order: the book's number in `anchor.books`, then 10 bits for the chapter, then 10 bits for the verse.
+`anchor.from` and `anchor.to` are the first and last verses of the passage (both included).
+So everything that's anchored to a passage is found by a binary search of `anchor.from` for the book's first anchor, then a scan as far as the end of the passage,
+keeping the anchors whose `to` isn't before the passage starts. There's no versification mapping yet: the numbers are the source's own.
+
+A place in one of these works is given as the document and then the entry's name (`GEN 1:1-2:3` in the study notes, or `Articles Aaron` in the dictionary),
+just as a place in Scripture is the document and then the verse's name.
+
 In an alignment module:
 
 | Section | Encoding | Content |
@@ -154,6 +185,13 @@ One-to-many, many-to-one, and many-to-many alignments are just several links tha
 `find grace truth --within sentence`: get the slots of each word as above, binary-search the sentence nodes to see which sentence each is in,
 and keep the sentences that have them all.
 
+`about JHN 3:16` looks the passage up in the anchors of every installed commentary and dictionary. The entries that are about the passage come first,
+starting with those whose own passage is closest to it (the note on 3:16, then the note on 3:16-21, and last the introduction to the whole book),
+and each is shown by the start of its text. Then come the entries that only cite it, each shown by the sentence that has the citation.
+
+`entry aaron` looks each word up in `idx.entry`, and keeps the entries whose titles have them all: exact titles first, then the shortest ones.
+It also lists the titles of the entries that each one links to.
+
 On the full data, starting with nothing in memory, on a desktop computer:
 
 | Query | Version 0 | Version 1 |
@@ -162,6 +200,8 @@ On the full data, starting with nothing in memory, on a desktop computer:
 | `find grace truth` | 8 ms, reading 4.4 MB | 4 ms, reading 0.7 MB |
 | `find love God` | 9 ms, reading 4.4 MB | 5 ms, reading 0.8 MB |
 | `marked pronoun_to_name` | 9 ms, reading 4.4 MB | 11 ms, reading 2.3 MB |
+| `about JHN 3:16` (84 entries, showing 20) | | 12 ms, reading 1.6 MB |
+| `entry aaron` | | 7 ms, reading 0.7 MB |
 
 With pages of 4 kB the first query reads 2.8 MB, not 4.3 MB, and the modules are 2% bigger. But browsers that have to use the slower way of reading
 (see [Browser.md](Browser.md)) then take half as long again, because they pay for each read, so 16 kB is the default.
@@ -180,5 +220,12 @@ With pages of 4 kB the first query reads 2.8 MB, not 4.3 MB, and the modules are
 - **OET-LV word joiners** (`_` and `=`) and a few other unexplained source characters are displayed as they are in the source.
 - **Node attributes aren't indexed.** They're stored as JSON text, so `marked` scans all the spans (which is still only about 10 ms).
 - **Not compiled yet:** notes (footnotes and cross-references), variant readings, and versification mappings between editions.
+    So `about` matches a commentary's chapter and verse numbers as they are, even where the reader's Bible numbers them differently (e.g., in some psalms).
+- **Passages are typed as a book code and numbers** (`JHN 3:16`, `PSA 23`, `GEN 1:1-2:3`). Book names and abbreviations in any language aren't understood yet.
+- **A passage that covers several books** can't be asked for, and an anchor to one is stored as its first and last parts only.
+- **Scanning the anchors of a long book** reads every anchor in it up to the passage: it's fast enough now (about 120,000 anchors in all), but won't be with many commentaries in one module.
+- **Entries are only found by their titles**, not by other names for the same thing, and their text is shown as plain text (headings, lists, and tables aren't laid out).
+- **There's no index from a passage's words to the entries**, and nothing yet finds the links that lead *to* an entry.
+- **Each commentary or dictionary is one module**, so it's all downloaded together, and one that's much larger would need splitting.
 - **Which columns are indexed**, and the compression level, are fixed in the compiler, rather than being set in the source registry.
 - The WebAssembly build works in Chrome (see [Browser.md](Browser.md)), but hasn't been tried in other browsers or on a phone.

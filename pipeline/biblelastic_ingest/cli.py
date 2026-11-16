@@ -4,7 +4,8 @@ Convert the registered source editions into the Biblelastic intermediate format.
 Usage (from the pipeline/ folder):
     python3 -m biblelastic_ingest [--editions OET-RV,SR-GNT] [--books MRK,GEN] [--jobs N]
 
-Each source file is handled in its own process, then word alignments are derived in a second pass.
+Each source file (or each document of a commentary or dictionary) is handled in its own process,
+then word alignments are derived in a second pass.
 """
 import argparse
 from concurrent.futures import ProcessPoolExecutor
@@ -23,7 +24,7 @@ import sys
 import time
 import tomllib
 
-from . import normalise, usfm
+from . import items, normalise, usfm
 
 PIPELINE_FOLDER = Path( __file__ ).resolve().parent.parent
 REPOSITORY_FOLDER = PIPELINE_FOLDER.parent
@@ -195,6 +196,34 @@ def ingest_file( edition:dict, sourcePath:str, BBB:str, table:tuple|None, output
     return stats
 
 
+def ingest_items( edition:dict, document:str, sourceNames:list, itemSources:list, outputFolder:str ) -> dict:
+    """ Worker: parse the items (study notes, articles, etc.) of one document of a commentary or dictionary, check them, and write the files. """
+    parsed = items.parse( itemSources, edition['item_documents'], edition['script'] )
+    doc, tokens = parsed.doc, parsed.doc.tokens
+    normaliser = normalise.NORMALISERS[edition['script']]
+    nodeCounts, anchorCounts = {}, {}
+    for node in doc.nodes: nodeCounts[node[0]] = nodeCounts.get( node[0], 0 ) + 1
+    for anchor in parsed.anchors: anchorCounts[anchor[2]] = anchorCounts.get( anchor[2], 0 ) + 1
+    stats = { 'BBB':document, 'source':', '.join( sourceNames ), 'sha256':hashlib.sha256( ''.join( itemSources ).encode( 'utf-8' ) ).hexdigest(),
+              'tokens':len(tokens), 'entries':len(parsed.entries), 'anchors':anchorCounts, 'links':len(parsed.links), 'nodes':nodeCounts,
+              'text_ok':not parsed.text_differences, 'row_marks_ok':True, 'bad_references':parsed.bad_references,
+              'warnings':doc.warnings, 'unknown_markers':{} }
+    if parsed.text_differences: stats['text_difference'] = parsed.text_differences[0]
+
+    folder = Path( outputFolder )
+    write_tsv( folder / f'{document}.tokens.tsv', ['before','text','after','norm'], ( [before, word, after, normaliser( word )] for before,word,after,_features in tokens ) )
+    write_tsv( folder / f'{document}.nodes.tsv', ['type','start','end','name','attributes'],
+                ( [nodeType, start, end, name, json.dumps( attributes, ensure_ascii=False ) if attributes else ''] for nodeType,start,end,name,attributes in doc.nodes ) )
+    write_tsv( folder / f'{document}.entries.tsv', ['start','end','name','type','title'], parsed.entries )
+    write_tsv( folder / f'{document}.anchors.tsv', ['start','end','kind','reference'], parsed.anchors )
+    write_tsv( folder / f'{document}.links.tsv', ['start','end','kind','target'], parsed.links )
+    (folder / f'{document}.meta.json').write_text( json.dumps( stats, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
+    # Only for the cross-document check of the links (not kept in the report)
+    stats['entry_locations'] = [ f'{document} {entry[2]}' for entry in parsed.entries ]
+    stats['link_targets'] = [ link[3] for link in parsed.links ]
+    return stats
+
+
 def read_column( path:Path, columnName:str ) -> list:
     with open( path, encoding='utf-8', newline='' ) as tsvFile:
         columnIndex = tsvFile.readline().rstrip( '\n' ).split( '\t' ).index( columnName )
@@ -244,16 +273,33 @@ def main() -> int:
             tableHeader, rowTable = load_row_table( edition, arguments.source_root ) if 'row_table' in edition else (None, None)
             paths = sorted( path for pattern in edition['files'] for path in arguments.source_root.glob( pattern ) )
             if not paths: print( f"ERROR: no source files found for {edition['id']} under {arguments.source_root}" ); failures += 1
+            if 'item_documents' in edition: # A commentary or dictionary: split the files into items, and handle each document's items together
+                groups = {}
+                for path in paths:
+                    for document, itemSource in items.split_items( path.read_text( encoding='utf-8' ), edition['item_documents'] ):
+                        group = groups.setdefault( document, ([], []) )
+                        if path.name not in group[0]: group[0].append( path.name )
+                        group[1].append( itemSource )
+                futures[edition['id']] = [ pool.submit( ingest_items, edition, document, sourceNames, itemSources, str(folder) )
+                                            for document, (sourceNames, itemSources) in groups.items() if not wantedBooks or document.upper() in wantedBooks ]
+                continue
             futures[edition['id']] = [ pool.submit( ingest_file, edition, str(path), book_code( path ), (tableHeader, rowTable.get( book_code( path ), [] )) if rowTable else None, str(folder), transliterationsFolder )
                                         for path in paths if not wantedBooks or book_code( path ) in wantedBooks ]
 
         for edition in editions:
             documents = [ future.result() for future in futures[edition['id']] ]
             manifest = { 'format_version':usfm.FORMAT_VERSION, 'generated':date.today().isoformat() }
+            manifest['kind'] = 'scripture' # Unless the registry says that it's a commentary or dictionary
             manifest.update( { key:value for key,value in edition.items() if not key.startswith( 'row_table' ) and key not in ('files','layer','variants') } )
             manifest['layers'] = [ { key:(list( value ) if key == 'columns' else value) for key,value in edition[layerKey].items() if key != 'filter_values' }
                                     | { 'kind':'features' if layerKey == 'layer' else 'variants' } for layerKey in ('layer','variants') if layerKey in edition ]
             manifest['token_columns'] = ['before','text','after','norm'] + edition['features']
+            if 'item_documents' in edition: # Check that every link between items leads somewhere
+                # (ignoring case, because the sources aren't consistent about it, e.g., AbrahamSBosom for AbrahamsBosom)
+                locations = { location.casefold() for document in documents for location in document.pop( 'entry_locations' ) }
+                targets = [ target.casefold() for document in documents for target in document.pop( 'link_targets' ) ]
+                brokenLinks = sorted( { target for target in targets if target not in locations } )
+                manifest['broken_links'] = brokenLinks
             manifest['documents'] = [ { key:document[key] for key in ('BBB','source','sha256','tokens') } for document in documents ]
             (arguments.output / edition['id'] / 'manifest.json').write_text( json.dumps( manifest, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
             report['editions'][edition['id']] = documents
@@ -266,6 +312,14 @@ def main() -> int:
                 for name, count in document['unknown_markers'].items(): unknownMarkers[name] = unknownMarkers.get( name, 0 ) + count
             totalTokens = sum( document['tokens'] for document in documents )
             print( f"{edition['id']}: {len(documents)} documents, {totalTokens:,} tokens, {len(documents)-len(bad)}/{len(documents)} passed the text checks" )
+            if 'item_documents' in edition:
+                anchorCounts = {}
+                for document in documents:
+                    for kind, count in document['anchors'].items(): anchorCounts[kind] = anchorCounts.get( kind, 0 ) + count
+                badReferences = [ reference for document in documents for reference in document['bad_references'] ]
+                print( f"    {sum( document['entries'] for document in documents ):,} entries; Scripture anchors: {anchorCounts};"
+                       f" {len(targets):,} links between entries ({sum( 1 for target in targets if target not in locations ):,} to {len(brokenLinks):,} missing entries)" )
+                if badReferences: print( f"    {len(badReferences):,} references couldn't be understood, e.g., {badReferences[:6]}" )
             if edition['format'] == 'ESFM':
                 print( f"    {sum( document['with_row'] for document in documents ):,} tokens have word numbers; {sum( document['marks'] for document in documents ):,} OET marks became attributes" )
             if 'row_table' in edition:

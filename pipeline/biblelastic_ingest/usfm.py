@@ -305,35 +305,42 @@ class _Parser:
             doc.nodes.append( ('section', start, end, title, {}) )
 
     def add_sentences( self ) -> None:
-        """
-        Heuristic sentence boundaries from punctuation (marked as derived, so they can be replaced by better data).
-
-        Only body and intro words are considered, so a sentence that's interrupted by a heading spans that heading.
-        Body sentences can continue across paragraphs (e.g., lines of poetry), but intro sentences can't.
-        A sentence doesn't end inside parentheses, e.g., at the abbreviation in ‘Yeshua (Jesus; Grk. Yaʸsous)’.
-        """
-        doc, tokens = self.doc, self.doc.tokens
-        enders = SENTENCE_ENDERS.get( self.script, '.?!' )
-        isLatin = self.script == 'Latn'
+        """ Body sentences can continue across paragraphs (e.g., lines of poetry), but intro sentences can't. """
+        doc = self.doc
         for wantedKind in ('intro','body'):
-            paragraphs = [ (start,end) for _marker,kind,start,end,_text in doc.paragraphs if kind == wantedKind ]
-            indexes = [ ix for start,end in paragraphs for ix in range( start, end ) ]
-            forcedEnds = { end-1 for _start,end in paragraphs } if wantedKind == 'intro' else set()
-            sentenceStart, depth = None, 0
-            for n, ix in enumerate( indexes ):
-                if sentenceStart is None: sentenceStart = ix
-                isLast = n+1 == len(indexes) or ix in forcedEnds
-                depth = max( 0, depth + tokens[ix][0].count( '(' ) - tokens[ix][2].count( ')' ) )
-                insideParentheses = depth > 0
-                depth += tokens[ix][2].count( '(' )
-                if isLast: depth = 0
-                elif insideParentheses: continue
-                if not isLast and not any( character in tokens[ix][2] for character in enders ): continue
-                if not isLast and isLatin:
-                    nextCharacter = tokens[indexes[n+1]][1][0]
-                    if nextCharacter.islower() or nextCharacter.isdigit(): continue # e.g., an abbreviation or reference
-                doc.nodes.append( ('sentence', sentenceStart, ix+1, '', {'derived':'punctuation'}) )
-                sentenceStart = None
+            ranges = [ (start,end) for _marker,kind,start,end,_text in doc.paragraphs if kind == wantedKind ]
+            doc.nodes.extend( sentence_nodes( doc.tokens, ranges, self.script, crossParagraphs=wantedKind == 'body' ) )
+
+
+def sentence_nodes( tokens:list, ranges:list, script:str, crossParagraphs:bool ) -> list:
+    """
+    Heuristic sentence boundaries from punctuation (marked as derived, so they can be replaced by better data).
+
+    ranges are the (start, end) token ranges of the paragraphs to consider, in order. Words outside them are ignored,
+    so a sentence that's interrupted by a heading spans that heading.
+    A sentence doesn't end inside parentheses, e.g., at the abbreviation in ‘Yeshua (Jesus; Grk. Yaʸsous)’.
+    """
+    nodes = []
+    enders = SENTENCE_ENDERS.get( script, '.?!' )
+    isLatin = script == 'Latn'
+    indexes = [ ix for start,end in ranges for ix in range( start, end ) ]
+    forcedEnds = set() if crossParagraphs else { end-1 for _start,end in ranges }
+    sentenceStart, depth = None, 0
+    for n, ix in enumerate( indexes ):
+        if sentenceStart is None: sentenceStart = ix
+        isLast = n+1 == len(indexes) or ix in forcedEnds
+        depth = max( 0, depth + tokens[ix][0].count( '(' ) - tokens[ix][2].count( ')' ) )
+        insideParentheses = depth > 0
+        depth += tokens[ix][2].count( '(' )
+        if isLast: depth = 0
+        elif insideParentheses: continue
+        if not isLast and not any( character in tokens[ix][2] for character in enders ): continue
+        if not isLast and isLatin:
+            nextCharacter = tokens[indexes[n+1]][1][0]
+            if nextCharacter.islower() or nextCharacter.isdigit(): continue # e.g., an abbreviation or reference
+        nodes.append( ('sentence', sentenceStart, ix+1, '', {'derived':'punctuation'}) )
+        sentenceStart = None
+    return nodes
 
 
 def parse( source:str, script:str='Latn', esfm:bool=False ) -> Document:

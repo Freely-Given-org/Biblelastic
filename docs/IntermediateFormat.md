@@ -14,7 +14,8 @@ It's created by the `pipeline/biblelastic_ingest` Python package (standard libra
     python3 -m unittest discover tests
 
 Output goes into `build/intermediate/` (which is not committed).
-Each source file is processed in its own process, so a full run of the first four editions takes a few seconds.
+Each source file is processed in its own process, so a full run of the first six editions takes several seconds.
+(For a commentary or dictionary, each document is processed in its own process.)
 
 Transliterations need the (CC0) [BibleTransliterations](https://github.com/Freely-Given-org/BibleTransliterations) library
 in a folder alongside this one. Without it, a warning is given and those columns are left empty.
@@ -30,6 +31,9 @@ in a folder alongside this one. Without it, a warning is given and those columns
                 <BBB>.nodes.tsv             Ranges of words (verses, paragraphs, sentences, etc.)
                 <BBB>.notes.tsv             Footnotes, cross-references, figures, and remarks
                 <BBB>.meta.json             Headers, counts, warnings, and check results
+                <DOCUMENT>.entries.tsv      Only for commentaries, dictionaries, etc.: the entries (study notes, articles, etc.)
+                <DOCUMENT>.anchors.tsv      … the Bible passages that they're about, and that they cite
+                <DOCUMENT>.links.tsv        … and the links from one entry to another
             layers/
                 <LAYER>/
                     <BBB>.features.tsv      Extra feature columns from another source: one row per word
@@ -39,7 +43,10 @@ in a folder alongside this one. Without it, a warning is given and those columns
                 <BBB>.links.tsv             Word-to-word links between two editions
 
 `<BBB>` is the three-character BibleOrgSys book code (GEN, SA1, MRK, etc.).
-One *document* is one ‘book’. Nothing assumes any particular set of documents.
+One *document* is one ‘book’. Nothing assumes any particular set of documents,
+and the documents of other kinds of work have other names (see *Commentaries and dictionaries* below).
+
+The manifest's `kind` says what an edition is: `scripture`, `commentary`, or `dictionary`.
 
 ## Tokens
 
@@ -165,6 +172,44 @@ It doesn't say which manuscripts have each reading.
 `anchor` is the number of words that come before the note. `type` is `f` (footnote), `x` (cross-reference), `fig` (figure), or `rem` (a remark line in the body).
 `content` is the raw source content—it's not yet tokenised, so it can't yet be searched like the main text.
 
+## Commentaries and dictionaries
+
+These have tokens and nodes just like a Bible ‘book’ (so their text is displayed and searched in the same way), plus three more files.
+They're made of separate items (study notes, articles, etc.), and each item becomes an *entry*.
+The registry says which document each type of item goes into: either a named document, or one document for each Bible book that the items are about.
+
+`<DOCUMENT>.entries.tsv` has the columns `start`, `end`, `name`, `type`, `title`, in order of `start` (`end` is exclusive, as for nodes).
+`name` identifies the entry within its document, so an entry's *locator* is the edition, then the document, then the name:
+e.g., `TOSN GEN 1:1-2:3` is a study note, and `TOBD Articles AbdonPerson` is a dictionary article whose `title` is ‘Abdon (Person)’.
+`type` is whatever the source calls that kind of item, e.g., `StudyNote` or `Article`.
+
+`<DOCUMENT>.anchors.tsv` has the columns `start`, `end`, `kind`, `reference`. These are the *Scripture anchors*:
+
+| Kind | Meaning | `start` and `end` |
+| --- | --- | --- |
+| `about` | The entry is about this passage | The whole entry |
+| `cites` | The entry refers to this passage | The words that are the link in the source, e.g., *Rom 5:8* |
+
+`reference` is one book code and a passage in it: `GEN 1:1`, or `GEN 1:1-2:3` for a range (always with the chapter number on both sides).
+A source reference to several passages gives several rows, and a range that goes from one book into another gives two rows
+(with `999:999` for ‘to the end of the book’, and any books in between left out).
+The chapter and verse numbers are the source's own, in the versification that the manifest names.
+
+`<DOCUMENT>.links.tsv` has the columns `start`, `end`, `kind`, `target`. `kind` is `see` (the words from `start` to `end` are a link to another entry)
+or `include` (another entry, e.g., a text box or a map, is displayed at this point, so `start` equals `end`).
+`target` is the document and name of an entry in the same edition. The manifest lists any `broken_links`: targets that don't exist.
+(Case is ignored when matching them, because the sources aren't consistent about it.)
+
+The paragraph and span nodes are named by the source's own classes, e.g., `sn-text`, `h2`, `sn-excerpt`, `hebrew`.
+Paragraphs have a `kind` attribute of `heading` or `body`, and sentences are derived from the body paragraphs (never crossing from one to the next).
+
+So far there are two, both from [Tyndale Open Resources](https://tyndaleopenresources.com) (CC BY-SA 4.0):
+
+| Edition | Kind | Documents | Entries | Words | Anchors |
+| --- | --- | --- | --- | --- | --- |
+| `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.08 million | 17,478 `about` and 55,554 `cites` |
+| `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.49 million | 47,393 `cites` |
+
 ## Alignments
 
 `<BBB>.links.tsv` has the columns `from` and `to`, each a word index in the same `<BBB>` document of the two editions.
@@ -177,7 +222,7 @@ The alignments so far are derived by joining OET `row` numbers to SR-GNT and UHB
 
 A run fails (non-zero exit code) if, for any document:
 
-- the text rebuilt from the tokens differs from the source text (ignoring white-space), or
+- the text rebuilt from the tokens differs from the source text (ignoring white-space)—for a commentary or dictionary, this is checked for each entry—or
 - the number of ESFM word numbers handled differs from the number in the source.
 
 Other oddities are counted as warnings in `<BBB>.meta.json` and `report.json`, e.g., word numbers that aren't attached to a word,
@@ -191,4 +236,9 @@ empty character markers, and unknown paragraph markers.
 - Syntax (`nesting`) isn't yet turned into clause and phrase nodes.
 - OET deuterocanonical books keep their `row` numbers, but there's no original-language edition for them to link to yet.
 - No English lemmas or stems.
-- Non-Bible works (with their own location schemes and Scripture references) aren't covered yet.
+- Commentaries and dictionaries can only be read from Tyndale's XML format so far.
+- A few source references can't be understood and are left out (16 of about 120,000 in the two Tyndale works: they're listed in `report.json`).
+    Most are mistakes in the source, e.g., `Gen.1.3-2` where the text says 1:3–2:3. Parts of verses (e.g., 16b) are treated as the whole verse.
+- References are only found where the source marks them as links: plain text like ‘v 13’ isn't recognised.
+- Links to a heading within an article, tables (their cells are just paragraphs), and images aren't kept.
+- Commentaries and dictionaries don't have section nodes for their headings yet.

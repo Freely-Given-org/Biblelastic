@@ -17,7 +17,7 @@ This is a first trial, to check that the [module format](ModuleFormat.md) suits 
 | File | What it is |
 | --- | --- |
 | `crates/biblelastic-engine/src/api.rs` | The interface for every kind of app: a text request in, JSON out |
-| `crates/biblelastic-wasm` | The engine as a WebAssembly module (315 kB, or 103 kB gzipped; about 95 kB of that is the zstd decoder) |
+| `crates/biblelastic-wasm` | The engine as a WebAssembly module (389 kB, or 126 kB gzipped; about 95 kB of that is the zstd decoder) |
 | `web/engine-worker.js` | The worker: loads the engine, installs modules into OPFS, and reads byte ranges for the engine |
 | `web/biblelastic.js` | What a web page uses: `Biblelastic.start()`, then `install`, `list`, `remove`, `request` |
 | `web/index.html` | The test page |
@@ -36,12 +36,12 @@ A request is lines of `key=value`, and the response is JSON:
     words=love loves loved loving
     limit=3
 
-The commands are `info`, `terms`, `find` (with `within`), and `marked`, with the same meanings and defaults as on the command line.
+The commands are `info`, `terms`, `find` (with `within`), `marked`, `about` (with `passage`), and `entry`, with the same meanings and defaults as on the command line.
 `target/release/biblelastic request command=find 'words=grace truth'` shows the same JSON that a browser gets.
 
 ## What the trial found
 
-Measured in headless Chrome on a desktop computer, with all twelve modules (42 MB) installed, running these one after another from a fresh start:
+Measured in headless Chrome on a desktop computer, with all fourteen modules (58 MB) installed, running these one after another from a fresh start:
 
 | Request | First time | Read from storage | Again |
 | --- | --- | --- | --- |
@@ -49,9 +49,11 @@ Measured in headless Chrome on a desktop computer, with all twelve modules (42 M
 | `find grace truth` | 2 ms | 0.4 MB | 0.1 ms |
 | `find love God` | 2 ms | 0.1 MB | 1 ms |
 | `marked pronoun_to_name` | 10 ms | 1.6 MB | 2 ms |
+| `about JHN 3:16` | 6 ms | 1.0 MB | 0.2 ms |
+| `entry aaron` | 6 ms | 0.5 MB | 0.1 ms |
 
-The engine used 10 MB of memory after all four. Starting it (with the modules already installed) took about 10 ms.
-When it was only allowed 2 MB for pages of the modules (`Biblelastic.start({ cacheBytes: 2 << 20 })`), it used 3.6 MB in all,
+The engine used 12.5 MB of memory after all six. Starting it (with the modules already installed) took about 10 ms.
+When it was only allowed 2 MB for pages of the modules (`Biblelastic.start({ cacheBytes: 2 << 20 })`), it used 3.7 MB in all,
 gave the same answers, and took about the same time, because it then reads everything again for each request.
 
 - **The format works the same in the browser as natively.** Reading only byte ranges, through one small interface, was enough.

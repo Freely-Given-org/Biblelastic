@@ -28,7 +28,7 @@
 
 <h2>Request</h2>
 <form id="request">
-  <select name="command"><option>terms</option><option>find</option><option>marked</option><option>info</option></select>
+  <select name="command"><option>terms</option><option>find</option><option>marked</option><option>about</option><option>entry</option><option>info</option></select>
   <input name="words" value="love loves loved loving" aria-label="Words">
   <label>in <input name="edition" value="OET-RV" size="7"></label>
   <label>within <select name="within"><option>sentence</option><option>verse</option><option>para</option><option>section</option><option>chapter</option></select></label>
@@ -87,9 +87,26 @@ $('request').onsubmit = async event => {
         lines.push(line);
     }
     for (const example of response.examples ?? []) lines.push(element('p', `${example.reference}: ${example.text}`));
+    if (response.comments) lines.push(element('p', `${response.total} entries are about ${response.passage} or cite it`));
+    for (const comment of response.comments ?? []) {
+        const line = element('p', `${comment.text} `);
+        line.prepend(element('small', `${comment.edition} ${comment.locator}${comment.title && ` ‘${comment.title}’`} (${comment.kind} ${comment.passage})`), document.createElement('br'));
+        lines.push(line);
+    }
+    if (response.entries) lines.push(element('p', `${response.total} entries`));
+    for (const entry of response.entries ?? []) {
+        const line = element('p', `${entry.text} `);
+        line.prepend(element('small', `${entry.edition} ${entry.locator} ‘${entry.title}’ (${entry.type})`), document.createElement('br'));
+        if (entry.see.length) line.append(document.createElement('br'), element('small', `See: ${entry.see.join('; ')}`));
+        lines.push(line);
+    }
     for (const module of response.modules ?? []) lines.push(element('p', `${module.name}: ${module.kind}, ${module.sections} sections`));
     results.replaceChildren(...lines);
 };
+
+// A sample of what each command takes. Commentaries and dictionaries are all searched unless an edition is named.
+const SAMPLES = { terms: ['love loves loved loving', 'OET-RV'], find: ['grace truth', 'OET-RV'], marked: ['pronoun_to_name', 'OET-RV'], about: ['JHN 3:16', ''], entry: ['aaron', ''], info: ['', ''] };
+$('request').command.onchange = event => [event.target.form.words.value, event.target.form.edition.value] = SAMPLES[event.target.value];
 
 try {
     engine = await Biblelastic.start();

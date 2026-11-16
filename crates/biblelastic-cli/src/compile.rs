@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use biblelastic_engine::format::{ModuleWriter, DEFAULT_PAGE_BITS};
+use biblelastic_engine::reference::{pack, Passage};
 
 type Result<T> = std::result::Result<T, String>;
 
@@ -119,6 +120,96 @@ struct Edition {
     slots: usize,
 }
 
+/// The entries of a commentary or dictionary (its study notes, articles, etc.), the Scripture passages they're anchored to,
+/// and the links between them
+#[derive(Default)]
+struct Items {
+    starts: Vec<u32>,
+    ends: Vec<u32>,
+    names: Interned,
+    types: Interned,
+    titles: Interned,
+    /// Lower-case `DOCUMENT NAME` → the entry's number
+    locations: HashMap<String, u32>,
+    /// The words of each title → the entries that have them
+    title_words: BTreeMap<String, Vec<u32>>,
+    /// (passage, kind, first slot, end slot)
+    anchors: Vec<(Passage, u32, u32, u32)>,
+    /// (first slot, end slot, kind, target location)
+    links: Vec<(u32, u32, u32, String)>,
+}
+
+impl Items {
+    /// Read one document's entries, anchors, and links (`start` is the document's first slot)
+    fn read(&mut self, id: &str, folder: &Path, document: &str, start: u32) -> Result<()> {
+        let file = |kind: &str| folder.join("documents").join(format!("{document}.{kind}.tsv"));
+        let slot = |field: &String| field.parse::<u32>().map(|value| value + start).map_err(|_| format!("{id} {document}: bad position '{field}'"));
+        if !file("entries").exists() { return Ok(()); }
+        for row in read_tsv(&file("entries"))?.1 { // start, end, name, type, title
+            let entry = self.starts.len() as u32;
+            self.starts.push(slot(&row[0])?);
+            self.ends.push(slot(&row[1])?);
+            self.names.push(&row[2]);
+            self.types.push(&row[3]);
+            self.titles.push(&row[4]);
+            self.locations.insert(format!("{document} {}", row[2]).to_lowercase(), entry);
+            for word in biblelastic_engine::query::title_words(&row[4].replace('*', " ")) {
+                let list = self.title_words.entry(word).or_default();
+                if list.last() != Some(&entry) { list.push(entry); }
+            }
+        }
+        for row in read_tsv(&file("anchors"))?.1 { // start, end, kind, reference
+            let kind = match row[2].as_str() { "about" => 0, "cites" => 1, other => return Err(format!("{id} {document}: unknown kind of anchor '{other}'")) };
+            let passage = Passage::parse(&row[3]).map_err(|error| format!("{id} {document}: {error}"))?;
+            self.anchors.push((passage, kind, slot(&row[0])?, slot(&row[1])?));
+        }
+        for row in read_tsv(&file("links"))?.1 { // start, end, kind, target
+            let kind = match row[2].as_str() { "see" => 0, "include" => 1, other => return Err(format!("{id} {document}: unknown kind of link '{other}'")) };
+            self.links.push((slot(&row[0])?, slot(&row[1])?, kind, row[3].to_lowercase()));
+        }
+        Ok(())
+    }
+
+    fn write(mut self, writer: &mut ModuleWriter) {
+        if self.starts.is_empty() { return; }
+        let entry_at = |slot: u32| self.starts.partition_point(|&start| start <= slot).saturating_sub(1) as u32;
+        writer.packed("node.entry.starts", &self.starts);
+        writer.packed("node.entry.ends", &self.ends);
+        self.names.write(writer, "node.entry.name", Index::None);
+        self.types.write(writer, "node.entry.type", Index::None);
+        self.titles.write(writer, "node.entry.title", Index::None);
+        writer.strings("idx.entry.dict", &self.title_words.keys().collect::<Vec<_>>());
+        writer.postings("idx.entry.post", &self.title_words.values().cloned().collect::<Vec<_>>());
+
+        // Scripture anchors, in passage order. The books are numbered within this module, in the order of their codes.
+        let books: Vec<String> = self.anchors.iter().map(|anchor| anchor.0.book.clone()).collect::<BTreeSet<_>>().into_iter().collect();
+        let book_numbers: HashMap<&str, u32> = books.iter().enumerate().map(|(number, book)| (book.as_str(), number as u32)).collect();
+        let mut anchors: Vec<[u32; 6]> = self.anchors.iter().map(|(passage, kind, start, end)| {
+            let book = book_numbers[passage.book.as_str()];
+            [pack(book, passage.from), pack(book, passage.to), *kind, *start, *end, entry_at(*start)]
+        }).collect();
+        anchors.sort_unstable();
+        anchors.dedup();
+        writer.strings("anchor.books", &books);
+        for (field, name) in ["from", "to", "kind", "start", "end", "entry"].iter().enumerate() {
+            writer.packed(&format!("anchor.{name}"), &anchors.iter().map(|anchor| anchor[field]).collect::<Vec<_>>());
+        }
+
+        // Links between entries, in slot order (the few that lead nowhere are dropped)
+        self.links.sort();
+        let links: Vec<[u32; 4]> = self.links.iter().filter_map(|(start, end, kind, target)| self.locations.get(target).map(|&entry| [*start, *end, *kind, entry])).collect();
+        for (field, name) in ["start", "end", "kind", "target"].iter().enumerate() {
+            writer.packed(&format!("link.{name}"), &links.iter().map(|link| link[field]).collect::<Vec<_>>());
+        }
+    }
+}
+
+/// A top-level text value from a manifest, as the ingest writes it (one key to a line, indented by one space)
+fn manifest_value(manifest: &[u8], key: &str) -> Option<String> {
+    let start = format!(" \"{key}\": \"");
+    String::from_utf8_lossy(manifest).lines().find_map(|line| line.strip_prefix(&start).map(|rest| rest.trim_end_matches(',').trim_end_matches('"').to_string()))
+}
+
 fn save(output: &Path, name: &str, writer: ModuleWriter) -> Result<Written> {
     let bytes = writer.finish();
     let sections = biblelastic_engine::format::Module::open(Box::new(bytes.clone())).map_err(|error| error.to_string())?.entries().len();
@@ -152,8 +243,10 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     let mut layer_columns: Vec<Vec<Interned>> = layer_folders.iter().map(|_| Vec::new()).collect();
     let mut nodes: BTreeMap<String, (Vec<u32>, Vec<u32>, Interned, Interned)> = BTreeMap::new();
     let mut starts = vec![0u32];
+    let mut items = Items::default();
     for document in &documents {
         let start = *starts.last().unwrap();
+        items.read(&id, folder, document, start)?;
         let (header, rows) = read_tsv(&folder.join("documents").join(format!("{document}.tokens.tsv")))?;
         if token_header.is_empty() { token_columns = header.iter().map(|_| Interned::default()).collect(); token_header = header; }
         else if header != token_header { return Err(format!("{id} {document}: token columns differ from the other documents")); }
@@ -182,9 +275,11 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     }
     let slots = *starts.last().unwrap() as usize;
 
+    let work = manifest_value(&manifest, "kind").unwrap_or_else(|| "scripture".to_string());
     let new_module = |layer: &str, kind: &str| {
         let mut writer = options.writer();
         writer.raw("module.kind", kind.as_bytes());
+        writer.raw("module.work", work.as_bytes());
         writer.raw("module.edition", id.as_bytes());
         writer.raw("module.layer", layer.as_bytes());
         writer.raw("manifest", &manifest);
@@ -210,6 +305,7 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
         names.write(&mut text, &format!("node.{node_type}.name"), Index::None);
         attributes.write(&mut text, &format!("node.{node_type}.attributes"), Index::None);
     }
+    items.write(&mut text);
     written.push(save(output, &format!("{id}.text"), text)?);
     if has_morph { written.push(save(output, &format!("{id}.morph"), morph)?); }
 
@@ -312,8 +408,21 @@ mod tests {
         write(&intermediate, "GR/layers/OET/JN1.features.tsv", "gloss\ttags\nGod\tPGod;Y30\nloves\tY30\nlove\t\n\t\n");
         write(&intermediate, "alignments/EN--GR/JN1.links.tsv", "from\tto\n0\t0\n1\t1\n3\t2\n4\t2\n8\t3\n");
 
+        // A commentary: a study note on one verse, and an article that's about a longer passage
+        write(&intermediate, "CM/manifest.json", "{\n \"format_version\": \"0.1\",\n \"kind\": \"commentary\",\n \"layers\": [{\"kind\": \"features\"}]\n}\n");
+        write(&intermediate, "CM/documents/JN1.tokens.tsv", "before\ttext\tafter\tnorm\n\tLove\t \tlove\n\tdefined\t. \tdefined\n(\tRom\t \trom\n\t5\t:\t5\n\t8\t)\t8\n");
+        write(&intermediate, "CM/documents/JN1.nodes.tsv", "type\tstart\tend\tname\tattributes\npara\t0\t5\tsn-text\t\nsentence\t0\t2\t\t\nsentence\t2\t5\t\t\n");
+        write(&intermediate, "CM/documents/JN1.entries.tsv", "start\tend\tname\ttype\ttitle\n0\t5\t4:8\tStudyNote\t\n");
+        write(&intermediate, "CM/documents/JN1.anchors.tsv", "start\tend\tkind\treference\n2\t5\tcites\tROM 5:8\n0\t5\tabout\tJN1 4:8\n");
+        write(&intermediate, "CM/documents/JN1.links.tsv", "start\tend\tkind\ttarget\n0\t1\tsee\tThemes love\n0\t1\tsee\tThemes Missing\n");
+        write(&intermediate, "CM/documents/Themes.tokens.tsv", "before\ttext\tafter\tnorm\n\tLove\t \tlove\n\tmatters\t.\tmatters\n");
+        write(&intermediate, "CM/documents/Themes.nodes.tsv", "type\tstart\tend\tname\tattributes\npara\t0\t2\ttheme-body\t\nsentence\t0\t2\t\t\n");
+        write(&intermediate, "CM/documents/Themes.entries.tsv", "start\tend\tname\ttype\ttitle\n0\t2\tLove\tThemeNote\tGod’s Love*\n");
+        write(&intermediate, "CM/documents/Themes.anchors.tsv", "start\tend\tkind\treference\n0\t2\tabout\tJN1 4:7-4:21\n");
+        write(&intermediate, "CM/documents/Themes.links.tsv", "start\tend\tkind\ttarget\n1\t2\tsee\tJN1 4:8\n");
+
         let written = super::compile(&intermediate, &folder.join("modules"), super::Options { page_bits: 5, compress: true }).unwrap(); // Tiny pages, so that plenty of things cross them
-        assert_eq!(written.iter().map(|module| module.name.as_str()).collect::<Vec<_>>(), ["EN.text", "GR.text", "GR.morph", "GR.OET", "EN--GR.align"]);
+        assert_eq!(written.iter().map(|module| module.name.as_str()).collect::<Vec<_>>(), ["CM.text", "EN.text", "GR.text", "GR.morph", "GR.OET", "EN--GR.align"]);
         let library = Library::open(&Folder(folder.join("modules"))).unwrap();
 
         // Text is resynthesised, with a space where the second paragraph starts
@@ -345,6 +454,28 @@ mod tests {
         assert_eq!(response, r#"{"ok":true,"forms":[["god",1]],"total":1,"examples":[{"reference":"JN1 4:8","text":"“[God] loves us.”"}]}"#);
         assert!(biblelastic_engine::api::respond(&library, "command=nothing").starts_with(r#"{"ok":false,"error":"#));
         assert!(std::fs::read_to_string(folder.join("modules/index.json")).unwrap().contains(r#"{"name": "EN--GR.align", "bytes": "#));
+
+        // What the commentary says about a passage: the note on that verse, then the article on a longer passage that includes it
+        use biblelastic_engine::reference::Passage;
+        assert_eq!(library.modules.iter().map(|installed| installed.work.as_str()).collect::<Vec<_>>(), ["commentary", "", "scripture", "scripture", "scripture", "scripture"]);
+        let found = query::about(&library, &Passage::parse("JN1 4:8").unwrap(), None, 5, 100).unwrap();
+        let comments: Vec<_> = found.comments.iter().map(|comment| (comment.locator.as_str(), comment.title.as_str(), comment.kind, comment.passage.as_str(), comment.text.as_str())).collect();
+        assert_eq!(comments, [("JN1 4:8", "", "about", "JN1 4:8", "Love defined. (Rom 5:8)"), ("Themes Love", "God’s Love*", "about", "JN1 4:7-21", "Love matters.")]);
+        // … and what cites a passage (shown as the sentence that cites it)
+        let found = query::about(&library, &Passage::parse("ROM 5").unwrap(), Some("CM"), 5, 100).unwrap();
+        assert_eq!((found.total, found.comments[0].kind, found.comments[0].locator.as_str(), found.comments[0].text.as_str()), (1, "cites", "JN1 4:8", "(Rom 5:8)"));
+        assert_eq!(query::about(&library, &Passage::parse("JN1 5").unwrap(), None, 5, 100).unwrap().total, 0);
+        assert_eq!(query::about(&library, &Passage::parse("JN1 4:8").unwrap(), None, 5, 6).unwrap().comments[0].text, "Love…");
+        // Entries are found by the words of their titles, and list what they link to
+        let found = query::entries(&library, &["Gods".to_string(), "lov*".to_string()], None, 5, 100).unwrap();
+        assert_eq!((found.total, found.entries[0].locator.as_str(), found.entries[0].kind.as_str(), found.entries[0].text.as_str()), (1, "Themes Love", "ThemeNote", "Love matters."));
+        assert_eq!(found.entries[0].see, ["JN1 4:8"]);
+        assert_eq!(query::entries(&library, &["defined".to_string()], None, 5, 100).unwrap().total, 0);
+        // A commentary's own text is searched like any other, and places in it are given by document and entry
+        assert_eq!(query::find_together(&library, "CM", &["love".to_string(), "rom".to_string()], "entry", 5).unwrap().examples[0].reference, "JN1 4:8");
+        let response = biblelastic_engine::api::respond(&library, "command=about\npassage=JN1 4:8\nlimit=1\nlength=4");
+        assert_eq!(response, r#"{"ok":true,"passage":"JN1 4:8","total":2,"comments":[{"edition":"CM","work":"commentary","locator":"JN1 4:8","title":"","kind":"about","passage":"JN1 4:8","text":"Love…"}]}"#);
+        assert!(biblelastic_engine::api::respond(&library, "command=entry\nwords=love").contains(r#""locator":"Themes Love","title":"God’s Love*","type":"ThemeNote","text":"Love matters.","see":["JN1 4:8"]"#));
 
         // Each tag is indexed separately
         let layer = library.column_module("GR", "tags").unwrap();

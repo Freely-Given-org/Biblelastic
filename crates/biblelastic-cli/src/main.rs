@@ -19,6 +19,8 @@ Commands:
   terms WORD...           Find the original-language terms that these words translate, e.g., terms love loves loved loving
   find WORD...            Find where all of these words occur together, e.g., find grace truth --within sentence
   marked REASON           Find where the translators marked an addition or change, e.g., marked pronoun_to_name
+  about PASSAGE           Find what the commentaries and dictionaries say about a passage, e.g., about JHN 3:16 or about PSA 23
+  entry WORD...           Look up a dictionary entry by its title, e.g., entry aaron or entry abel*
   request KEY=VALUE...    Send a request as an app would, and show the JSON response, e.g., request command=find 'words=grace truth'
 
 A word can end with * to match any ending, e.g., lov*
@@ -26,10 +28,11 @@ A word can end with * to match any ending, e.g., lov*
 Options:
   --intermediate DIR      Where the ingest wrote its files (default: build/intermediate)
   --modules DIR           Where the modules are (default: build/modules)
-  --edition ID            The edition to search (default: OET-RV)
+  --edition ID            The edition to search (default: OET-RV; for about and entry: all of them)
   --within TYPE           For find: sentence, verse, para, section, or chapter (default: sentence)
   --examples N            For terms: how many example verses to show for each term (default: 1)
   --limit N               How many results to show (default: 20)
+  --length N              For about and entry: how many characters of each entry to show (default: 300)
   --cache N               How many megabytes of the modules may be kept in memory (default: 16)
   --page-bits N           For compile: store sections as pages of 2^N bytes (default: 14, i.e., 16 kB)
   --no-compress           For compile: don't compress anything
@@ -40,6 +43,9 @@ struct Arguments {
     intermediate: PathBuf,
     modules: PathBuf,
     edition: String,
+    /// The edition, if one was asked for
+    only: Option<String>,
+    length: usize,
     within: String,
     examples: usize,
     limit: usize,
@@ -50,7 +56,7 @@ struct Arguments {
 
 fn parse(arguments: &[String]) -> Result<Arguments, String> {
     let mut parsed = Arguments { words: Vec::new(), intermediate: "build/intermediate".into(), modules: "build/modules".into(),
-                                 edition: "OET-RV".into(), within: "sentence".into(), examples: 1, limit: 20,
+                                 edition: "OET-RV".into(), only: None, length: 300, within: "sentence".into(), examples: 1, limit: 20,
                                  page_bits: compile::Options::default().page_bits, compress: true, cache: biblelastic_engine::format::DEFAULT_CACHE_BYTES >> 20 };
     let mut iterator = arguments.iter();
     while let Some(argument) = iterator.next() {
@@ -61,7 +67,8 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
         match argument.as_str() {
             "--intermediate" => parsed.intermediate = value.into(),
             "--modules" => parsed.modules = value.into(),
-            "--edition" => parsed.edition = value.clone(),
+            "--edition" => { parsed.edition = value.clone(); parsed.only = Some(value.clone()); }
+            "--length" => parsed.length = number()?,
             "--within" => parsed.within = value.clone(),
             "--examples" => parsed.examples = number()?,
             "--limit" => parsed.limit = number()?,
@@ -143,6 +150,30 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
             for example in &found.examples { println!("{}: {}", example.reference, example.text); }
             if found.total > found.examples.len() { println!("… and {} more (use --limit)", found.total - found.examples.len()); }
             println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
+        }
+        "about" => {
+            let passage = biblelastic_engine::reference::Passage::parse(&arguments.words.join(" "))?;
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
+            let found = query::about(&library, &passage, arguments.only.as_deref(), arguments.limit, arguments.length)?;
+            println!("{} entries are about {passage} or cite it:\n", found.total);
+            for comment in &found.comments {
+                let title = if comment.title.is_empty() { String::new() } else { format!(" ‘{}’", comment.title) };
+                println!("{} {}{title} ({} {}): {}\n", comment.edition, comment.locator, comment.kind, comment.passage, comment.text);
+            }
+            if found.total > found.comments.len() { println!("… and {} more (use --limit)", found.total - found.comments.len()); }
+            println!("{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
+        }
+        "entry" => {
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
+            let found = query::entries(&library, &arguments.words, arguments.only.as_deref(), arguments.limit, arguments.length)?;
+            println!("{} entries have a title with: {}\n", found.total, arguments.words.join(" "));
+            for entry in &found.entries {
+                println!("{} {} ‘{}’ ({}): {}", entry.edition, entry.locator, entry.title, entry.kind, entry.text);
+                if !entry.see.is_empty() { println!("    See: {}", entry.see.join("; ")); }
+                println!();
+            }
+            if found.total > found.entries.len() { println!("… and {} more (use --limit)", found.total - found.entries.len()); }
+            println!("{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
         }
         "request" => {
             let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;

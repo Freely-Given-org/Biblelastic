@@ -102,6 +102,46 @@ licence = "CC BY-SA 4.0"
 licence_verified = false
 columns = { gloss = "WordGloss", context_gloss = "ContextualWordGloss", morpheme_glosses = "MorphemeGlosses", context_morpheme_glosses = "ContextualMorphemeGlosses", role = "Role", nesting = "Nesting", tags = "Tags", row_type = "RowType" }
 
+# Commentaries and dictionaries are made of items (study notes, articles, etc.). Each item becomes an entry in a document:
+#   item_documents says which document each type of item goes into ("*" means one document for each Bible book that the items are about).
+#   Types that aren't listed are left out.
+
+[[edition]]
+id = "TOSN"
+kind = "commentary"
+name = "Tyndale Open Study Notes"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "TyndaleXML"
+copyright = "Copyright © 2022 by Tyndale House Publishers"
+licence = "CC BY-SA 4.0"
+attribution = "Adapted from Tyndale Open Study Notes. The original work by Tyndale House Publishers is available for free at http://www.tyndaleopenresources.com."
+changes = "Converted to the Biblelastic module format. The wording is unchanged."
+redistributable = true
+licence_verified = false
+files = ["OpenBibleData/copiedBibles/English/Tyndale/Tyndale Open Study Notes/*.xml"]
+features = []
+item_documents = { StudyNote = "*", BookIntro = "Intros", BookIntroSummary = "Summaries", Profile = "Profiles", ThemeNote = "Themes" }
+
+[[edition]]
+id = "TOBD"
+kind = "dictionary"
+name = "Tyndale Open Bible Dictionary"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "TyndaleXML"
+copyright = "Copyright © 2023 by Tyndale House Publishers"
+licence = "CC BY-SA 4.0"
+attribution = "Adapted from Tyndale Open Bible Dictionary. The original work by Tyndale House Publishers is available for free at http://www.tyndaleopenresources.com."
+changes = "Converted to the Biblelastic module format, without the maps' image files. The wording is unchanged."
+redistributable = true
+licence_verified = false
+files = ["OpenBibleData/copiedBibles/English/Tyndale/TyndaleOpenBibleDictionary/*/*.xml"]
+features = []
+item_documents = { Article = "Articles", Textbox = "Textboxes", Chart = "Charts", Map = "Maps", Picture = "Pictures" }
+
 [tools]
 # Optional: https://github.com/Freely-Given-org/BibleTransliterations (CC0), used for the translit columns
 transliterations = "BibleTransliterations/Python"

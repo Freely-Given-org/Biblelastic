@@ -7,3 +7,4 @@ pub mod api;
 pub mod format;
 pub mod library;
 pub mod query;
+pub mod reference;

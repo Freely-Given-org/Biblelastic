@@ -8,13 +8,14 @@
 //! words=love loves loved loving
 //! ```
 //!
-//! Commands: `info`, `terms`, `find` and `marked`. The response is always a JSON object with `"ok"`.
+//! Commands: `info`, `terms`, `find`, `marked`, `about` and `entry`. The response is always a JSON object with `"ok"`.
 
 use std::collections::{BTreeMap, HashMap};
 
 use crate::format::Result;
 use crate::library::Library;
 use crate::query::{self, Example};
+use crate::reference::Passage;
 
 pub fn respond(library: &Library, request: &str) -> String {
     match answer(library, request) {
@@ -34,7 +35,7 @@ fn answer(library: &Library, request: &str) -> Result<String> {
     match text("command", "") {
         "info" => {
             let modules: Vec<String> = library.modules.iter().map(|installed| format!(
-                "{{\"name\":{},\"kind\":{},\"edition\":{},\"layer\":{},\"from\":{},\"to\":{},\"sections\":{}}}", quote(&installed.name), quote(&installed.kind),
+                "{{\"name\":{},\"kind\":{},\"work\":{},\"edition\":{},\"layer\":{},\"from\":{},\"to\":{},\"sections\":{}}}", quote(&installed.name), quote(&installed.kind), quote(&installed.work),
                 quote(&installed.edition), quote(&installed.layer), quote(&installed.from), quote(&installed.to), installed.module.entries().len())).collect();
             Ok(format!("\"modules\":[{}]", modules.join(",")))
         }
@@ -55,6 +56,21 @@ fn answer(library: &Library, request: &str) -> Result<String> {
             let reason = words.first().ok_or("marked needs a reason, e.g., pronoun_to_name")?;
             let found = query::find_spans(library, edition, "add", "reason", reason, limit)?;
             Ok(format!("\"forms\":{},\"total\":{},\"examples\":{}", counts(&found.forms, 10), found.total, examples(&found.examples)))
+        }
+        "about" => { // What the installed commentaries, dictionaries, etc. say about a passage (in all of them, unless an edition is given)
+            let passage = Passage::parse(match text("passage", "") { "" => text("words", ""), given => given })?;
+            let found = query::about(library, &passage, fields.get("edition").copied().filter(|edition| !edition.is_empty()), limit, number("length", 300)?)?;
+            let comments: Vec<String> = found.comments.iter().map(|comment| format!(
+                "{{\"edition\":{},\"work\":{},\"locator\":{},\"title\":{},\"kind\":{},\"passage\":{},\"text\":{}}}", quote(&comment.edition), quote(&comment.work),
+                quote(&comment.locator), quote(&comment.title), quote(comment.kind), quote(&comment.passage), quote(&comment.text))).collect();
+            Ok(format!("\"passage\":{},\"total\":{},\"comments\":[{}]", quote(&passage.to_string()), found.total, comments.join(",")))
+        }
+        "entry" => { // Look entries up by their titles
+            let found = query::entries(library, &words, fields.get("edition").copied().filter(|edition| !edition.is_empty()), limit, number("length", 300)?)?;
+            let entries: Vec<String> = found.entries.iter().map(|entry| format!(
+                "{{\"edition\":{},\"work\":{},\"locator\":{},\"title\":{},\"type\":{},\"text\":{},\"see\":[{}]}}", quote(&entry.edition), quote(&entry.work),
+                quote(&entry.locator), quote(&entry.title), quote(&entry.kind), quote(&entry.text), entry.see.iter().map(|title| quote(title)).collect::<Vec<_>>().join(","))).collect();
+            Ok(format!("\"total\":{},\"entries\":[{}]", found.total, entries.join(",")))
         }
         other => Err(format!("unknown command '{other}'").into()),
     }
