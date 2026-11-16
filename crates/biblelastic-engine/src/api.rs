@@ -8,13 +8,13 @@
 //! words=love loves loved loving
 //! ```
 //!
-//! Commands: `info`, `terms`, `find`, `marked`, `about` and `entry`. The response is always a JSON object with `"ok"`.
+//! Commands: `info`, `contents`, `read`, `terms`, `find`, `marked`, `about` and `entry`. The response is always a JSON object with `"ok"`.
 
 use std::collections::{BTreeMap, HashMap};
 
 use crate::format::Result;
 use crate::library::Library;
-use crate::query::{self, Example};
+use crate::query::{self, Example, Piece};
 use crate::reference::Passage;
 
 pub fn respond(library: &Library, request: &str) -> String {
@@ -38,6 +38,24 @@ fn answer(library: &Library, request: &str) -> Result<String> {
                 "{{\"name\":{},\"kind\":{},\"work\":{},\"edition\":{},\"layer\":{},\"from\":{},\"to\":{},\"sections\":{}}}", quote(&installed.name), quote(&installed.kind), quote(&installed.work),
                 quote(&installed.edition), quote(&installed.layer), quote(&installed.from), quote(&installed.to), installed.module.entries().len())).collect();
             Ok(format!("\"modules\":[{}]", modules.join(",")))
+        }
+        "contents" => { // The documents of an edition, and how many chapters each has
+            let documents: Vec<String> = query::contents(library, edition)?.iter().map(|document| format!(
+                "{{\"name\":{},\"chapters\":{},\"introduction\":{}}}", quote(&document.name), document.chapters, document.introduction)).collect();
+            Ok(format!("\"edition\":{},\"documents\":[{}]", quote(edition), documents.join(",")))
+        }
+        "read" => { // A passage laid out for reading: each paragraph is a list of verse numbers {"v"} and pieces of text {"t"} with any character styles {"s"}
+            let passage = Passage::parse(match text("passage", "") { "" => text("words", ""), given => given })?;
+            let reading = query::read(library, edition, &passage)?;
+            let paragraphs: Vec<String> = reading.paragraphs.iter().map(|paragraph| {
+                let pieces: Vec<String> = paragraph.pieces.iter().map(|piece| match piece {
+                    Piece::Verse(number) => format!("{{\"v\":{}}}", quote(number)),
+                    Piece::Text(words, styles) if styles.is_empty() => format!("{{\"t\":{}}}", quote(words)),
+                    Piece::Text(words, styles) => format!("{{\"t\":{},\"s\":[{}]}}", quote(words), styles.iter().map(|style| quote(style)).collect::<Vec<_>>().join(",")),
+                }).collect();
+                format!("{{\"style\":{},\"kind\":{},\"pieces\":[{}]}}", quote(&paragraph.style), quote(&paragraph.kind), pieces.join(","))
+            }).collect();
+            Ok(format!("\"edition\":{},\"passage\":{},\"paragraphs\":[{}]", quote(edition), quote(&reading.passage), paragraphs.join(",")))
         }
         "terms" => {
             if words.is_empty() { return Err("terms needs at least one word".into()); }

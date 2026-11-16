@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::format::Result;
 use crate::library::{find_terms, Anchors, Column, Library, Nodes, Text};
-use crate::reference::{pack, unpack, Passage};
+use crate::reference::{pack, unpack, Passage, LAST};
 
 pub struct Example {
     pub reference: String,
@@ -152,6 +152,135 @@ pub fn find_spans(library: &Library, edition: &str, marker: &str, attribute: &st
         }
     }
     Ok(Found { total, forms, examples })
+}
+
+/// One document of an edition, for a table of contents
+pub struct Document {
+    pub name: String,
+    /// The highest chapter number (0 if the document isn't divided into chapters)
+    pub chapters: u32,
+    /// Whether there's anything before the first chapter (titles and an introduction), which is read as chapter 0
+    pub introduction: bool,
+}
+
+/// The documents of an edition, in order
+pub fn contents(library: &Library, edition: &str) -> Result<Vec<Document>> {
+    let module = library.text_module(edition)?;
+    let text = Text::open(&module)?;
+    let chapters = if module.has("node.chapter.starts") { Some(Nodes::open(&module, "chapter")?) } else { None };
+    (0..text.document_names.len()).map(|document| {
+        let (start, end) = (text.document_starts.get(document), text.document_starts.get(document + 1));
+        let (mut highest, mut introduction) = (0, false);
+        if let Some(chapters) = &chapters {
+            let (first, after) = (chapters.starts.lower_bound(start), chapters.starts.lower_bound(end));
+            introduction = first < after && chapters.starts.get(first) > start;
+            highest = (first..after).filter_map(|chapter| chapters.names.get(chapter as u32).parse().ok()).max().unwrap_or(0);
+        }
+        Ok(Document { name: text.document_names.get(document), chapters: highest, introduction })
+    }).collect()
+}
+
+/// A piece of a paragraph, for displaying it
+pub enum Piece {
+    /// A verse starts here: its number as the edition gives it (which isn't always just a number)
+    Verse(String),
+    /// Some text, and the character styles that it has (e.g., `add`, `nd`, or `wj`)
+    Text(String, Vec<String>),
+}
+
+pub struct Paragraph {
+    /// The edition's own paragraph style, e.g., `p`, `q1`, or `s1`
+    pub style: String,
+    /// `body`, `heading`, `title`, `intro`, or `other`
+    pub kind: String,
+    pub pieces: Vec<Piece>,
+}
+
+pub struct Reading {
+    /// The passage that's actually given
+    pub passage: String,
+    pub paragraphs: Vec<Paragraph>,
+}
+
+/// The text of a passage of Scripture, laid out for reading: whole chapters come with their headings,
+/// and chapter 0 is whatever comes before the first chapter (titles and an introduction).
+pub fn read(library: &Library, edition: &str, passage: &Passage) -> Result<Reading> {
+    let module = library.text_module(edition)?;
+    let text = Text::open(&module)?;
+    let (Some(verses), true) = (&text.verses, module.has("node.chapter.starts")) else { return Err(format!("'{edition}' isn't divided into chapters and verses").into()) };
+    let chapters = Nodes::open(&module, "chapter")?;
+    let document = (0..text.document_names.len()).find(|&document| text.document_names.get(document) == passage.book)
+        .ok_or_else(|| format!("'{edition}' doesn't have {}", passage.book))?;
+    let (document_start, document_end) = (text.document_starts.get(document), text.document_starts.get(document + 1));
+    let whole_chapters = passage.from.1 == 0 && passage.to.1 == LAST;
+
+    let (mut start, mut end) = (u32::MAX, 0);
+    if whole_chapters { // From the start of the first chapter (with its headings) to the end of the last one
+        for chapter in chapters.starts.lower_bound(document_start)..chapters.starts.lower_bound(document_end) {
+            let Ok(number) = chapters.names.get(chapter as u32).parse::<u32>() else { continue };
+            if number >= passage.from.0 && number <= passage.to.0 { start = start.min(chapters.starts.get(chapter)); end = end.max(chapters.ends.get(chapter)); }
+        }
+        if passage.from.0 == 0 { // What's before the first chapter
+            let first = chapters.starts.lower_bound(document_start);
+            start = document_start;
+            end = end.max(if first < chapters.starts.len() && chapters.starts.get(first) < document_end { chapters.starts.get(first) } else { document_end });
+        }
+    } else { // Just the verses
+        for verse in verses.starts.lower_bound(document_start)..verses.starts.lower_bound(document_end) {
+            let Some(number) = verse_number(&verses.names.get(verse as u32)) else { continue };
+            if number >= passage.from && number <= passage.to && verses.ends.get(verse) > verses.starts.get(verse) {
+                start = start.min(verses.starts.get(verse)); end = end.max(verses.ends.get(verse));
+            }
+        }
+    }
+    if start >= end { return Err(format!("'{edition}' doesn't have {passage}").into()); }
+
+    // The character styles that overlap the passage (they're in order of where they start, and none is very long)
+    let spans = Nodes::open(&module, "span")?;
+    let overlapping: Vec<(std::ops::Range<u32>, String)> = (spans.starts.lower_bound(start.saturating_sub(2000))..spans.starts.lower_bound(end))
+        .map(|span| (spans.range(span), span)).filter(|(range, _)| range.end > start).map(|(range, span)| (range, spans.names.get(span as u32))).collect();
+    let attributes = Column::open(&module, "node.para.attributes")?;
+    let mut paragraphs = Vec::new();
+    let mut verse = verses.starts.lower_bound(start);
+    // From the first paragraph that starts in the passage, or the one before it if that runs on into the passage
+    let mut first = text.paragraphs.starts.lower_bound(start);
+    if first > 0 && text.paragraphs.ends.get(first - 1) > start { first -= 1; }
+    for paragraph in first..text.paragraphs.starts.lower_bound(end) {
+        let range = text.paragraphs.starts.get(paragraph).max(start)..text.paragraphs.ends.get(paragraph).min(end);
+        if range.start >= range.end { continue; }
+        let attribute_text = attributes.get(paragraph as u32); // JSON, as the ingest writes it
+        let kind = attribute_text.split_once("\"kind\": \"").and_then(|(_, rest)| rest.split_once('"')).map_or("other", |(kind, _)| kind).to_string();
+        let mut pieces: Vec<Piece> = Vec::new();
+        let mut current: Option<(String, Vec<String>)> = None;
+        for slot in range {
+            while verse < verses.starts.len() && verses.starts.get(verse) <= slot {
+                if verses.starts.get(verse) == slot && verses.ends.get(verse) > slot {
+                    pieces.extend(current.take().map(|(words, styles)| Piece::Text(words, styles)));
+                    let name = verses.names.get(verse as u32);
+                    pieces.push(Piece::Verse(name.split_once(':').map_or(name.clone(), |(_, number)| number.to_string())));
+                }
+                verse += 1;
+            }
+            let mut styles: Vec<String> = overlapping.iter().filter(|(span, _)| span.contains(&slot)).map(|(_, name)| name.clone()).collect();
+            styles.sort_unstable();
+            styles.dedup();
+            let words = format!("{}{}{}", text.before.get(slot), text.text.get(slot), text.after.get(slot));
+            match &mut current {
+                Some((all, current_styles)) if *current_styles == styles => all.push_str(&words),
+                _ => { pieces.extend(current.replace((words, styles)).map(|(words, styles)| Piece::Text(words, styles))); }
+            }
+        }
+        pieces.extend(current.take().map(|(words, styles)| Piece::Text(words, styles)));
+        paragraphs.push(Paragraph { style: text.paragraphs.names.get(paragraph as u32), kind, pieces });
+    }
+    Ok(Reading { passage: passage.to_string(), paragraphs })
+}
+
+/// `3:16` → (3, 16), and `3:16a` too
+fn verse_number(name: &str) -> Option<(u32, u32)> {
+    let (chapter, verse) = name.split_once(':')?;
+    let digits = |text: &str| text.chars().take_while(char::is_ascii_digit).collect::<String>().parse::<u32>().ok();
+    Some((digits(chapter)?, digits(verse)?))
 }
 
 /// What's said about (or what cites) a passage of Scripture, in one entry of a commentary, dictionary, etc.

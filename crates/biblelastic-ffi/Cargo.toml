@@ -1,0 +1,14 @@
+[package]
+name = "biblelastic-ffi"
+description = "The Biblelastic engine as a native library with a C interface, for the phone, tablet, and desktop apps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "biblelastic"
+crate-type = ["cdylib"]
+
+[dependencies]
+biblelastic-engine = { path = "../biblelastic-engine" }

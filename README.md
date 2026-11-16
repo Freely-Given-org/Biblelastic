@@ -104,7 +104,7 @@ and checked periodically for updated versions.
 
 ### Current status
 
-There's no app yet—only the start of the build pipeline and engine, used from the command line or from a test page in a browser.
+There's the start of the build pipeline and engine, and a minimal app (for Android and browsers) that reads, searches, and shows notes (see [docs/App.md](docs/App.md)).
 Four Bible editions (OET-RV, OET-LV, SR-GNT, and UHB), one commentary (Tyndale Open Study Notes), and one dictionary (Tyndale Open Bible Dictionary)
 can be converted and compiled, and two of the example searches above already work:
 
@@ -127,7 +127,7 @@ The same engine also runs in a browser, reading the same modules from the browse
 
 ### One engine everywhere
 
-The engine is a single Rust library. It will be linked directly into the phone, tablet, and desktop apps,
+The engine is a single Rust library. It's linked directly into the Android app (and will be into the other phone, tablet, and desktop apps),
 and it's compiled to WebAssembly for browsers, so that searching works the same way everywhere, including offline.
 The server will only need to host static files: a catalogue and the downloadable modules.
 
@@ -188,5 +188,5 @@ can download only what they need. The engine works with whichever modules are in
 
 ### Frontends
 
-The frontends are planned to be written in [Flutter](https://flutter.dev), starting with English and Spanish interfaces,
+The frontends are written in [Flutter](https://flutter.dev) (so far a minimal app in `app/`), starting with English and Spanish interfaces,
 with allowance for more languages to be added later.

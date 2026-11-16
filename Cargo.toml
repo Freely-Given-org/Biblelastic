@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/biblelastic-engine", "crates/biblelastic-cli", "crates/biblelastic-wasm"]
+members = ["crates/biblelastic-engine", "crates/biblelastic-cli", "crates/biblelastic-wasm", "crates/biblelastic-ffi"]
 
 [workspace.package]
 version = "0.0.1"

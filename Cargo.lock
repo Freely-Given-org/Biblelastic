@@ -18,6 +18,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "biblelastic-ffi"
+version = "0.0.1"
+dependencies = [
+ "biblelastic-engine",
+]
+
+[[package]]
 name = "biblelastic-wasm"
 version = "0.0.1"
 dependencies = [

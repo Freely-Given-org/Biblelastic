@@ -399,7 +399,7 @@ mod tests {
         write(&intermediate, "EN/documents/JN1.tokens.tsv", "before\ttext\tafter\tnorm\trow\n\
             “\tGod\t \tgod\t2\n\tloves\t \tloves\t3\n\tus\t.” \tus\t\n\tLove\t \tlove\t5\n\tis\t \tis\t5\n\tgood\t,\tgood\t\n\tgrace\t \tgrace\t\n\tand\t \tand\t\n\tlovely\t \tlovely\t9\n\ttruth\t.\ttruth\t\n");
         write(&intermediate, "EN/documents/JN1.nodes.tsv", "type\tstart\tend\tname\tattributes\n\
-            para\t0\t6\tp\t{\"kind\": \"body\"}\nverse\t0\t3\t4:8\t\nsentence\t0\t3\t\t\nverse\t3\t3\t4:9\t\nverse\t3\t10\t4:10\t\nsentence\t3\t10\t\t\npara\t6\t10\tq1\t\n\
+            chapter\t0\t10\t4\t\npara\t0\t6\tp\t{\"kind\": \"body\"}\nverse\t0\t3\t4:8\t\nsentence\t0\t3\t\t\nverse\t3\t3\t4:9\t\nverse\t3\t10\t4:10\t\nsentence\t3\t10\t\t\npara\t6\t10\tq1\t\n\
             span\t0\t1\tadd\t{\"reason\": \"pronoun_to_name\", \"uncertain\": true}\nspan\t2\t3\tadd\t{\"reason\": \"object\"}\nspan\t0\t1\tnd\t\n");
         write(&intermediate, "GR/manifest.json", "{}");
         write(&intermediate, "GR/documents/JN1.tokens.tsv", "before\ttext\tafter\tnorm\tlemma\tstrong\tlemma_translit\toet_row\n\
@@ -476,6 +476,17 @@ mod tests {
         let response = biblelastic_engine::api::respond(&library, "command=about\npassage=JN1 4:8\nlimit=1\nlength=4");
         assert_eq!(response, r#"{"ok":true,"passage":"JN1 4:8","total":2,"comments":[{"edition":"CM","work":"commentary","locator":"JN1 4:8","title":"","kind":"about","passage":"JN1 4:8","text":"Love…"}]}"#);
         assert!(biblelastic_engine::api::respond(&library, "command=entry\nwords=love").contains(r#""locator":"Themes Love","title":"God’s Love*","type":"ThemeNote","text":"Love matters.","see":["JN1 4:8"]"#));
+
+        // Reading: whole chapters come with their headings, and part of a verse range starts mid-paragraph
+        assert_eq!(biblelastic_engine::api::respond(&library, "command=contents\nedition=EN"),
+                   r#"{"ok":true,"edition":"EN","documents":[{"name":"FRT","chapters":0,"introduction":false},{"name":"JN1","chapters":4,"introduction":false}]}"#);
+        assert_eq!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 4"), concat!(
+            r#"{"ok":true,"edition":"EN","passage":"JN1 4","paragraphs":[{"style":"p","kind":"body","pieces":[{"v":"8"},{"t":"“God ","s":["add","nd"]},{"t":"loves "},{"t":"us.” ","s":["add"]},"#,
+            r#"{"v":"10"},{"t":"Love is good,"}]},{"style":"q1","kind":"other","pieces":[{"t":"grace and lovely truth."}]}]}"#));
+        assert_eq!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 4:10"),
+                   r#"{"ok":true,"edition":"EN","passage":"JN1 4:10","paragraphs":[{"style":"p","kind":"body","pieces":[{"v":"10"},{"t":"Love is good,"}]},{"style":"q1","kind":"other","pieces":[{"t":"grace and lovely truth."}]}]}"#);
+        assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 5").contains("doesn't have JN1 5"));
+        assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=CM\npassage=JN1 4").contains("isn't divided into chapters"));
 
         // Each tag is indexed separately
         let layer = library.column_module("GR", "tags").unwrap();

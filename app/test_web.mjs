@@ -1,0 +1,104 @@
+// Open the web build of the app in headless Chrome, install some modules, and save screenshots:  node app/test_web.mjs [FOLDER-FOR-SCREENSHOTS]
+// Needs Node 22+ and Chrome or Chromium (set CHROME to its path if it isn't found).
+// Run first: app/build-engine.sh web, then (in app/) flutter build web --base-href /app/build/web/, and `biblelastic compile`.
+
+import { spawn } from 'node:child_process';
+import { createReadStream, existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { extname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+const shots = process.argv[2] ?? tmpdir();
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.wasm': 'application/wasm', '.png': 'image/png', '.otf': 'font/otf', '.ttf': 'font/ttf' };
+const server = createServer((request, response) => {
+    let path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    if (path.endsWith('/')) path += 'index.html';
+    const file = join(root, normalize(path));
+    if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) return response.writeHead(404).end();
+    response.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Content-Length': statSync(file).size });
+    createReadStream(file).pipe(response);
+});
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+const origin = `http://localhost:${server.address().port}`;
+
+const chromePath = process.env.CHROME ?? ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(existsSync);
+const profile = mkdtempSync(join(tmpdir(), 'biblelastic-app-'));
+const chrome = spawn(chromePath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--window-size=412,892', 'about:blank']);
+const browserUrl = await new Promise((resolve, reject) => {
+    let output = '';
+    chrome.stderr.on('data', data => { output += data; const match = output.match(/DevTools listening on (ws:\S+)/); if (match) resolve(match[1]); });
+    chrome.on('exit', () => reject(new Error(`Chrome didn't start:\n${output}`)));
+});
+const socket = new WebSocket(browserUrl);
+await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
+const waiting = new Map();
+const errors = [];
+let nextId = 1;
+socket.onmessage = ({ data }) => {
+    const message = JSON.parse(data);
+    if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text);
+    waiting.get(message.id)?.(message); waiting.delete(message.id);
+};
+const send = (method, params = {}, sessionId) => new Promise((resolve, reject) => {
+    const id = nextId++;
+    waiting.set(id, message => message.error ? reject(new Error(`${method}: ${message.error.message}`)) : resolve(message.result));
+    socket.send(JSON.stringify({ id, method, params, sessionId }));
+});
+const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+let failed = false;
+try {
+    const { targetId } = await send('Target.createTarget', { url: `${origin}/app/build/web/` });
+    const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
+    await send('Runtime.enable', {}, sessionId);
+    await send('Emulation.setDeviceMetricsOverride', { width: 412, height: 892, deviceScaleFactor: 2, mobile: true }, sessionId);
+    const evaluate = async expression => {
+        const { result, exceptionDetails } = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }, sessionId);
+        if (exceptionDetails) throw new Error(exceptionDetails.exception?.description ?? exceptionDetails.text);
+        return result.value;
+    };
+    const shoot = async name => {
+        const { data } = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
+        writeFileSync(join(shots, `${name}.png`), Buffer.from(data, 'base64'));
+        console.log(`Saved ${join(shots, `${name}.png`)}`);
+    };
+    const tap = async (x, y) => {
+        for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 }, sessionId);
+        await sleep(1500);
+    };
+    await sleep(6000);
+    await shoot('1-nothing-installed');
+
+    // Install modules into this browser's storage with the engine's own JavaScript (as the app's Modules page does), then start the app again
+    const installed = await evaluate(`(async () => {
+        const { Biblelastic } = await import('${origin}/app/build/web/engine/biblelastic.js');
+        const engine = await Biblelastic.start();
+        let modules = [];
+        for (const name of ['OET-RV.text', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text'])
+            modules = await engine.install(name, '${origin}/build/modules/' + name + '.blm');
+        engine.stop();
+        return modules.length;
+    })()`);
+    console.log(`${installed} modules installed`);
+    await send('Page.reload', {}, sessionId);
+    await sleep(6000);
+    await shoot('2-reading');
+    await tap(22, 752); // The number of John 1:14, for the notes on it (where it is depends on the text and the fonts: check the screenshot)
+    await shoot('3-notes');
+    await tap(200, 60); // Outside the sheet, to close it
+    await tap(352, 27); // The search button
+    await send('Input.insertText', { text: 'grace truth' }, sessionId);
+    for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: type === 'keyDown' ? '\r' : undefined }, sessionId);
+    await sleep(2000);
+    await shoot('4-search');
+    if (errors.length) { console.log(`Errors in the page:\n${errors.join('\n')}`); failed = true; }
+} catch (error) { console.log(`FAILED: ${error.message}`); failed = true; }
+finally {
+    socket.close(); chrome.kill(); server.close();
+    await new Promise(resolve => chrome.on('exit', resolve));
+    rmSync(profile, { recursive: true, force: true });
+}
+console.log(failed ? '\nFAILED' : '\nDone');
+process.exit(failed ? 1 : 0);

@@ -130,3 +130,8 @@ dmypy.json
 
 # Biblelastic
 web/biblelastic.wasm
+!/app/lib/
+# Copies of the engine that app/build-engine.sh makes
+/app/web/engine/
+/app/linux/engine/
+/app/android/app/src/main/jniLibs/
