@@ -104,7 +104,7 @@ and checked periodically for updated versions.
 
 ### Current status
 
-There's no app yet—only the start of the build pipeline and engine, used from the command line.
+There's no app yet—only the start of the build pipeline and engine, used from the command line or from a test page in a browser.
 Four editions (OET-RV, OET-LV, SR-GNT, and UHB) can be converted and compiled, and two of the example searches above already work:
 
     cd pipeline && python3 -m biblelastic_ingest && cd ..      # Source texts → build/intermediate/
@@ -117,10 +117,15 @@ Four editions (OET-RV, OET-LV, SR-GNT, and UHB) can be converted and compiled, a
 (The ingest expects the source texts to be in folders alongside this one, as listed in `pipeline/sources.toml`.)
 See [docs/IntermediateFormat.md](docs/IntermediateFormat.md) and [docs/ModuleFormat.md](docs/ModuleFormat.md) for the details.
 
+The same engine also runs in a browser, reading the same modules from the browser's own storage (see [docs/Browser.md](docs/Browser.md)):
+
+    web/build.sh                                               # Compiles the engine to WebAssembly
+    python3 -m http.server 8377                                # Then open http://localhost:8377/web/
+
 ### One engine everywhere
 
-The engine will be a single Rust library. It will be linked directly into the phone, tablet, and desktop apps,
-and compiled to WebAssembly for browsers, so that searching works the same way everywhere, including offline.
+The engine is a single Rust library. It will be linked directly into the phone, tablet, and desktop apps,
+and it's compiled to WebAssembly for browsers, so that searching works the same way everywhere, including offline.
 The server will only need to host static files: a catalogue and the downloadable modules.
 
 ### Data model

@@ -1,0 +1,14 @@
+[package]
+name = "biblelastic-wasm"
+description = "The Biblelastic engine as a WebAssembly module for browsers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+# No wasm-bindgen: the interface is five plain functions (see web/engine-worker.js), so no extra tools are needed to build it.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+biblelastic-engine = { path = "../biblelastic-engine" }

@@ -1,7 +1,8 @@
 # Biblelastic module format (v0)
 
 A module is one file (`.blm`) that the engine reads directly. Modules are what users will download.
-They're compiled from the [intermediate format](IntermediateFormat.md) by `biblelastic compile`.
+They're compiled from the [intermediate format](IntermediateFormat.md) by `biblelastic compile`,
+which also writes `index.json`: the catalogue of the modules and their sizes.
 
 This is version 0: it proves the design end to end, and it will change (see *Known gaps* below).
 The engine refuses any module whose format version it doesn't know.
@@ -13,6 +14,7 @@ The engine refuses any module whose format version it doesn't know.
     target/release/biblelastic terms love loves loved loving   # The original-language terms behind these words
     target/release/biblelastic find grace truth --within sentence
     target/release/biblelastic marked pronoun_to_name          # Where the translators marked an addition or change
+    target/release/biblelastic request command=find 'words=grace truth'   # The same as JSON, as an app gets it
     cargo test
 
 ## Design rules
@@ -150,4 +152,4 @@ On the full data each of these takes 10–30 ms on a desktop computer.
 - **Node attributes aren't indexed.** They're stored as JSON text, so `marked` scans all the spans (which is still only about 10 ms).
 - **Not compiled yet:** notes (footnotes and cross-references), variant readings, and versification mappings between editions.
 - **Which columns are indexed** is fixed in the compiler, rather than being set in the source registry.
-- The WebAssembly build hasn't been tried.
+- The WebAssembly build works in Chrome (see [Browser.md](Browser.md)), but hasn't been tried in other browsers or on a phone.

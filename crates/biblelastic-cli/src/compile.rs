@@ -244,7 +244,12 @@ pub fn compile(intermediate: &Path, output: &Path) -> Result<Vec<Written>> {
         let handles: Vec<_> = subfolders(&intermediate.join("alignments")).into_iter().map(|folder| scope.spawn(move || compile_alignment(&folder, editions, output))).collect();
         handles.into_iter().map(|handle| handle.join().map_err(|_| "a compile thread failed".to_string())?).collect::<Result<Vec<_>>>()
     })?.into_iter().flatten().collect();
-    Ok(editions.into_iter().flat_map(|edition| edition.written).chain(alignments).collect())
+    let written: Vec<Written> = editions.into_iter().flat_map(|edition| edition.written).chain(alignments).collect();
+    // The catalogue that an installer downloads first, to see what there is
+    let entries: Vec<String> = written.iter().map(|module| format!("    {{\"name\": \"{}\", \"bytes\": {}}}", module.name, module.bytes)).collect();
+    let catalogue = format!("{{\n  \"format\": {},\n  \"modules\": [\n{}\n  ]\n}}\n", biblelastic_engine::format::FORMAT_VERSION, entries.join(",\n"));
+    fs::write(output.join("index.json"), catalogue).map_err(|error| format!("{}: {error}", output.display()))?;
+    Ok(written)
 }
 
 #[cfg(test)]
@@ -306,6 +311,12 @@ mod tests {
         let marked = query::find_spans(&library, "EN", "add", "reason", "pronoun_to_name", 5).unwrap();
         assert_eq!((marked.total, marked.examples[0].reference.as_str(), marked.examples[0].text.as_str()), (1, "JN1 4:8", "“[God] loves us.”"));
         assert_eq!(query::find_spans(&library, "EN", "add", "reason", "measure", 5).unwrap().total, 0);
+
+        // The same through the request interface that apps use, and the catalogue
+        let response = biblelastic_engine::api::respond(&library, "command=marked\nedition=EN\nwords=pronoun_to_name");
+        assert_eq!(response, r#"{"ok":true,"forms":[["god",1]],"total":1,"examples":[{"reference":"JN1 4:8","text":"“[God] loves us.”"}]}"#);
+        assert!(biblelastic_engine::api::respond(&library, "command=nothing").starts_with(r#"{"ok":false,"error":"#));
+        assert!(std::fs::read_to_string(folder.join("modules/index.json")).unwrap().contains(r#"{"name": "EN--GR.align", "bytes": "#));
 
         // Each tag is indexed separately
         let layer = library.column_module("GR", "tags").unwrap();

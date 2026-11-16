@@ -19,6 +19,7 @@ Commands:
   terms WORD...           Find the original-language terms that these words translate, e.g., terms love loves loved loving
   find WORD...            Find where all of these words occur together, e.g., find grace truth --within sentence
   marked REASON           Find where the translators marked an addition or change, e.g., marked pronoun_to_name
+  request KEY=VALUE...    Send a request as an app would, and show the JSON response, e.g., request command=find 'words=grace truth'
 
 A word can end with * to match any ending, e.g., lov*
 
@@ -131,6 +132,10 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
             for example in &found.examples { println!("{}: {}", example.reference, example.text); }
             if found.total > found.examples.len() { println!("… and {} more (use --limit)", found.total - found.examples.len()); }
             println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
+        }
+        "request" => {
+            let library = Library::open(&Folder(arguments.modules.clone()))?;
+            println!("{}", biblelastic_engine::api::respond(&library, &arguments.words.join("\n")));
         }
         _ => return Err(format!("unknown command '{command}'\n\n{USAGE}").into()),
     }

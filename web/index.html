@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblelastic engine test</title>
+<style>
+  :root { color-scheme: light dark; --line: #8884; }
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 60rem; margin: 0 auto; padding: 1rem; }
+  h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; margin-top: 2rem; }
+  table { border-collapse: collapse; } td, th { padding: .15rem .8rem .15rem 0; text-align: left; } td.number { text-align: right; font-variant-numeric: tabular-nums; }
+  input, select, button { font: inherit; padding: .25rem .5rem; } input[name=words] { width: 18rem; max-width: 100%; }
+  form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  #status, #cost { color: GrayText; } #cost { font-variant-numeric: tabular-nums; }
+  #results p { margin: .4rem 0; border-top: 1px solid var(--line); padding-top: .4rem; } #results small { color: GrayText; }
+  .error { color: #c33; }
+</style>
+</head>
+<body>
+<h1>Biblelastic engine test</h1>
+<p>This page is only for testing the engine in a browser: it's not the app.
+  The engine runs in a web worker, and reads the modules from this browser's private storage (OPFS).</p>
+<p id="status">Starting…</p>
+
+<h2>Modules</h2>
+<p><button id="install">Install all</button> <button id="remove">Remove all</button> <span id="storage"></span></p>
+<table id="modules"></table>
+
+<h2>Request</h2>
+<form id="request">
+  <select name="command"><option>terms</option><option>find</option><option>marked</option><option>info</option></select>
+  <input name="words" value="love loves loved loving" aria-label="Words">
+  <label>in <input name="edition" value="OET-RV" size="7"></label>
+  <label>within <select name="within"><option>sentence</option><option>verse</option><option>para</option><option>section</option><option>chapter</option></select></label>
+  <button>Run</button> <button type="button" id="forget">Forget cache</button>
+</form>
+<p id="cost"></p>
+<div id="results"></div>
+
+<script type="module">
+import { Biblelastic } from './biblelastic.js';
+
+const MODULES = new URL('../build/modules/', location.href); // Where `biblelastic compile` puts them
+const $ = id => document.getElementById(id);
+const megabytes = bytes => (bytes / 1048576).toFixed(bytes < 1048576 ? 2 : 1) + ' MB';
+const element = (tag, text, className) => { const made = document.createElement(tag); made.textContent = text; if (className) made.className = className; return made; };
+let engine, catalogue = [];
+
+async function showModules(installed) {
+    const sizes = new Map(installed.map(module => [module.name, module.bytes]));
+    const names = [...new Set([...catalogue.map(module => module.name), ...sizes.keys()])];
+    $('modules').replaceChildren(...names.map(name => {
+        const row = document.createElement('tr');
+        row.append(element('td', name), element('td', sizes.has(name) ? megabytes(sizes.get(name)) : '—', 'number'), element('td', sizes.has(name) ? 'installed' : 'not installed'));
+        row.dataset.name = name;
+        return row;
+    }));
+    const { usage, quota } = await navigator.storage.estimate();
+    $('storage').textContent = `Using ${megabytes(usage)} of this browser's storage (limit ${megabytes(quota)}).`;
+}
+
+$('install').onclick = async () => {
+    const started = performance.now();
+    let installed = [];
+    for (const { name, bytes } of catalogue) {
+        const cell = document.querySelector(`tr[data-name="${name}"] td:last-child`);
+        installed = await engine.install(name, new URL(`${name}.blm`, MODULES), ({ written }) => cell.textContent = `${Math.round(100 * written / bytes)}%`);
+    }
+    await showModules(installed);
+    $('status').textContent = `Installed ${catalogue.length} modules in ${((performance.now() - started) / 1000).toFixed(1)} s.`;
+};
+$('remove').onclick = async () => showModules(await engine.remove());
+$('forget').onclick = async () => { await engine.forget(); $('cost').textContent = 'Cache dropped.'; };
+
+$('request').onsubmit = async event => {
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.target));
+    const { response, bytesRead, milliseconds, memoryBytes } = await engine.request(fields);
+    $('cost').textContent = `${milliseconds.toFixed(1)} ms in the engine, reading ${megabytes(bytesRead)} from storage. The engine is using ${megabytes(memoryBytes)} of memory.`;
+    const results = $('results');
+    if (!response.ok) return results.replaceChildren(element('p', response.error, 'error'));
+    const lines = [];
+    if (response.forms) lines.push(element('p', `Matched: ${response.forms.map(([form, count]) => `${form} (${count})`).join(', ')} — ${response.total} results`));
+    for (const term of response.terms ?? []) {
+        const line = element('p', `${term.count}× ${term.lemma}  ${term.transliteration}  ${term.strong}  ‘${term.gloss}’ in ${term.verses} verses `);
+        for (const example of term.examples) line.append(document.createElement('br'), element('small', `${example.reference}: ${example.text}`));
+        lines.push(line);
+    }
+    for (const example of response.examples ?? []) lines.push(element('p', `${example.reference}: ${example.text}`));
+    for (const module of response.modules ?? []) lines.push(element('p', `${module.name}: ${module.kind}, ${module.sections} sections`));
+    results.replaceChildren(...lines);
+};
+
+try {
+    engine = await Biblelastic.start();
+    window.engine = engine; // For trying things in the console
+    catalogue = await fetch(new URL('index.json', MODULES)).then(response => response.ok ? response.json() : { modules: [] }).then(json => json.modules);
+    await showModules(await engine.list());
+    $('status').textContent = 'The engine is running.';
+} catch (error) {
+    $('status').textContent = `The engine couldn't start: ${error.message}`;
+    $('status').className = 'error';
+}
+</script>
+</body>
+</html>
