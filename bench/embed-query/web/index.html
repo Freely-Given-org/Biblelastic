@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblelastic embedding trial</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 0 auto; padding: 1rem; }
+  h1 { font-size: 1.3rem; } button, select { font: inherit; padding: .4rem .8rem; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<h1>Biblelastic embedding trial</h1>
+<p>This measures how long this device takes to turn a search query into a vector, and to compare it with every passage.
+  The first run downloads the model (32 MB or 127 MB).</p>
+<p><select id="model"><option value="int8">8-bit model (32 MB)</option><option value="float32">Full-precision model (127 MB)</option></select>
+  <button id="run">Run</button></p>
+<pre id="log"></pre>
+<script type="module">
+const FILES = new URL('../../../build/embeddings/rust/', location.href); // Where build.sh and the Python scripts put things
+const PADDED = 32, DIMENSIONS = 384;
+const log = text => { document.getElementById('log').textContent += text + '\n'; };
+const pause = () => new Promise(resolve => setTimeout(resolve, 30)); // Lets the page show what's been logged
+const median = values => [...values].sort((a, b) => a - b)[values.length >> 1];
+const megabytes = bytes => (bytes / 1048576).toFixed(1) + ' MB';
+
+async function run(which, tokens = PADDED) {
+    const results = { model: which, tokens, device: navigator.userAgent, threads: navigator.hardwareConcurrency, deviceMemoryGB: navigator.deviceMemory };
+    log(`${results.device}\n${results.threads} processors, ${results.deviceMemoryGB ?? '?'} GB of memory reported\n`);
+    let started = performance.now();
+    const { instance } = await WebAssembly.instantiateStreaming(fetch(new URL('embed_query.wasm', FILES)), {});
+    const wasm = instance.exports;
+    results.wasmMs = performance.now() - started;
+    log(`Runtime (tract, compiled to WebAssembly) started in ${results.wasmMs.toFixed(0)} ms`); await pause();
+
+    started = performance.now();
+    const model = new Uint8Array(await (await fetch(new URL(`bge-small-en-v1.5.${which}.onnx`, FILES))).arrayBuffer());
+    results.downloadMs = performance.now() - started; results.modelBytes = model.length;
+    log(`Model fetched: ${megabytes(model.length)} in ${results.downloadMs.toFixed(0)} ms`); await pause();
+    started = performance.now();
+    const modelPointer = wasm.allocate(model.length);
+    new Uint8Array(wasm.memory.buffer, modelPointer, model.length).set(model);
+    if (wasm.load(modelPointer, model.length, tokens) !== 0) throw new Error('the model failed to load');
+    results.loadMs = performance.now() - started; results.memoryBytes = wasm.memory.buffer.byteLength;
+    log(`Model loaded in ${results.loadMs.toFixed(0)} ms; the runtime is using ${megabytes(results.memoryBytes)}`); await pause();
+
+    const lines = (await (await fetch(new URL('queries.tsv', FILES))).text()).trim().split('\n').map(line => line.split('\t').map(field => field.split(' ').map(Number)));
+    const [idsPointer, maskPointer, outputPointer] = [wasm.allocate(8 * tokens), wasm.allocate(8 * tokens), wasm.allocate(4 * DIMENSIONS)];
+    const times = []; let worst = 1, vector;
+    for (const [ids, mask, expected] of lines) {
+        if (mask.reduce((a, b) => a + b) > tokens) continue;
+        new BigInt64Array(wasm.memory.buffer, idsPointer, tokens).set(ids.slice(0, tokens).map(BigInt));
+        new BigInt64Array(wasm.memory.buffer, maskPointer, tokens).set(mask.slice(0, tokens).map(BigInt));
+        started = performance.now();
+        if (wasm.embed(idsPointer, maskPointer, outputPointer) !== DIMENSIONS) throw new Error('a query failed');
+        times.push(performance.now() - started);
+        vector = new Float32Array(wasm.memory.buffer, outputPointer, DIMENSIONS).slice();
+        worst = Math.min(worst, vector.reduce((sum, value, n) => sum + value * expected[n], 0));
+        if (times.length % 10 === 0) { log(`  ${times.length} queries…`); await pause(); }
+    }
+    Object.assign(results, { queries: times.length, queryMs: median(times), slowestQueryMs: Math.max(...times), agreement: worst });
+    log(`${times.length} queries of up to ${tokens} tokens: ${results.queryMs.toFixed(0)} ms each (median; slowest ${results.slowestQueryMs.toFixed(0)} ms)`);
+    log(`The vectors agree with the build computer's to at least ${worst.toFixed(4)}`); await pause();
+
+    // Comparing the query with every passage: one byte for each dimension of each passage (plain JavaScript, no SIMD)
+    const query = Int8Array.from(vector, value => Math.round(value * 127));
+    results.scanMs = {};
+    for (const count of [8725, 100000]) {
+        const passages = new Int8Array(count * DIMENSIONS);
+        for (let n = 0; n < passages.length; n++) passages[n] = (n * 2654435761 >>> 24) - 128;
+        started = performance.now();
+        let best = -Infinity;
+        for (let passage = 0, offset = 0; passage < count; passage++) {
+            let sum = 0;
+            for (let n = 0; n < DIMENSIONS; n++) sum += query[n] * passages[offset++];
+            if (sum > best) best = sum;
+        }
+        results.scanMs[count] = performance.now() - started;
+        log(`Compared with ${count.toLocaleString()} passages (${megabytes(passages.length)} of vectors) in ${results.scanMs[count].toFixed(0)} ms`); await pause();
+    }
+    log('\nDone. Please send these lines back.');
+    return results;
+}
+window.runTrial = run;
+document.getElementById('run').onclick = async event => {
+    event.target.disabled = true;
+    document.getElementById('log').textContent = '';
+    try { await run(document.getElementById('model').value); } catch (error) { log(`FAILED: ${error.message}`); }
+    event.target.disabled = false;
+};
+</script>
+</body>
+</html>

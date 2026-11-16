@@ -1,0 +1,23 @@
+# Embedding trial: can the query-side model run in pure Rust (and so inside the engine's WebAssembly build)?
+[package]
+name = "embed-query"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+tract-onnx = "0.21"
+
+# tract's random-number operators pull in getrandom, which has no source of randomness on this target.
+# The model doesn't use them, so one that always fails is enough (see lib.rs).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["custom"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[workspace]
