@@ -41,6 +41,8 @@ in a folder alongside this one. Without it, a warning is given and those columns
         alignments/
             <FROM>--<TO>/
                 <BBB>.links.tsv             Word-to-word links between two editions
+        thesaurus/
+            <LANGUAGE>.tsv                  What people search for → the titles of entries about it
 
 `<BBB>` is the three-character BibleOrgSys book code (GEN, SA1, MRK, etc.).
 One *document* is one ‘book’. Nothing assumes any particular set of documents,
@@ -203,12 +205,32 @@ or `include` (another entry, e.g., a text box or a map, is displayed at this poi
 The paragraph and span nodes are named by the source's own classes, e.g., `sn-text`, `h2`, `sn-excerpt`, `hebrew`.
 Paragraphs have a `kind` attribute of `heading` or `body`, and sentences are derived from the body paragraphs (never crossing from one to the next).
 
-So far there are two, both from [Tyndale Open Resources](https://tyndaleopenresources.com) (CC BY-SA 4.0):
+So far there are two, both from [Tyndale Open Resources](https://tyndaleopenresources.com) (CC BY-SA 4.0), in the form that's been
+[adapted for the OET](https://github.com/Freely-Given-org/OET_TyndaleOpenResources): names and some other wording are changed to match the OET-RV
+(e.g., ‘Yeshua (Jesus; Grk. Yesus)’, and ‘Yahweh’ for ‘the LORD’), but references, links, and titles are as Tyndale has them:
 
 | Edition | Kind | Documents | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- | --- |
-| `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.08 million | 17,478 `about` and 55,554 `cites` |
-| `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.49 million | 47,393 `cites` |
+| `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.12 million | 17,478 `about` and 55,554 `cites` |
+| `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.53 million | 47,393 `cites` |
+
+## Thesauruses
+
+A thesaurus connects the words that people search with to the entries of the dictionaries and commentaries, which are found by their titles.
+`thesaurus/<LANGUAGE>.tsv` has the columns `term`, `see`, `contrast`, `note`:
+
+| Column | Meaning |
+| --- | --- |
+| `term` | What someone might type, e.g., `once saved, always saved`. Capitals and punctuation don't matter |
+| `see` | The titles of entries on the subject, separated by semicolons, e.g., `Perseverance; Assurance; Eternal Life` |
+| `contrast` | The titles of entries for the other side of the question, e.g., `Apostasy; Backsliding`, so that both can be shown |
+| `note` | A remark for whoever maintains it (not used) |
+
+A title that no installed work has is simply not found, so one thesaurus can name titles from several works.
+
+The source is `pipeline/thesaurus/eng.tsv`, which is written for Biblelastic (CC0). It's only a first sketch of 32 terms, to prove the idea:
+**it needs writing properly, and reviewing by people who know the subjects**, because choosing what counts as ‘the other side’ is a theological judgement.
+The ingest checks it (every row has a term and at least one title, and no term is repeated) and copies it.
 
 ## Alignments
 

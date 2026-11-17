@@ -8,13 +8,13 @@
 //! words=love loves loved loving
 //! ```
 //!
-//! Commands: `info`, `contents`, `read`, `terms`, `find`, `marked`, `about` and `entry`. The response is always a JSON object with `"ok"`.
+//! Commands: `info`, `contents`, `read`, `terms`, `find`, `marked`, `about`, `entry` and `topic`. The response is always a JSON object with `"ok"`.
 
 use std::collections::{BTreeMap, HashMap};
 
 use crate::format::Result;
 use crate::library::Library;
-use crate::query::{self, Example, Paragraph, Piece, Wanted};
+use crate::query::{self, EntryFound, Example, KeyPassage, Paragraph, Piece, Wanted};
 use crate::reference::Passage;
 
 pub fn respond(library: &Library, request: &str) -> String {
@@ -90,6 +90,19 @@ fn answer(library: &Library, request: &str) -> Result<String> {
                 "{{\"edition\":{},\"work\":{},\"locator\":{},\"title\":{},\"type\":{},\"text\":{},\"see\":[{}]}}", quote(&entry.edition), quote(&entry.work),
                 quote(&entry.locator), quote(&entry.title), quote(&entry.kind), quote(&entry.text), entry.see.iter().map(|title| quote(title)).collect::<Vec<_>>().join(","))).collect();
             Ok(format!("\"total\":{},\"entries\":[{}]", found.total, entries.join(",")))
+        }
+        "topic" => { // What the Scriptures and the commentators say about a subject
+            if words.is_empty() { return Err("topic needs at least one word".into()); }
+            let topic = query::topic(library, edition, &words, limit, number("length", 300)?)?;
+            let titles = |titles: &[String]| titles.iter().map(|title| quote(title)).collect::<Vec<_>>().join(",");
+            let entries = |entries: &[EntryFound]| entries.iter().map(|entry| format!(
+                "{{\"edition\":{},\"work\":{},\"locator\":{},\"title\":{},\"type\":{},\"text\":{}}}", quote(&entry.edition), quote(&entry.work), quote(&entry.locator),
+                quote(&entry.title), quote(&entry.kind), quote(&entry.text))).collect::<Vec<_>>().join(",");
+            let passages = |passages: &[KeyPassage]| passages.iter().map(|passage| format!(
+                "{{\"passage\":{},\"sources\":[{}],\"text\":{}}}", quote(&passage.passage), titles(&passage.sources), quote(&passage.text))).collect::<Vec<_>>().join(",");
+            Ok(format!("\"see\":[{}],\"contrast\":[{}],\"entries\":[{}],\"passages\":[{}],\"otherEntries\":[{}],\"otherPassages\":[{}],\"scripture\":{},\"mentions\":{}",
+                       titles(&topic.see), titles(&topic.contrast), entries(&topic.entries), passages(&topic.passages), entries(&topic.other_entries), passages(&topic.other_passages),
+                       examples(&topic.scripture), examples(&topic.mentions)))
         }
         other => Err(format!("unknown command '{other}'").into()),
     }

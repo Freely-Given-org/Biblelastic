@@ -76,7 +76,7 @@ try {
         const { Biblelastic } = await import('${origin}/app/build/web/engine/biblelastic.js');
         const engine = await Biblelastic.start();
         let modules = [];
-        for (const name of ['OET-RV.text', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text'])
+        for (const name of ['OET-RV.text', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng'])
             modules = await engine.install(name, '${origin}/build/modules/' + name + '.blm');
         engine.stop();
         return modules.length;
@@ -89,11 +89,14 @@ try {
     await shoot('3-notes');
     await tap(200, 60); // Outside the sheet, to close it
     await tap(352, 27); // The search button
-    await send('Input.insertText', { text: 'grace truth' }, sessionId);
+    await send('Input.insertText', { text: 'once saved, always saved' }, sessionId);
     for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: type === 'keyDown' ? '\r' : undefined }, sessionId);
     await sleep(2000);
-    await shoot('4-search');
-    await tap(100, 390); // The third result (Colossians 1:5): it should open in its section, with the verse marked
+    await shoot('4-topic');
+    await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 200, y: 500, deltaX: 0, deltaY: 520 }, sessionId);
+    await sleep(1000);
+    await shoot('4b-topic-further');
+    await tap(100, 700); // A passage in the results: it should open in its section, with the verse marked (check the screenshot before for what's there)
     await sleep(1500);
     await shoot('5-landed');
     if (errors.length) { console.log(`Errors in the page:\n${errors.join('\n')}`); failed = true; }

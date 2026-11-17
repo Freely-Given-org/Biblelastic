@@ -106,7 +106,7 @@ and checked periodically for updated versions.
 
 There's the start of the build pipeline and engine, and a minimal app (for Android and browsers) that reads, searches, and shows notes (see [docs/App.md](docs/App.md)).
 Four Bible editions (OET-RV, OET-LV, SR-GNT, and UHB), one commentary (Tyndale Open Study Notes), and one dictionary (Tyndale Open Bible Dictionary)
-can be converted and compiled, and two of the example searches above already work:
+can be converted and compiled, and three of the example searches above already work (the third only as a first sketch):
 
     cd pipeline && python3 -m biblelastic_ingest && cd ..      # Source texts → build/intermediate/
     cargo build --release
@@ -116,6 +116,7 @@ can be converted and compiled, and two of the example searches above already wor
     target/release/biblelastic marked pronoun_to_name          # Where the OET-RV has a name in place of a pronoun
     target/release/biblelastic about JHN 3:16                  # What the commentary and dictionary say about a passage
     target/release/biblelastic entry aaron                     # Look up a dictionary entry
+    target/release/biblelastic topic once saved, always saved  # What the Scriptures and the commentators say about a subject
 
 (The ingest expects the source texts to be in folders alongside this one, as listed in `pipeline/sources.toml`.)
 See [docs/IntermediateFormat.md](docs/IntermediateFormat.md) and [docs/ModuleFormat.md](docs/ModuleFormat.md) for the details.

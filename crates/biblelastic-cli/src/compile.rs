@@ -354,6 +354,23 @@ fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path, options
     save(output, &format!("{name}.align"), writer).map(Some)
 }
 
+/// A thesaurus: for each term (as it's looked up), the entry titles to see, and the ones for the other side of the question
+fn compile_thesaurus(path: &Path, output: &Path, options: Options) -> Result<Written> {
+    let language = file_name(path).trim_end_matches(".tsv").to_string();
+    let mut rows: Vec<(String, Vec<String>)> = read_tsv(path)?.1.into_iter() // term, see, contrast, note
+        .map(|row| (biblelastic_engine::query::title_words(&row[0]).join(" "), row)).filter(|(key, _)| !key.is_empty()).collect();
+    rows.sort();
+    rows.dedup_by(|a, b| a.0 == b.0);
+    let mut writer = options.writer();
+    writer.raw("module.kind", b"thesaurus");
+    writer.raw("module.layer", language.as_bytes());
+    writer.strings("term.dict", &rows.iter().map(|(key, _)| key).collect::<Vec<_>>());
+    for (column, name) in ["name", "see", "contrast", "note"].iter().enumerate() {
+        writer.strings(&format!("term.{name}"), &rows.iter().map(|(_, row)| row[column].as_str()).collect::<Vec<_>>());
+    }
+    save(output, &format!("Thesaurus.{language}"), writer)
+}
+
 /// Compile everything in the intermediate folder. Editions are compiled in parallel.
 pub fn compile(intermediate: &Path, output: &Path, options: Options) -> Result<Vec<Written>> {
     fs::create_dir_all(output).map_err(|error| format!("{}: {error}", output.display()))?;
@@ -368,7 +385,11 @@ pub fn compile(intermediate: &Path, output: &Path, options: Options) -> Result<V
         let handles: Vec<_> = subfolders(&intermediate.join("alignments")).into_iter().map(|folder| scope.spawn(move || compile_alignment(&folder, editions, output, options))).collect();
         handles.into_iter().map(|handle| handle.join().map_err(|_| "a compile thread failed".to_string())?).collect::<Result<Vec<_>>>()
     })?.into_iter().flatten().collect();
-    let written: Vec<Written> = editions.into_iter().flat_map(|edition| edition.written).chain(alignments).collect();
+    let mut thesauruses = Vec::new();
+    let mut thesaurus_files: Vec<PathBuf> = fs::read_dir(intermediate.join("thesaurus")).into_iter().flatten().flatten().map(|entry| entry.path()).collect();
+    thesaurus_files.sort();
+    for path in thesaurus_files.iter().filter(|path| path.extension().is_some_and(|extension| extension == "tsv")) { thesauruses.push(compile_thesaurus(path, output, options)?); }
+    let written: Vec<Written> = editions.into_iter().flat_map(|edition| edition.written).chain(alignments).chain(thesauruses).collect();
     // The catalogue that an installer downloads first, to see what there is
     let entries: Vec<String> = written.iter().map(|module| format!("    {{\"name\": \"{}\", \"bytes\": {}}}", module.name, module.bytes)).collect();
     let catalogue = format!("{{\n  \"format\": {},\n  \"modules\": [\n{}\n  ]\n}}\n", biblelastic_engine::format::FORMAT_VERSION, entries.join(",\n"));
@@ -421,8 +442,11 @@ mod tests {
         write(&intermediate, "CM/documents/Themes.anchors.tsv", "start\tend\tkind\treference\n0\t2\tabout\tJN1 4:7-4:21\n");
         write(&intermediate, "CM/documents/Themes.links.tsv", "start\tend\tkind\ttarget\n1\t2\tsee\tJN1 4:8\n");
 
+        // A thesaurus: what people might type → the titles of entries (and of entries on the other side of the question)
+        write(&intermediate, "thesaurus/eng.tsv", "term\tsee\tcontrast\tnote\nDivine affection!\tGod’s Love; Nothing Called This\t\t\n");
+
         let written = super::compile(&intermediate, &folder.join("modules"), super::Options { page_bits: 5, compress: true }).unwrap(); // Tiny pages, so that plenty of things cross them
-        assert_eq!(written.iter().map(|module| module.name.as_str()).collect::<Vec<_>>(), ["CM.text", "EN.text", "GR.text", "GR.morph", "GR.OET", "EN--GR.align"]);
+        assert_eq!(written.iter().map(|module| module.name.as_str()).collect::<Vec<_>>(), ["CM.text", "EN.text", "GR.text", "GR.morph", "GR.OET", "EN--GR.align", "Thesaurus.eng"]);
         let library = Library::open(&Folder(folder.join("modules"))).unwrap();
 
         // Text is resynthesised, with a space where the second paragraph starts
@@ -457,7 +481,7 @@ mod tests {
 
         // What the commentary says about a passage: the note on that verse, then the article on a longer passage that includes it
         use biblelastic_engine::reference::Passage;
-        assert_eq!(library.modules.iter().map(|installed| installed.work.as_str()).collect::<Vec<_>>(), ["commentary", "", "scripture", "scripture", "scripture", "scripture"]);
+        assert_eq!(library.modules.iter().map(|installed| installed.work.as_str()).collect::<Vec<_>>(), ["commentary", "", "scripture", "scripture", "scripture", "scripture", ""]);
         let found = query::about(&library, &Passage::parse("JN1 4:8").unwrap(), None, 5, 100).unwrap();
         let comments: Vec<_> = found.comments.iter().map(|comment| (comment.locator.as_str(), comment.title.as_str(), comment.kind, comment.passage.as_str(), comment.text.as_str())).collect();
         assert_eq!(comments, [("JN1 4:8", "", "about", "JN1 4:8", "Love defined. (Rom 5:8)"), ("Themes Love", "God’s Love*", "about", "JN1 4:7-21", "Love matters.")]);
@@ -493,6 +517,17 @@ mod tests {
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\ndocument=JN1\nsection=2").contains("JN1 has no section 2"));
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 5").contains("doesn't have JN1 5"));
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=CM\npassage=JN1 4").contains("isn't divided into chapters"));
+
+        // A subject: through the thesaurus to an entry, and from that to the passage it's about, with its text from the translation
+        let topic = query::topic(&library, "EN", &["divine".to_string(), "AFFECTION".to_string()], 5, 100).unwrap();
+        assert_eq!((topic.see.len(), topic.entries.len(), topic.entries[0].locator.as_str(), topic.other_entries.len()), (2, 1, "Themes Love", 0));
+        assert_eq!(topic.passages.iter().map(|passage| (passage.passage.as_str(), passage.sources[0].as_str(), passage.text.as_str())).collect::<Vec<_>>(),
+                   [("JN1 4:7-21", "God’s Love*", "“God loves us.” Love is good, grace and lovely truth.")]);
+        // … or straight to an entry by its title, and to wherever the words are found
+        let topic = query::topic(&library, "EN", &["love".to_string()], 5, 100).unwrap();
+        assert_eq!((topic.see.len(), topic.entries[0].title.as_str(), topic.scripture[0].reference.as_str(), topic.mentions[0].reference.as_str()), (0, "God’s Love*", "JN1 4:10", "CM JN1 4:8"));
+        assert!(biblelastic_engine::api::respond(&library, "command=topic\nedition=EN\nwords=divine affection").contains(r#""see":["God’s Love","Nothing Called This"],"contrast":[],"entries":[{"edition":"CM","#));
+        assert!(biblelastic_engine::api::respond(&library, "command=topic\nedition=EN\nwords=nonsense").starts_with(r#"{"ok":true,"see":[],"contrast":[],"entries":[],"passages":[],"#));
 
         // Each tag is indexed separately
         let layer = library.column_module("GR", "tags").unwrap();

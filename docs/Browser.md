@@ -36,7 +36,7 @@ A request is lines of `key=value`, and the response is JSON:
     words=love loves loved loving
     limit=3
 
-The commands are `info`, `contents`, `read` (with `passage`), `terms`, `find` (with `within`), `marked`, `about` (with `passage`), and `entry`, with the same meanings and defaults as on the command line.
+The commands are `info`, `contents`, `read` (with `passage`), `terms`, `find` (with `within`), `marked`, `about` (with `passage`), `entry`, and `topic`, with the same meanings and defaults as on the command line.
 `target/release/biblelastic request command=find 'words=grace truth'` shows the same JSON that a browser gets.
 
 ## What the trial found

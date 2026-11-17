@@ -17,6 +17,7 @@ The engine refuses any module whose format version it doesn't know, so modules m
     target/release/biblelastic marked pronoun_to_name          # Where the translators marked an addition or change
     target/release/biblelastic about JHN 3:16                  # What the commentaries and dictionaries say about a passage
     target/release/biblelastic entry aaron                     # Look up a dictionary entry by its title
+    target/release/biblelastic topic once saved, always saved  # What the Scriptures and the commentators say about a subject
     target/release/biblelastic find covenant grace --edition TOSN --within para   # A commentary's own words are searched like any other text
     target/release/biblelastic request command=find 'words=grace truth'   # The same as JSON, as an app gets it
     cargo test
@@ -53,13 +54,14 @@ All the modules of one edition use the same slot numbers.
 | `<EDITION>.morph.blm` | `features` | The edition's other word columns, e.g., `lemma`, `strong`, `morph`, `translit` |
 | `<EDITION>.<LAYER>.blm` | `features` | The columns of one intermediate-format layer, e.g., `SR-GNT.OET.blm` has the OET glosses and tags |
 | `<FROM>--<TO>.align.blm` | `alignment` | Word-to-word links between two editions |
+| `Thesaurus.<LANGUAGE>.blm` | `thesaurus` | What people search for → the titles of entries about it |
 
 The first four editions compile to twelve modules totalling about 42 MB (from 142 MB of intermediate files, and 63 MB before compression).
 The smallest useful download, `OET-RV.text.blm`, is 6.4 MB.
 
 A commentary or a dictionary is an edition too, and so far each is a single `text` module:
-`TOSN.text.blm` (Tyndale Open Study Notes) is 7.6 MB and `TOBD.text.blm` (Tyndale Open Bible Dictionary) is 8.9 MB.
-That makes fourteen modules and 58 MB altogether.
+`TOSN.text.blm` (Tyndale Open Study Notes) is 7.8 MB and `TOBD.text.blm` (Tyndale Open Bible Dictionary) is 9.2 MB.
+With the thesaurus (2 kB) that makes fifteen modules and 59 MB altogether.
 
 ## File layout
 
@@ -162,6 +164,13 @@ keeping the anchors whose `to` isn't before the passage starts. There's no versi
 A place in one of these works is given as the document and then the entry's name (`GEN 1:1-2:3` in the study notes, or `Articles Aaron` in the dictionary),
 just as a place in Scripture is the document and then the verse's name.
 
+In a thesaurus module (see *Thesauruses* in the [intermediate format](IntermediateFormat.md)):
+
+| Section | Encoding | Content |
+| --- | --- | --- |
+| `term.dict` | Strings | The terms as they're looked up (lower case, without punctuation), sorted |
+| `term.name`, `term.see`, `term.contrast`, `term.note` | Strings | For each term: as it was written, the entry titles on the subject, the ones for the other side of the question, and the note |
+
 In an alignment module:
 
 | Section | Encoding | Content |
@@ -192,6 +201,15 @@ and each is shown by the start of its text. Then come the entries that only cite
 `entry aaron` looks each word up in `idx.entry`, and keeps the entries whose titles have them all: exact titles first, then the shortest ones.
 It also lists the titles of the entries that each one links to.
 
+`topic once saved, always saved` answers ‘what do the Scriptures and the commentators say about …?’ without generating anything:
+
+1. look the words up in the thesaurus, for the titles of entries on the subject and on the other side of the question
+1. find the entries with those titles in every installed dictionary and commentary (and any entry whose title is the words themselves)
+1. collect the passages that those entries are about or cite, taking overlapping passages together. The passages that the most entries refer to come first,
+    then the entries take turns, so that one long article doesn't crowd the others out. Each is shown with its text from the edition being read
+1. do the same for the other side of the question
+1. add the places where the words themselves are found: together in a sentence of the edition being read, and together in a paragraph of a dictionary or commentary.
+
 On the full data, starting with nothing in memory, on a desktop computer:
 
 | Query | Version 0 | Version 1 |
@@ -202,6 +220,7 @@ On the full data, starting with nothing in memory, on a desktop computer:
 | `marked pronoun_to_name` | 9 ms, reading 4.4 MB | 11 ms, reading 2.3 MB |
 | `about JHN 3:16` (84 entries, showing 20) | | 12 ms, reading 1.6 MB |
 | `entry aaron` | | 7 ms, reading 0.7 MB |
+| `topic once saved, always saved` | | 23 ms, reading 2.7 MB |
 
 With pages of 4 kB the first query reads 2.8 MB, not 4.3 MB, and the modules are 2% bigger. But browsers that have to use the slower way of reading
 (see [Browser.md](Browser.md)) then take half as long again, because they pay for each read, so 16 kB is the default.
@@ -224,6 +243,10 @@ With pages of 4 kB the first query reads 2.8 MB, not 4.3 MB, and the modules are
 - **Passages are typed as a book code and numbers** (`JHN 3:16`, `PSA 23`, `GEN 1:1-2:3`). Book names and abbreviations in any language aren't understood yet.
 - **A passage that covers several books** can't be asked for, and an anchor to one is stored as its first and last parts only.
 - **Scanning the anchors of a long book** reads every anchor in it up to the passage: it's fast enough now (about 120,000 anchors in all), but won't be with many commentaries in one module.
+- **A subject is only as good as the thesaurus and the articles.** `topic` finds nothing through the thesaurus for a phrase that isn't in it (it's a sketch of 32 terms),
+    and it can only give the passages that the installed articles happen to cite: e.g., for ‘once saved, always saved’ it doesn't give John 10:27-29, because none of the three articles refers to it.
+    Meaning-based search (see [Embeddings.md](Embeddings.md)) isn't joined to it yet.
+- **To find the passages that some entries cite, every anchor in the module is looked at**, because anchors are stored in passage order only.
 - **Entries are only found by their titles**, not by other names for the same thing, and their text is shown as plain text (headings, lists, and tables aren't laid out).
 - **There's no index from a passage's words to the entries**, and nothing yet finds the links that lead *to* an entry.
 - **Each commentary or dictionary is one module**, so it's all downloaded together, and one that's much larger would need splitting.

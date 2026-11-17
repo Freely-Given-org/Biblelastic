@@ -1,11 +1,12 @@
-// Searching: words together in a sentence, the original-language terms behind words, and dictionary entries.
+// Searching: a subject (what the Scriptures and the commentators say about it), words together in a sentence,
+// the original-language terms behind words, and dictionary entries.
 import 'package:flutter/material.dart';
 
 import 'engine/engine.dart';
 import 'main.dart' show edition;
 import 'strings.dart';
 
-enum SearchKind { together, terms, dictionary }
+enum SearchKind { topic, together, terms, dictionary }
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key, required this.engine});
@@ -16,7 +17,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController words = TextEditingController();
-  SearchKind kind = SearchKind.together;
+  SearchKind kind = SearchKind.topic;
   Map<String, dynamic>? response;
   String? problem;
 
@@ -30,6 +31,7 @@ class _SearchPageState extends State<SearchPage> {
     final text = words.text.trim();
     if (text.isEmpty) return;
     final fields = switch (kind) {
+      SearchKind.topic => {'command': 'topic', 'edition': edition, 'words': text, 'limit': '8', 'length': '360'},
       SearchKind.together => {'command': 'find', 'edition': edition, 'words': text, 'within': 'sentence', 'limit': '50'},
       SearchKind.terms => {'command': 'terms', 'edition': edition, 'words': text, 'limit': '30'},
       SearchKind.dictionary => {'command': 'entry', 'words': text, 'limit': '20', 'length': '600'},
@@ -56,26 +58,53 @@ class _SearchPageState extends State<SearchPage> {
     final terms = (answer?['terms'] as List<dynamic>?) ?? const [];
     final entries = (answer?['entries'] as List<dynamic>?) ?? const [];
     final shown = examples.length + terms.length + entries.length;
+    final isTopic = answer != null && answer['passages'] != null;
+    List<dynamic> list(String name) => (answer?[name] as List<dynamic>?) ?? const [];
+    Widget heading(String text) => Padding(padding: const EdgeInsets.only(top: 20, bottom: 4), child: Text(text, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary)));
+    Widget article(dynamic entry) => ListTile(contentPadding: EdgeInsets.zero, title: Text('${entry['title']}'), subtitle: Text('${entry['edition']} · ${entry['type']}\n${entry['text']}'));
+    Widget passage(dynamic found) => ListTile(contentPadding: EdgeInsets.zero,
+        title: Text(strings.reference(found['passage'] as String), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
+        subtitle: Text('${found['text']}\n${strings.citedIn((found['sources'] as List<dynamic>).join('; '))}'), onTap: () => open(found['passage'] as String));
+    Widget example(dynamic found) => ListTile(contentPadding: EdgeInsets.zero,
+        title: Text(strings.reference(found['reference'] as String), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
+        subtitle: Text(found['text'] as String), onTap: () => open(found['reference'] as String));
+    final topic = !isTopic ? const <Widget>[] : [
+      if ([for (final name in ['entries', 'passages', 'otherEntries', 'otherPassages', 'scripture', 'mentions']) ...list(name)].isEmpty)
+        Padding(padding: const EdgeInsets.only(top: 12), child: Text(strings.noResults, style: theme.textTheme.bodySmall)),
+      if (list('entries').isNotEmpty) heading(strings.articles),
+      ...list('entries').map(article),
+      if (list('passages').isNotEmpty) heading(strings.keyPassages),
+      ...list('passages').map(passage),
+      if (list('otherEntries').isNotEmpty || list('otherPassages').isNotEmpty) heading('${strings.otherSide}: ${list('contrast').join('; ')}'),
+      ...list('otherEntries').map(article),
+      ...list('otherPassages').map(passage),
+      if (list('scripture').isNotEmpty) heading(strings.inTheBible),
+      ...list('scripture').map(example),
+      if (list('mentions').isNotEmpty) heading(strings.inTheNotes),
+      ...list('mentions').map(example),
+    ];
     return Scaffold(
       appBar: AppBar(title: TextField(
         controller: words, autofocus: true, textInputAction: TextInputAction.search, onSubmitted: (_) => run(),
-        decoration: InputDecoration(hintText: strings.searchHint, border: InputBorder.none),
+        decoration: InputDecoration(hintText: kind == SearchKind.topic ? strings.topicHint : strings.searchHint, border: InputBorder.none),
       ), actions: [IconButton(tooltip: strings.search, icon: const Icon(Icons.search), onPressed: run)]),
       body: SafeArea(child: Column(children: [
         Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), child: SegmentedButton<SearchKind>(
           segments: [
-            ButtonSegment(value: SearchKind.together, label: Text(strings.together)),
-            ButtonSegment(value: SearchKind.terms, label: Text(strings.originalTerms)),
-            ButtonSegment(value: SearchKind.dictionary, label: Text(strings.dictionary)),
+            ButtonSegment(value: SearchKind.topic, label: FittedBox(fit: BoxFit.scaleDown, child: Text(strings.topic, softWrap: false))),
+            ButtonSegment(value: SearchKind.together, label: FittedBox(fit: BoxFit.scaleDown, child: Text(strings.together, softWrap: false))),
+            ButtonSegment(value: SearchKind.terms, label: FittedBox(fit: BoxFit.scaleDown, child: Text(strings.originalTerms, softWrap: false))),
+            ButtonSegment(value: SearchKind.dictionary, label: FittedBox(fit: BoxFit.scaleDown, child: Text(strings.dictionary, softWrap: false))),
           ],
           selected: {kind}, showSelectedIcon: false,
           onSelectionChanged: (chosen) { setState(() { kind = chosen.first; response = null; }); run(); },
         )),
         if (problem != null) Padding(padding: const EdgeInsets.all(16), child: Text(problem!, style: TextStyle(color: theme.colorScheme.error))),
-        if (answer != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Align(alignment: Alignment.centerLeft,
+        if (answer != null && !isTopic) Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Align(alignment: Alignment.centerLeft,
             child: Text(shown == 0 ? strings.noResults : strings.results(shown, answer['total'] as int), style: theme.textTheme.bodySmall))),
         Expanded(child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
-          for (final example in examples)
+          ...topic,
+          for (final example in isTopic ? const [] : examples)
             ListTile(contentPadding: EdgeInsets.zero, title: Text(strings.reference(example['reference'] as String), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
                 subtitle: Text(example['text'] as String), onTap: () => open(example['reference'] as String)),
           for (final term in terms)
@@ -86,7 +115,7 @@ class _SearchPageState extends State<SearchPage> {
                   for (final example in term['examples'] as List<dynamic>) '${strings.reference(example['reference'] as String)}: ${example['text']}',
                 ].join('\n')),
                 onTap: (term['examples'] as List<dynamic>).isEmpty ? null : () => open((term['examples'] as List<dynamic>).first['reference'] as String)),
-          for (final entry in entries)
+          for (final entry in isTopic ? const [] : entries)
             ListTile(contentPadding: EdgeInsets.zero,
                 title: Text('${entry['title']}'),
                 subtitle: Text('${entry['edition']} · ${entry['type']}\n${entry['text']}${(entry['see'] as List<dynamic>).isEmpty ? '' : '\n→ ${(entry['see'] as List<dynamic>).join('; ')}'}')),

@@ -9,7 +9,7 @@ It can:
 - read the OET-RV a section at a time (from one section heading to the next, whichever chapters that covers), with its poetry indents, words of Jesus, and translators' additions shown differently
 - step to the next or previous section, right through from one book into the next, or choose a book and chapter
 - show what the installed commentaries and dictionaries say about a verse (tap its number)
-- search: words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
+- search: a subject (the articles about it, the passages they refer to most, the other side of the question, and where the words themselves are found), words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
 
 Its own words are in English and Spanish (`app/lib/strings.dart`), chosen by the device's language.
 
@@ -67,7 +67,7 @@ The section view (added later the same day) was checked in headless Chrome by sc
 - **Only the OET-RV can be read**, the reader doesn't remember where you were, and there's no chapter view to choose in place of the section view.
 - **Sections aren't listed anywhere**: a book's section headings would make a better way in than chapter numbers.
 - **Verse numbers are small targets** for a finger, and nothing else about a verse can be tapped yet (e.g., a word, to see what it translates).
-- **Search results and notes are plain text**, and dictionary entries are cut short, not opened in full.
+- **Search results and notes are plain text**, and dictionary entries are cut short, not opened in full. A passage that's opened from a search has only its first verse marked.
 - **Modules are only fetched from a development address**, with no resuming of a broken download, no checking of what was downloaded, and no licence or attribution shown.
 - **Only debug builds were made**: no release build, signing, app icon, or store listing. A debug build is 155 MB; a release build will be far smaller.
 - **Linux desktop is set up but untried**, and there's nothing for iOS, macOS, or Windows yet.

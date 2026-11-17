@@ -351,6 +351,19 @@ def main() -> int:
                 if results: print( f"{fromId} → {toId}: {len(books)} books, {total['links']:,} links from {total['from_numbered']:,} numbered words;"
                                    f" {total['to_linked']:,} of {total['to_tokens']:,} linkable original words are translated" )
 
+    # Thesauruses: checked, then copied as they are (the compiler works out how each term is looked up)
+    report['thesauruses'] = {}
+    for thesaurus in registry.get( 'thesaurus', [] ) if not wantedEditions else []:
+        rows = [ line.split( '\t' ) for line in (PIPELINE_FOLDER / thesaurus['file']).read_text( encoding='utf-8' ).split( '\n' ) if line ]
+        problems = [ row[0] for row in rows if len(row) != 4 or not row[0].strip() or not (row[1].strip() or row[2].strip()) ]
+        problems += sorted( { row[0] for row in rows if sum( 1 for other in rows if other[0].casefold() == row[0].casefold() ) > 1 } )
+        if rows[0] != ['term','see','contrast','note'] or problems:
+            print( f"ERROR: thesaurus {thesaurus['file']} has bad or repeated rows: {problems[:5]}" ); failures += 1; continue
+        (arguments.output / 'thesaurus').mkdir( parents=True, exist_ok=True )
+        write_tsv( arguments.output / 'thesaurus' / f"{thesaurus['language']}.tsv", rows[0], rows[1:] )
+        report['thesauruses'][thesaurus['language']] = { 'terms':len(rows)-1, 'licence':thesaurus.get( 'licence', '' ) }
+        print( f"Thesaurus ({thesaurus['language']}): {len(rows)-1} terms" )
+
     (arguments.output / 'report.json').write_text( json.dumps( report, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
     print( f"{'FAILED' if failures else 'Done'} in {time.time()-startTime:.1f}s -- output in {arguments.output}" )
     return 1 if failures else 0

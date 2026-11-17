@@ -230,13 +230,8 @@ pub fn read(library: &Library, edition: &str, passage: &Passage) -> Result<Readi
             start = document_start;
             end = end.max(if first < chapters.starts.len() && chapters.starts.get(first) < document_end { chapters.starts.get(first) } else { document_end });
         }
-    } else { // Just the verses
-        for verse in verses.starts.lower_bound(document_start)..verses.starts.lower_bound(document_end) {
-            let Some(number) = verse_number(&verses.names.get(verse as u32)) else { continue };
-            if number >= passage.from && number <= passage.to && verses.ends.get(verse) > verses.starts.get(verse) {
-                start = start.min(verses.starts.get(verse)); end = end.max(verses.ends.get(verse));
-            }
-        }
+    } else if let Some(range) = verse_slots(verses, document_start..document_end, passage) { // Just the verses
+        (start, end) = (range.start, range.end);
     }
     if start >= end { return Err(format!("'{edition}' doesn't have {passage}").into()); }
     Ok(Reading { passage: passage.to_string(), paragraphs: lay_out(&module, &text, verses, start..end)? })
@@ -378,6 +373,18 @@ fn lay_out(module: &crate::format::Module, text: &Text, verses: &Nodes, range: s
     Ok(paragraphs)
 }
 
+/// The slots of the verses of a passage, within one document's slots
+fn verse_slots(verses: &Nodes, document: std::ops::Range<u32>, passage: &Passage) -> Option<std::ops::Range<u32>> {
+    let (mut start, mut end) = (u32::MAX, 0);
+    for verse in verses.starts.lower_bound(document.start)..verses.starts.lower_bound(document.end) {
+        let Some(number) = verse_number(&verses.names.get(verse as u32)) else { continue };
+        if number >= passage.from && number <= passage.to && verses.ends.get(verse) > verses.starts.get(verse) {
+            start = start.min(verses.starts.get(verse)); end = end.max(verses.ends.get(verse));
+        }
+    }
+    (start < end).then_some(start..end)
+}
+
 /// `3:16` → (3, 16), and `3:16a` too
 fn verse_number(name: &str) -> Option<(u32, u32)> {
     let (chapter, verse) = name.split_once(':')?;
@@ -468,16 +475,7 @@ pub fn entries(library: &Library, words: &[String], edition: Option<&str>, limit
     let (mut opened, mut matches) = (Vec::new(), Vec::new());
     for installed in library.item_modules(edition) {
         let titles = Column::open(&installed.module, "node.entry.title")?;
-        let mut common: Option<BTreeSet<u32>> = None;
-        for word in &wanted {
-            let found: BTreeSet<u32> = find_terms(&installed.module, "idx.entry", std::slice::from_ref(word))?.0.into_iter().collect();
-            common = Some(match common { Some(previous) => previous.intersection(&found).copied().collect(), None => found });
-        }
-        for entry in common.unwrap_or_default() {
-            let title_words = title_words(&titles.get(entry));
-            let exact = title_words.iter().map(|word| word.trim_end_matches('*')).eq(wanted.iter().map(|word| word.trim_end_matches('*')));
-            matches.push((!exact, title_words.len(), opened.len(), entry));
-        }
+        for (exact, words, entry) in titled(&installed.module, &titles, &wanted)? { matches.push((!exact, words, opened.len(), entry)); }
         opened.push((installed, titles));
     }
     matches.sort_unstable();
@@ -499,6 +497,151 @@ pub fn entries(library: &Library, words: &[String], edition: Option<&str>, limit
                         kind: Column::open(&installed.module, "node.entry.type")?.get(entry), text: text.excerpt(range, length), see })
     }).collect::<Result<Vec<_>>>()?;
     Ok(Entries { total: matches.len(), entries })
+}
+
+/// The entries of one module whose titles have all of these words: (whether that's the whole title, how many words the title has, the entry)
+fn titled(module: &crate::format::Module, titles: &Column, wanted: &[String]) -> Result<Vec<(bool, usize, u32)>> {
+    let mut common: Option<BTreeSet<u32>> = None;
+    for word in wanted {
+        let found: BTreeSet<u32> = find_terms(module, "idx.entry", std::slice::from_ref(word))?.0.into_iter().collect();
+        common = Some(match common { Some(previous) => previous.intersection(&found).copied().collect(), None => found });
+    }
+    Ok(common.unwrap_or_default().into_iter().map(|entry| {
+        let title_words = title_words(&titles.get(entry));
+        let exact = title_words.iter().map(|word| word.trim_end_matches('*')).eq(wanted.iter().map(|word| word.trim_end_matches('*')));
+        (exact, title_words.len(), entry)
+    }).collect())
+}
+
+/// A passage that the entries on a subject refer to
+pub struct KeyPassage {
+    pub passage: String,
+    /// The titles of the entries that refer to it
+    pub sources: Vec<String>,
+    /// Its text in the edition being read (empty if that edition doesn't have it)
+    pub text: String,
+}
+
+/// What's known about a subject (see `topic`)
+pub struct Topic {
+    /// The entry titles that the thesaurus gives for the subject, and for the other side of the question
+    pub see: Vec<String>,
+    pub contrast: Vec<String>,
+    /// Entries on the subject, and the passages that they refer to most
+    pub entries: Vec<EntryFound>,
+    pub passages: Vec<KeyPassage>,
+    /// The same for the other side of the question
+    pub other_entries: Vec<EntryFound>,
+    pub other_passages: Vec<KeyPassage>,
+    /// Where the words themselves are found: together in a sentence of the edition being read, and in a paragraph of a commentary or dictionary
+    pub scripture: Vec<Example>,
+    pub mentions: Vec<Example>,
+}
+
+/// "What do the Scriptures and the commentators say about …?" Nothing is generated: the answer is entries from the installed
+/// dictionaries and commentaries (found by their titles, and through the thesaurus), the passages that those entries refer to most,
+/// the same again for the other side of the question where the thesaurus names one, and the places where the words themselves are found.
+pub fn topic(library: &Library, edition: &str, words: &[String], limit: usize, length: usize) -> Result<Topic> {
+    let wanted: Vec<String> = words.iter().flat_map(|word| title_words(word)).map(|word| word.trim_end_matches('*').to_string()).collect();
+    if wanted.is_empty() { return Err("no words to look up".into()); }
+    let (mut see, mut contrast) = (Vec::new(), Vec::new());
+    for installed in library.modules.iter().filter(|installed| installed.kind == "thesaurus") {
+        if let Some(term) = installed.module.strings("term.dict")?.find(&wanted.join(" ")) {
+            let list = |section: &str| -> Result<Vec<String>> {
+                Ok(installed.module.strings(section)?.get(term).split(';').map(|title| title.trim().to_string()).filter(|title| !title.is_empty()).collect())
+            };
+            see.extend(list("term.see")?);
+            contrast.extend(list("term.contrast")?);
+        }
+    }
+    let reading = library.text_module(edition).ok().map(|module| Text::open(&module)).transpose()?;
+
+    // One side of the question: the entries with these titles, and the passages that they refer to most
+    let side = |titles_wanted: &[String], with_query: bool| -> Result<(Vec<EntryFound>, Vec<KeyPassage>)> {
+        let (mut entries, mut passages): (Vec<EntryFound>, BTreeMap<(String, (u32, u32), (u32, u32)), (u32, Vec<String>)>) = (Vec::new(), BTreeMap::new());
+        for installed in library.item_modules(None) {
+            let titles = Column::open(&installed.module, "node.entry.title")?;
+            // The query's own words: an entry with just that title, or failing that a few that have all the words. The thesaurus's titles: exact ones only.
+            let mut found: Vec<u32> = Vec::new();
+            if with_query {
+                let matches = titled(&installed.module, &titles, &wanted)?;
+                let exact: Vec<u32> = matches.iter().filter(|(exact, _, _)| *exact).map(|&(_, _, entry)| entry).collect();
+                found = if exact.is_empty() { let mut near = matches; near.sort_by_key(|&(_, words, entry)| (words, entry)); near.iter().take(3).map(|&(_, _, entry)| entry).collect() } else { exact };
+            }
+            for title in titles_wanted {
+                found.extend(titled(&installed.module, &titles, &title_words(title))?.into_iter().filter(|(exact, _, _)| *exact).map(|(_, _, entry)| entry));
+            }
+            found.sort_unstable();
+            found.dedup();
+            if found.is_empty() { continue; }
+            let text = Text::open(&installed.module)?;
+            let nodes = Nodes::open(&installed.module, "entry")?;
+            for &entry in &found {
+                let range = nodes.range(entry as usize);
+                entries.push(EntryFound { edition: installed.edition.clone(), work: installed.work.clone(), locator: text.reference(range.start), title: titles.get(entry),
+                                          kind: Column::open(&installed.module, "node.entry.type")?.get(entry), text: text.excerpt(range, length), see: Vec::new() });
+            }
+            if !installed.module.has("anchor.from") { continue; }
+            let anchors = Anchors::open(&installed.module)?;
+            for anchor in 0..anchors.entry.len() { // (Every anchor is looked at: they're in passage order, not entry order)
+                let entry = anchors.entry.get(anchor);
+                if found.binary_search(&entry).is_err() { continue; }
+                let ((book, from), (_, to)) = (unpack(anchors.from.get(anchor)), unpack(anchors.to.get(anchor)));
+                if to.0 > from.0 + 1 || to.0 >= 999 { continue; } // Not whole books and other long stretches
+                let key = (anchors.books.get(book as usize), from, to);
+                let scored = passages.entry(key).or_default();
+                scored.0 += if anchors.kind.get(anchor) == 0 { 2 } else { 1 };
+                let title = titles.get(entry);
+                if !scored.1.contains(&title) { scored.1.push(title); }
+            }
+        }
+        // Passages that overlap are taken together (as long as that doesn't make more than about a dozen verses)
+        let mut merged: Vec<((String, (u32, u32), (u32, u32)), (u32, Vec<String>))> = Vec::new();
+        for ((book, from, to), (score, sources)) in passages { // (In order of book, then of where they start)
+            match merged.last_mut() {
+                Some(((last_book, last_from, last_to), (last_score, last_sources)))
+                    if *last_book == book && from <= *last_to && pack(0, to.max(*last_to)) - pack(0, *last_from) <= 12 => {
+                    *last_to = to.max(*last_to);
+                    *last_score += score;
+                    for source in sources { if !last_sources.contains(&source) { last_sources.push(source); } }
+                }
+                _ => merged.push(((book, from, to), (score, sources))),
+            }
+        }
+        // The passages that the most entries refer to come first, then the ones referred to most often.
+        // After that, the entries take turns, so that one long article doesn't crowd the others out.
+        merged.sort_by_key(|(_, (score, sources))| (std::cmp::Reverse(sources.len()), std::cmp::Reverse(*score)));
+        let mut turns: BTreeMap<(usize, String), usize> = BTreeMap::new();
+        let mut ranked: Vec<_> = merged.into_iter().map(|passage| {
+            let turn = turns.entry((passage.1 .1.len(), passage.1 .1[0].clone())).or_default();
+            *turn += 1;
+            (std::cmp::Reverse(passage.1 .1.len()), *turn, passage)
+        }).collect();
+        ranked.sort_by(|a, b| (&a.0, a.1).cmp(&(&b.0, b.1)));
+        let ranked = ranked.into_iter().map(|(_, _, passage)| passage);
+        let passages = ranked.take(limit).map(|((book, from, to), (_, sources))| {
+            let passage = Passage { book, from, to };
+            let text = reading.as_ref().and_then(|text| {
+                let document = (0..text.document_names.len()).find(|&document| text.document_names.get(document) == passage.book)?;
+                let slots = verse_slots(text.verses.as_ref()?, text.document_starts.get(document)..text.document_starts.get(document + 1), &passage)?;
+                Some(text.excerpt(slots, length))
+            }).unwrap_or_default();
+            KeyPassage { passage: passage.to_string(), sources, text }
+        }).collect();
+        Ok((entries, passages))
+    };
+    let (entries, passages) = side(&see, true)?;
+    let (other_entries, mut other_passages) = if contrast.is_empty() { (Vec::new(), Vec::new()) } else { side(&contrast, false)? };
+    other_passages.retain(|other| !passages.iter().any(|passage| passage.passage == other.passage));
+
+    // Where the words themselves are found (these can fail harmlessly, e.g., if a word isn't used at all)
+    let scripture = find_together(library, edition, &wanted, "sentence", limit).map_or(Vec::new(), |found| found.examples);
+    let mut mentions = Vec::new();
+    for installed in library.item_modules(None) {
+        let found = find_together(library, &installed.edition, &wanted, "para", limit.min(5)).map_or(Vec::new(), |found| found.examples);
+        mentions.extend(found.into_iter().map(|example| Example { reference: format!("{} {}", installed.edition, example.reference), text: example.text.chars().take(length).collect() }));
+    }
+    Ok(Topic { see, contrast, entries, passages, other_entries, other_passages, scripture, mentions })
 }
 
 /// How a title is looked up: in lower case, as separate words, without punctuation (but keeping a final `*`).

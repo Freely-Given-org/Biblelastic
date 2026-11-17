@@ -109,7 +109,7 @@ columns = { gloss = "WordGloss", context_gloss = "ContextualWordGloss", morpheme
 [[edition]]
 id = "TOSN"
 kind = "commentary"
-name = "Tyndale Open Study Notes"
+name = "Tyndale Open Study Notes, adapted for the OET"
 language = "eng"
 script = "Latn"
 versification = "eng"
@@ -117,17 +117,17 @@ format = "TyndaleXML"
 copyright = "Copyright © 2022 by Tyndale House Publishers"
 licence = "CC BY-SA 4.0"
 attribution = "Adapted from Tyndale Open Study Notes. The original work by Tyndale House Publishers is available for free at http://www.tyndaleopenresources.com."
-changes = "Converted to the Biblelastic module format. The wording is unchanged."
+changes = "Names and some other wording were changed by Freely-Given.org to match the Open English Translation (see ADAPTATION_NOTICE.md in https://github.com/Freely-Given-org/OET_TyndaleOpenResources), then it was converted to the Biblelastic module format."
 redistributable = true
 licence_verified = false
-files = ["OpenBibleData/copiedBibles/English/Tyndale/Tyndale Open Study Notes/*.xml"]
+files = ["OpenBibleData/datasets/Tyndale/OET_TyndaleOpenResources/Tyndale Open Study Notes/*.xml"]
 features = []
 item_documents = { StudyNote = "*", BookIntro = "Intros", BookIntroSummary = "Summaries", Profile = "Profiles", ThemeNote = "Themes" }
 
 [[edition]]
 id = "TOBD"
 kind = "dictionary"
-name = "Tyndale Open Bible Dictionary"
+name = "Tyndale Open Bible Dictionary, adapted for the OET"
 language = "eng"
 script = "Latn"
 versification = "eng"
@@ -135,12 +135,20 @@ format = "TyndaleXML"
 copyright = "Copyright © 2023 by Tyndale House Publishers"
 licence = "CC BY-SA 4.0"
 attribution = "Adapted from Tyndale Open Bible Dictionary. The original work by Tyndale House Publishers is available for free at http://www.tyndaleopenresources.com."
-changes = "Converted to the Biblelastic module format, without the maps' image files. The wording is unchanged."
+changes = "Names and some other wording were changed by Freely-Given.org to match the Open English Translation (see ADAPTATION_NOTICE.md in https://github.com/Freely-Given-org/OET_TyndaleOpenResources), then it was converted to the Biblelastic module format, without the maps' image files."
 redistributable = true
 licence_verified = false
-files = ["OpenBibleData/copiedBibles/English/Tyndale/TyndaleOpenBibleDictionary/*/*.xml"]
+files = ["OpenBibleData/datasets/Tyndale/OET_TyndaleOpenResources/TyndaleOpenBibleDictionary/*/*.xml"]
 features = []
 item_documents = { Article = "Articles", Textbox = "Textboxes", Chart = "Charts", Map = "Maps", Picture = "Pictures" }
+
+# Thesauruses connect the words that people search with to the titles of entries in the dictionaries and commentaries.
+#   Columns: term, see (entry titles on the subject), contrast (entry titles for the other side of a question), note. Lists are separated by semicolons.
+[[thesaurus]]
+language = "eng"
+file = "thesaurus/eng.tsv" # Relative to the pipeline folder: this one is written for Biblelastic
+copyright = "Freely-Given.org"
+licence = "CC0 1.0"
 
 [tools]
 # Optional: https://github.com/Freely-Given-org/BibleTransliterations (CC0), used for the translit columns

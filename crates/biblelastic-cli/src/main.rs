@@ -21,6 +21,7 @@ Commands:
   marked REASON           Find where the translators marked an addition or change, e.g., marked pronoun_to_name
   about PASSAGE           Find what the commentaries and dictionaries say about a passage, e.g., about JHN 3:16 or about PSA 23
   entry WORD...           Look up a dictionary entry by its title, e.g., entry aaron or entry abel*
+  topic WORD...           Find what the Scriptures and the commentators say about a subject, e.g., topic once saved always saved
   request KEY=VALUE...    Send a request as an app would, and show the JSON response, e.g., request command=find 'words=grace truth'
 
 A word can end with * to match any ending, e.g., lov*
@@ -174,6 +175,27 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
             }
             if found.total > found.entries.len() { println!("… and {} more (use --limit)", found.total - found.entries.len()); }
             println!("{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
+        }
+        "topic" => {
+            if arguments.words.is_empty() { return Err("topic needs at least one word".into()); }
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
+            let topic = query::topic(&library, &arguments.edition, &arguments.words, arguments.limit.min(8), arguments.length.min(160))?;
+            let show = |heading: &str, entries: &[query::EntryFound], passages: &[query::KeyPassage]| {
+                if entries.is_empty() && passages.is_empty() { return; }
+                println!("{heading}\n");
+                for entry in entries { println!("  {} ‘{}’: {}", entry.edition, entry.title, entry.text); }
+                println!();
+                for passage in passages { println!("  {} (in {}): {}", passage.passage, passage.sources.join("; "), passage.text); }
+                println!();
+            };
+            if !topic.see.is_empty() { println!("The thesaurus points to: {}\n", topic.see.join("; ")); }
+            show("ENTRIES ON THE SUBJECT, AND THE PASSAGES THEY REFER TO MOST", &topic.entries, &topic.passages);
+            if !topic.contrast.is_empty() { show(&format!("THE OTHER SIDE OF THE QUESTION ({})", topic.contrast.join("; ")), &topic.other_entries, &topic.other_passages); }
+            if !topic.scripture.is_empty() { println!("THE WORDS TOGETHER IN A SENTENCE OF THE {}\n", arguments.edition); }
+            for example in &topic.scripture { println!("  {}: {}", example.reference, example.text); }
+            if !topic.mentions.is_empty() { println!("\nTHE WORDS TOGETHER IN A PARAGRAPH OF A COMMENTARY OR DICTIONARY\n"); }
+            for example in &topic.mentions { println!("  {}: {}", example.reference, example.text); }
+            println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
         }
         "request" => {
             let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
