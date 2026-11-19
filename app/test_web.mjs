@@ -76,7 +76,8 @@ try {
         const { Biblelastic } = await import('${origin}/app/build/web/engine/biblelastic.js');
         const engine = await Biblelastic.start();
         let modules = [];
-        for (const name of ['OET-RV.text', 'OET-LV.text', 'OET-LV--SR-GNT.align', 'OET-LV--UHB.align', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng', 'UHB.UBS', 'SR-GNT.UBS', 'UBSH.text', 'PritchardMark.text', 'PritchardJude.text'])
+        const index = await (await fetch('${origin}/build/modules/index.json')).json(); // Every module there is
+        for (const { name } of index.modules)
             modules = await engine.install(name, '${origin}/build/modules/' + name + '.blm');
         engine.stop();
         return modules.length;

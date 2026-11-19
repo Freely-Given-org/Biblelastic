@@ -363,6 +363,9 @@ def main() -> int:
 
     startTime = time.time()
     registry = tomllib.loads( arguments.registry.read_text( encoding='utf-8' ) )
+    for included in registry.get( 'include', [] ): # More editions, from other files (e.g., ones that a tool writes)
+        path = arguments.registry.parent / included
+        if path.exists(): registry['edition'] = registry.get( 'edition', [] ) + tomllib.loads( path.read_text( encoding='utf-8' ) ).get( 'edition', [] )
     wantedEditions = set( arguments.editions.split( ',' ) ) if arguments.editions else None
     wantedBooks = set( arguments.books.upper().split( ',' ) ) if arguments.books else None
     editions = [ edition for edition in registry['edition'] if not wantedEditions or edition['id'] in wantedEditions ]

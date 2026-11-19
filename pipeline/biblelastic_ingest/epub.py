@@ -15,6 +15,8 @@ import zipfile
 
 from . import items, references, usfm
 
+# Chapters and headings with these words are lists of things, not text: references in them aren't citations
+LISTING_RE = re.compile( r'(?i)\b(index|contents|bibliography|glossary|abbreviations|sigla)\b' )
 BLOCKS = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'dt', 'dd', 'td', 'th', 'div', 'blockquote', 'figcaption', 'caption', 'pre'}
 SKIPPED = {'head', 'script', 'style', 'svg', 'math'}
 NOTE_CONTAINERS = {'aside', 'dl'} # Footnotes are in these (with epub:type="footnote", or a footnote class)
@@ -25,6 +27,7 @@ class Block:
         self.tag, self.ids = tag, ids
         self.parts = [] # (text, italic, heading-like)
         self.note = False
+        self.first = False # The first block of its file (a book's files are often one per chapter, section, or e.g., prayer)
 
     @property
     def text( self ) -> str: return ''.join( text for text, _italic, _large in self.parts )
@@ -61,6 +64,7 @@ class _Reader( html.parser.HTMLParser ):
             if open_tag == tag: break
 
     def handle_data( self, data:str ) -> None:
+        data = data.replace( '\u00ad', '' ).replace( '\u200b', '' ) # Soft hyphens and zero-width spaces are only hints for line breaking
         if self._inside( SKIPPED ) or not data: return
         # Footnote markers: a superscript link (the notes themselves are kept where they are)
         if any( tag == 'a' and ('noteref' in attributes.get( 'epub:type', '' ) or 'note' in attributes.get( 'href', '' )) for tag, attributes in self.stack ) and self._inside( {'sup'} ):
@@ -124,6 +128,7 @@ def read_epub( path:str ) -> tuple:
             reader = _Reader( styles )
             reader.feed( book.read( name ).decode( 'utf-8', 'replace' ) )
             reader.close()
+            if reader.blocks: reader.blocks[0].first = True
             for block in reader.blocks:
                 for block_id in block.ids: positions[f'{name}#{block_id}'] = len(blocks)
                 blocks.append( block )
@@ -150,6 +155,7 @@ class BookParser( items._Parser ):
         super().__init__( {}, 'Latn' )
         self.context = context # The Bible book that bare references are in (e.g., MRK for a study of Mark), if any
         self.openAbout = [] # Headings that name a passage: (level, start token, passages)
+        self.listing = 0 # While above 0: the level of the heading of an index, contents, bibliography, etc., where references aren't citations
 
     def close_about( self, level:int ) -> None:
         while self.openAbout and self.openAbout[-1][0] >= level:
@@ -159,6 +165,8 @@ class BookParser( items._Parser ):
     def add_block( self, block:Block, style:str, level:int ) -> None:
         tokens = self.doc.tokens
         if level > 1: self.close_about( level )
+        if level and self.listing and level <= self.listing: self.listing = 0
+        if level and LISTING_RE.search( block.text ): self.listing = level
         start = len(tokens)
         self.start_paragraph( style, {} )
         italicStart = None
@@ -177,6 +185,7 @@ class BookParser( items._Parser ):
             offsets.append( (len(text) + len(before), ix) ); text += before + word + after
         word_at = lambda position: next( (ix for offset, ix in reversed( offsets ) if offset <= position), start )
         for first, last, passages in references.find( text, self.context ):
+            if self.listing: break # e.g., a Scripture index: its references aren't the book citing those passages
             if level == 1: break # (A chapter's title is taken from its entry in the contents)
             if level: # A heading that names a passage: what's under it is about that passage
                 self.openAbout.append( (level, start, passages) ); break
@@ -201,6 +210,7 @@ def parse( path:str, context:str|None=None ) -> tuple:
             finish_entry()
             names += 1
             entryStart, entryTitle = len(tokens), starts[index]
+            parser.listing = 1 if LISTING_RE.search( entryTitle ) else 0
             # A chapter whose title names a passage (e.g., ‘Mark 1:1-20’) is about that passage
             found = references.find( entryTitle, parser.context )
             if found: parser.openAbout.append( (1, entryStart, found[0][2]) )
@@ -208,6 +218,8 @@ def parse( path:str, context:str|None=None ) -> tuple:
         if block.tag in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'): level = int(block.tag[1])
         elif index in headings: level = headings[index]
         elif not block.note and all( large for text, _italic, large in block.parts if text.strip() ) and len(block.text) < 150: level = 3
+        # A short line that starts a file, and isn't a sentence, is that file's title, e.g., ‘God of Grace,’ for a prayer in a book of them
+        elif block.first and index not in starts and not block.note and len(block.text.strip()) <= 50 and not block.text.strip()[:1].islower() and not re.search( r'[.!?:;”"’)\]]$', block.text.strip() ): level = 3
         if index in starts and (level or block.text.strip() == entryTitle): level = 1 # The chapter's own title
         style = 'note' if block.note else f'h{level}' if level else 'li' if block.tag == 'li' else 'p'
         parser.add_block( block, style, level )

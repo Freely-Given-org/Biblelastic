@@ -20,13 +20,16 @@ class LibraryPage extends StatelessWidget {
       body: SafeArea(child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
         for (final MapEntry(key: kind, value: heading) in kinds.entries) ...[
           if (works.values.any((work) => work['work'] == kind)) Padding(padding: const EdgeInsets.only(top: 16, bottom: 4), child: Text(heading, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary))),
-          for (final work in works.values.where((work) => work['work'] == kind))
+          for (final work in works.values.where((work) => work['work'] == kind).toList()..sort((a, b) => _sortKey(a).compareTo(_sortKey(b))))
             ListTile(contentPadding: EdgeInsets.zero, title: Text(work['title'] as String), subtitle: Text(work['edition'] as String),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => ContentsPage(engine: engine, edition: work['edition'] as String)))),
         ],
       ])),
     );
   }
+
+  // By title, as a library shelves them: ‘The Pilgrim’s Progress’ under P
+  static String _sortKey(Map work) => (work['title'] as String).toLowerCase().replaceFirst(RegExp(r'^(the|an?) '), '');
 }
 
 /// The entries of one work, e.g., a book's chapters

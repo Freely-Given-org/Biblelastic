@@ -1,0 +1,513 @@
+# Books from https://books.freely.giving: every English book there that is CC0 or in the public domain, and has an EPUB.
+# Written by `python3 -m biblelastic_ingest.freely_giving`: run it again (rather than editing this) to pick up new books.
+# The copyright of each is the book's own notices, as found in its front matter: check them before publishing.
+
+[[edition]]
+id = "AllOfGrace"
+kind = "book"
+name = "All of Grace"
+author = "Charles Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/charles-spurgeon/all-of-grace/"
+download = "https://files.books.freelygiv.ing/all-of-grace/all-of-grace.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/all-of-grace.epub"]
+copyright = "All of Grace, 1886, by Charles Spurgeon. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "AnatomyOfSimonMagus"
+kind = "book"
+name = "The Anatomy of Simon Magus"
+author = "Anonymous, foreword by Conley Owens"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/anonymous/the-anatomy-of-simon-magus/"
+download = "https://files.books.freelygiv.ing/the-anatomy-of-simon-magus/the-anatomy-of-simon-magus.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-anatomy-of-simon-magus.epub"]
+copyright = "The Anatomy of Simon Magus, 1700, by Anonymous, foreword by Conley Owens. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "AutobiographyOfCharlesSpurgeon"
+kind = "book"
+name = "The Autobiography of Charles H. Spurgeon, Vol. 1: The Early Years"
+author = "Charles Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/charles-spurgeon/autobiography-of-charles-spurgeon/"
+download = "https://files.books.freelygiv.ing/autobiography-of-charles-spurgeon/AutobiographyOfCharlesHSpurgeonVol1.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/AutobiographyOfCharlesHSpurgeonVol1.epub"]
+copyright = "The Autobiography of Charles H. Spurgeon, Vol. 1: The Early Years, 1897, by Charles Spurgeon. In the spirit of Freely Giving (Matthew 10:8), I dedicate this edition to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Scripture quotations in the text are from the King James Version, as Spurgeon quoted it, and references are given in modern form. Verses cited without quotation are printed in the footnotes from the Berean Standard Bible (BSB), with the divine name printed as “Yahweh,” and where the BSB’s “you” or “your” is plural, it is marked “you+” or “your+.” Both are in the public domain."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "ChristianEconomy"
+kind = "book"
+name = "Christian Economy"
+author = "William Perkins"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-perkins/christian-economy/"
+download = "https://files.books.freelygiv.ing/christian-economy/christian-economy.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/christian-economy.epub"]
+copyright = "Christian Economy, 1609, by William Perkins. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "CrookInTheLot"
+kind = "book"
+name = "The Crook in the Lot"
+author = "Thomas Boston"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-boston/the-crook-in-the-lot/"
+download = "https://files.books.freelygiv.ing/the-crook-in-the-lot/the-crook-in-the-lot.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-crook-in-the-lot.epub"]
+copyright = "The Crook in the Lot, 1737, by Thomas Boston. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DeathOfDeath"
+kind = "book"
+name = "The Death of Death in the Death of Christ"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-owen/the-death-of-death/"
+download = "https://files.books.freelygiv.ing/the-death-of-death/the-death-of-death.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-death-of-death.epub"]
+copyright = "The Death of Death in the Death of Christ, 1648, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "ADivineCordial"
+kind = "book"
+name = "A Divine Cordial"
+author = "Thomas Watson"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-watson/a-divine-cordial/"
+download = "https://files.books.freelygiv.ing/a-divine-cordial/a-divine-cordial.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/a-divine-cordial.epub"]
+copyright = "A Divine Cordial, 1663, by Thomas Watson. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesVolume1"
+kind = "book"
+name = "Of Domestical Duties, Volume I"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-volume-1/"
+download = "https://files.books.freelygiv.ing/domestical-duties-volume-1/domestical-duties-volume-1.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-volume-1.epub"]
+copyright = "Of Domestical Duties, Volume I, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesVolume2"
+kind = "book"
+name = "Of Domestical Duties, Volume II"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-volume-2/"
+download = "https://files.books.freelygiv.ing/domestical-duties-volume-2/domestical-duties-volume-2.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-volume-2.epub"]
+copyright = "Of Domestical Duties, Volume II, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesVolume3"
+kind = "book"
+name = "Of Domestical Duties, Volume III"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-volume-3/"
+download = "https://files.books.freelygiv.ing/domestical-duties-volume-3/domestical-duties-volume-3.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-volume-3.epub"]
+copyright = "Of Domestical Duties, Volume III, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesVolume4"
+kind = "book"
+name = "Of Domestical Duties, Volume IV"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-volume-4/"
+download = "https://files.books.freelygiv.ing/domestical-duties-volume-4/domestical-duties-volume-4.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-volume-4.epub"]
+copyright = "Of Domestical Duties, Volume IV, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "GloriousFeastOfTheGospel"
+kind = "book"
+name = "The Glorious Feast of the Gospel"
+author = "Richard Sibbes"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/richard-sibbes/the-glorious-feast-of-the-gospel/"
+download = "https://files.books.freelygiv.ing/the-glorious-feast-of-the-gospel/the-glorious-feast-of-the-gospel.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-glorious-feast-of-the-gospel.epub"]
+copyright = "The Glorious Feast of the Gospel, 1650, by Richard Sibbes. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "GodSpoke"
+kind = "book"
+name = "God Spoke"
+author = "Matthew Mangum"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/matthew-mangum/god-spoke/"
+download = "https://files.books.freelygiv.ing/god-spoke/god-spoke.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/god-spoke.epub"]
+copyright = "God Spoke, 2025, by Matthew Mangum. To the extent possible under law, Matthew J. D. Mangum has waived all copyright and related or neighboring rights to God Spoke: The Story of How We Came to Have the Bible as We Know It Today and dedicated it to the public domain. You may copy, translate, modify, and distribute this resource without restriction and without needing to ask permission. This resource is freely given for the sake of the gospel (Matt 10:8). This work is published from the United States. Unless otherwise noted, all Scripture quotations are from the Berean Standard Bible (BSB). The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain. Because I do not expect all of my readers to read the copyright page, I have chosen to include a section here to highlight the freely shareable nature of this book. I have dedicated this book to the public domain, meaning that you can freely copy, translate, modify, and distribute this book without restriction and without needing to ask for my permission. This is a resource freely given for the use and edification of the body of Christ. You may visit equipthesaints.church to find a freely available digital copy of the book, freely available audiobook, audiobook supplemental material, as well as (Lord willing) other books and resources I hope to make available in the future. Physical copies of this book will be sold at the lowest cost possible and will not be priced for profit. We live at a time in our culture when we are inundated with a plethora of Christian resources, yet very few of them are freely available and shareable. Most resources, including English Bible translations, are locked behind copyrights which prevent their free use and distribution, including to other countries where our brothers and sisters do not have access to the wealth of resources that we possess. Yet Christ freely gave to us; should we not also freely give? The sale of ministry has become, in my estimation, far too unquestioningly accepted in our time and is, I believe, in need of reform. In our digital age, it is easier than ever to cheaply and widely distribute resources for the edification of the body. Keeping these tools behind paywalls, copyright restrictions, or even “free book” offers that require a transaction of handing over personal information seems to be at odds with the generosity God has shown toward us; freely we have received, so freely we should give. I have become convinced of the argument that ministry should be supported and not sold, and so I offer this book freely in service of Christ’s church. I would urge you to consider the case for freely giving found in Conley Owens’ book The Dorean Principle, as well as online at sellingjesus.org and copy.church. Whether or not you agree with the conclusions in whole, I believe you will be challenged to rethink the current paradigm."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "GodsWordIsNotBound"
+kind = "book"
+name = "God's Word Is Not Bound: Copyright & the Stewardship of Scripture"
+author = "Andrew Case with contributions by Conley Owens, Jonathan Melin, Michael Coughlin, Jon Here"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/andrew-case/gods-word-is-not-bound/"
+download = "https://sellingjesus.org/book_bound/Gods-Word-Is-Not-Bound.epub"
+files = ["Biblelastic/build/downloads/sellingjesus.org/Gods-Word-Is-Not-Bound.epub"]
+copyright = "God's Word Is Not Bound: Copyright & the Stewardship of Scripture, 2026, by Andrew Case with contributions by Conley Owens, Jonathan Melin, Michael Coughlin, Jon Here. Dedicated to the public domain, CC0. All of this publication may be shared, translated, sold, or copied freely without limitation and without permission. The price of this print edition only covers the cost of materials and does not generate profit for the authors. To learn more about why this book is freely given (Matt 10:8), please visit sellingJesus.org."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "GraceAbounding"
+kind = "book"
+name = "Grace Abounding to the Chief of Sinners"
+author = "John Bunyan"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-bunyan/grace-abounding/"
+download = "https://files.books.freelygiv.ing/grace-abounding/grace-abounding.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/grace-abounding.epub"]
+copyright = "Grace Abounding to the Chief of Sinners, 1666, by John Bunyan. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "IndwellingSin"
+kind = "book"
+name = "Indwelling Sin"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-owen/indwelling-sin/"
+download = "https://files.books.freelygiv.ing/indwelling-sin/indwelling-sin.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/indwelling-sin.epub"]
+copyright = "Indwelling Sin, 1668, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "KeepingTheHeart"
+kind = "book"
+name = "Keeping the Heart"
+author = "John Flavel"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-flavel/keeping-the-heart/"
+download = "https://files.books.freelygiv.ing/keeping-the-heart/KeepingTheHeart.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/KeepingTheHeart.epub"]
+copyright = "Keeping the Heart, 1667, by John Flavel. In the spirit of Freely Giving (Matthew 10:8), I dedicate this edition to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Scripture quotations in the text are from the King James Version, as Flavel quoted it. Verses he cites without quoting are printed in the footnotes from the Berean Standard Bible (BSB), with the divine name printed as “Yahweh,” and where the BSB’s “you” or “your” is plural, it is marked “you+” or “your+.” Both are in the public domain."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "BaptistConfessionOfFaith1689"
+kind = "book"
+name = "The London Baptist Confession of Faith (1689) with Catechisms"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/courtney-hicks/the-1689-baptist-confession-of-faith/"
+download = "https://files.books.freelygiv.ing/the-1689-baptist-confession-of-faith/the-1689-baptist-confession-of-faith.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-1689-baptist-confession-of-faith.epub"]
+copyright = "The London Baptist Confession of Faith (1689) with Catechisms, 1689. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "MeditationsOnPsalm119"
+kind = "book"
+name = "Meditations on Psalm 119"
+author = "Michael Coughlin"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/michael-coughlin/meditations-on-psalm-119/"
+download = "https://files.books.freelygiv.ing/meditations-on-psalm-119/MeditationsOnPsalm119.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/MeditationsOnPsalm119.epub"]
+context_book = "PSA"
+copyright = "Meditations on Psalm 119, 2026, by Michael Coughlin. In the spirit of Freely Giving (Matthew 10:8), I dedicate this work to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Unless otherwise noted, Scripture quotations are from the Berean Standard Bible (BSB), which has been dedicated to the public domain. In this book the divine name is printed as “Yahweh” where the BSB has “the LORD,” and where the BSB’s “you” or “your” is plural, it is marked “you+” or “your+.”"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "MortificationOfSin"
+kind = "book"
+name = "The Mortification of Sin"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-owen/the-mortification-of-sin/"
+download = "https://files.books.freelygiv.ing/the-mortification-of-sin/the-mortification-of-sin.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-mortification-of-sin.epub"]
+copyright = "The Mortification of Sin, 1656, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "OfTemptation"
+kind = "book"
+name = "Of Temptation"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-owen/of-temptation/"
+download = "https://files.books.freelygiv.ing/of-temptation/of-temptation.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/of-temptation.epub"]
+copyright = "Of Temptation, 1658, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "OnTheElectionOfInfants"
+kind = "book"
+name = "On the Election of Infants"
+author = "Michael Coughlin"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/michael-coughlin/on-the-election-of-infants/"
+download = "https://files.books.freelygiv.ing/on-the-election-of-infants/OnTheElectionOfInfants.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/OnTheElectionOfInfants.epub"]
+copyright = "On the Election of Infants, 2026, by Michael Coughlin. In the spirit of Freely Giving (Matthew 10:8), I dedicate this work to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Unless otherwise noted, Scripture quotations are from the Berean Standard Bible (BSB), which has been dedicated to the public domain. Where the BSB’s “you” or “your” is plural, it is marked “you+” or “your+.”"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "PilgrimsProgress"
+kind = "book"
+name = "The Pilgrim's Progress"
+author = "John Bunyan"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-bunyan/the-pilgrims-progress/"
+download = "https://files.books.freelygiv.ing/the-pilgrims-progress/the-pilgrims-progress.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-pilgrims-progress.epub"]
+copyright = "The Pilgrim's Progress, 1678, by John Bunyan. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "PrayingTheBibleTogether"
+kind = "book"
+name = "Praying the Bible Together"
+author = "Andrew Case"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/andrew-case/praying-the-bible-together/"
+download = "https://files.books.freelygiv.ing/praying-the-bible-together/praying-the-bible-together.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/praying-the-bible-together.epub"]
+copyright = "Praying the Bible Together, 2022, by Andrew Case. CC0 2022 by Andrew Case Public Domain. All of this publication may be shared, translated, sold, or copied freely without limitation and without permission. To learn more about this open license visit https://creativecommons.org/share-your-work/public-domain/cc0/"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "PreciousRemediesAgainstSatansDevices"
+kind = "book"
+name = "Precious Remedies Against Satan's Devices"
+author = "Thomas Brooks"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-brooks/precious-remedies-against-satans-devices/"
+download = "https://files.books.freelygiv.ing/precious-remedies-against-satans-devices/precious-remedies-against-satans-devices.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/precious-remedies-against-satans-devices.epub"]
+copyright = "Precious Remedies Against Satan's Devices, 1652, by Thomas Brooks. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DivineName"
+kind = "book"
+name = "Pronouncing & Translating the Divine Name יהוה: History & Practice"
+author = "Andrew Case"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/andrew-case/the-divine-name/"
+download = "https://files.books.freelygiv.ing/the-divine-name/the-divine-name.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-divine-name.epub"]
+copyright = "Pronouncing & Translating the Divine Name יהוה: History & Practice, 2025, by Andrew Case. Dedicated to the public domain. All of this publication may be shared, translated, sold, or copied freely without limitation and without permission. The price of this print edition only covers the cost of materials and does not generate profit for the author. To learn more about why this book is freely given (Matt 10:8), please visit sellingJesus.org."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "SecretKeyOfHeaven"
+kind = "book"
+name = "The Secret Key of Heaven"
+author = "Thomas Brooks"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-brooks/the-secret-key-of-heaven/"
+download = "https://files.books.freelygiv.ing/the-secret-key-of-heaven/the-secret-key-of-heaven.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-secret-key-of-heaven.epub"]
+copyright = "The Secret Key of Heaven, 1665, by Thomas Brooks. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "SinnersInTheHandsOfAnAngryGod"
+kind = "book"
+name = "Sinners in the Hands of an Angry God"
+author = "Jonathan Edwards"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/jonathan-edwards/sinners-in-the-hands-of-an-angry-god/"
+download = "https://files.books.freelygiv.ing/sinners-in-the-hands-of-an-angry-god/sinners-in-the-hands-of-an-angry-god.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/sinners-in-the-hands-of-an-angry-god.epub"]
+copyright = "Sinners in the Hands of an Angry God, 1741, by Jonathan Edwards. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "SurprisedByHesed"
+kind = "book"
+name = "Surprised by Hesed"
+author = "Mark Feezell"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/mark-feezell/surprised-by-hesed/"
+download = "https://files.books.freelygiv.ing/surprised-by-hesed/surprised-by-hesed.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/surprised-by-hesed.epub"]
+copyright = "Surprised by Hesed, 2024, by Mark Feezell. Visit https://www.drfeezell.com to discover more public domain books, poetry, photos, and music compositions and arrangements by Mark Feezell. This book has been dedicated to the public domain as of 2024 (Creative Commons0 1.0 license). You can copy, translate, modify, and distribute this resource, without restriction, and without needing to ask permission. This resource is freely given (Matthew 10:8) for the sake of the gospel. https://creativecommons.org/publicdomain/zero/1.0/legalcode. The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with BibleHub.com, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God’s Word has been dedicated to the public domain. Cover image: Emerald Pools Trail, Zion National Park, Utah. Taken by Mark Feezell on June 5, 2022. Dedicated to the Public Domain (CC0 1.0) in 2024. https://drfeezell.com/waterfall-from-emerald-pool-zion-np-dsc03422/"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "ATokenForMourners"
+kind = "book"
+name = "A Token for Mourners"
+author = "John Flavel"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-flavel/a-token-for-mourners/"
+download = "https://files.books.freelygiv.ing/a-token-for-mourners/ATokenForMourners.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/ATokenForMourners.epub"]
+copyright = "A Token for Mourners, 1674, by John Flavel. In the spirit of Freely Giving (Matthew 10:8), I dedicate this edition to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Scripture quotations in the text are from the King James Version, as Flavel quoted it. Verses he cites without quoting are printed in the footnotes from the Berean Standard Bible (BSB), with the divine name printed as “Yahweh,” and where the BSB’s “you” or “your” is plural, it is marked “you+” or “your+.” Both are in the public domain."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false

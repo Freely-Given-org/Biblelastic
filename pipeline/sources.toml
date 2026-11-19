@@ -6,6 +6,9 @@
 # licence_verified must be set to true by a person who has checked the licence at its source.
 #   Nothing may be published from an edition where it's false.
 
+# More editions, in files of their own (books-freely-giving.toml is written by `python3 -m biblelastic_ingest.freely_giving`)
+include = ["books-freely-giving.toml"]
+
 [[edition]]
 id = "OET-RV"
 name = "Open English Translation—Readers’ Version"
@@ -183,6 +186,57 @@ files = ["Biblelastic/build/downloads/books.freely.giving/jude-a-theological-com
 context_book = "JDE"
 copyright = "“Jude: A Theological Commentary” 2025, Shelby Pritchard. Dedicated to the public domain (CC0: https://creativecommons.org/publicdomain/zero/1.0/), as its listing on books.freely.giving says. (Its copyright page names The Mark of a True Disciple, apparently copied from that book.) Scripture quotations marked CSB have been taken from the Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission. Christian Standard Bible® and CSB® are federally registered trademarks of Holman Bible Publishers. Scripture quotations marked (LEB) are from the Lexham English Bible. Copyright 2012 Logos Bible Software. Lexham is a registered trademark of Logos Bible Software. Scriptures marked KJV are taken from the KING JAMES VERSION (KJV): KING JAMES VERSION, public domain. Quotations designated (NET) are from the NET Bible® copyright ©1996, 2019 by Biblical Studies Press, L.L.C. https://netbible.com All rights reserved. Scriptures marked ESV are taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION (ESV): Scriptures taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION ® Copyright© 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. Scripture quotations taken from the (LSB®) Legacy Standard Bible®, Copyright © 2021 by The Lockman Foundation. Used by permission. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc. LSBible.org and 316publishing.com. Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, copyright 1996, 2004. Used by permission of Tyndale House Publishers, Inc., Wheaton, Illinois 60189. The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain."
 licence = "CC0 1.0 (the Bible quotations: as their notices say)"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DoreanPrinciple"
+kind = "book"
+name = "The Dorean Principle"
+author = "Conley Owens"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/conley-owens/the-dorean-principle/"
+download = "https://files.books.freelygiv.ing/the-dorean-principle/the-dorean-principle.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-dorean-principle.epub"]
+copyright = "The Dorean Principle: A Biblical Response to the Commercialization of Christianity, 2021, Conley Owens. Published by FirstLove Publications. To the extent possible under law, Conley Owens has waived all copyright and related or neighboring rights to The Dorean Principle: A Biblical Response to the Commercialization of Christianity (https://creativecommons.org/publicdomain/zero/1.0/). Unless otherwise indicated, all Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), copyright © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. Scripture quotations marked “NASB” taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission. www.Lockman.org"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DoctrineOfSimony"
+kind = "book"
+name = "The Doctrine of Simony: A Theological Retrieval and Appraisal"
+author = "Conley Owens"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/conley-owens/the-doctrine-of-simony/"
+download = "https://simony.info/the-doctrine-of-simony.epub"
+files = ["Biblelastic/build/downloads/simony.info/the-doctrine-of-simony.epub"]
+copyright = "The Doctrine of Simony: A Theological Retrieval and Appraisal. Copyright © waived 2026 by Conley Owens. Published by Dorean Press. To the extent possible under law, Conley Owens has waived all copyright and related or neighboring rights to The Doctrine of Simony: A Theological Retrieval and Appraisal (https://creativecommons.org/publicdomain/zero/1.0/). Unless otherwise indicated, translations, including those of Scripture, are the author’s own. Online edition: https://simony.info"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "AbolishTheJesusTrade"
+kind = "book"
+name = "Abolish the Jesus Trade"
+author = "Andrew Case, Conley Owens, and Jon Here, with contributions by Maurice A. Robinson and Sarah Owens"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/andrew-case/abolish-the-jesus-trade/"
+download = "https://files.books.freelygiv.ing/abolish-the-jesus-trade/abolish-the-jesus-trade.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/abolish-the-jesus-trade.epub"]
+copyright = "Abolish the Jesus Trade: Spread the Joy of Freely Giving. By Andrew Case, Conley Owens, Jon Here, and other contributors. Published by Selling Jesus (sellingjesus.org), first edition (2025). This book is freely given to the glory of God and dedicated to the public domain. It may be copied, translated, adapted, in whole or in part, without needing to ask permission. (The book doesn’t say which Bible version its quotations are from.)"
+licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
 

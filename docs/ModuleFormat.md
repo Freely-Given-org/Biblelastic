@@ -66,7 +66,7 @@ The smallest useful download, `OET-RV.text.blm`, is 6.4 MB.
 A commentary or a dictionary is an edition too, and so far each is a single `text` module:
 `TOSN.text.blm` (Tyndale Open Study Notes) is 7.8 MB and `TOBD.text.blm` (Tyndale Open Bible Dictionary) is 9.2 MB.
 With the thesaurus (2 kB), the UBS meanings layers (`UHB.UBS.blm`, 2.1 MB, and `SR-GNT.UBS.blm`, 1.6 MB), and the UBS handbooks (`UBSH.text.blm`, 2.1 MB),
-and two books (`PritchardMark.text.blm`, 0.6 MB, and `PritchardJude.text.blm`, 0.2 MB), that makes twenty modules and 65 MB altogether.
+and thirty-five books (0.03 to 1.1 MB each, 14.7 MB in all), that makes fifty-three modules and 79 MB altogether.
 
 ## File layout
 

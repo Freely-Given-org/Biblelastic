@@ -135,3 +135,6 @@ web/biblelastic.wasm
 /app/web/engine/
 /app/linux/engine/
 /app/android/app/src/main/jniLibs/
+
+# Editor settings
+.vscode/

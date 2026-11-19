@@ -30,8 +30,9 @@ SINGLE_CHAPTER = {'OBA', 'PHM', 'JN2', 'JN3', 'JDE'}
 _NUMBERED = r'(?:[1-3]|I{1,3})\s*'
 _NAME = r'[A-Z][a-z]+(?:\s+of\s+(?:Songs|Solomon))?'
 _RANGE = r'\d{1,3}(?::\d{1,3}[a-c]?)?(?:\s*[-–]\s*\d{1,3}(?::\d{1,3})?[a-c]?)?'
-REFERENCE_RE = re.compile( rf'\b(?P<book>(?:{_NUMBERED})?{_NAME})\.?\s+(?P<ranges>{_RANGE}(?:\s*[,;]\s*{_RANGE})*)' )
-BARE_RE = re.compile( rf'(?<![\w:.])(?P<ranges>\d{{1,3}}:\d{{1,3}}[a-c]?(?:\s*[-–]\s*\d{{1,3}}(?::\d{{1,3}})?[a-c]?)?(?:\s*[,;]\s*{_RANGE})*)(?![\w:])' )
+_NEXT_BOOK = r'(?!\s*[A-Z][a-z]+\.?\s+\d)' # A later number that starts another reference (e.g., the 2 in ‘1 Cor. 10:6; 2 Cor. 3:5’) isn't part of this one
+REFERENCE_RE = re.compile( rf'\b(?P<book>(?:{_NUMBERED})?{_NAME})\.?\s+(?P<ranges>{_RANGE}(?:\s*[,;]\s*{_RANGE}{_NEXT_BOOK})*)' )
+BARE_RE = re.compile( rf'(?<![\w:.])(?P<ranges>\d{{1,3}}:\d{{1,3}}[a-c]?(?:\s*[-–]\s*\d{{1,3}}(?::\d{{1,3}})?[a-c]?)?(?:\s*[,;]\s*{_RANGE}{_NEXT_BOOK})*)(?![\w:])' )
 VERSES_RE = re.compile( r'\((?P<ranges>\d{1,2}(?:\s*[-–]\s*\d{1,2})?(?:\s*,\s*\d{1,2}(?:\s*[-–]\s*\d{1,2})?)*)\)' ) # e.g., (1-2), in a one-chapter book
 
 

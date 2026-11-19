@@ -225,21 +225,40 @@ with one document, `Chapter`: each top-level item of the book's table of content
 - **Paragraphs** are the book's blocks (paragraphs, list items, table cells), styled `h1`–`h3` (headings), `p`, `li`, or `note` (footnotes and endnotes;
     the footnote markers in the text are left out). A heading is an h1–h6 element, a block that the contents points to below its top level,
     or a block whose text the book's stylesheet makes bold and large (that's how some word processors mark headings).
+    A short line that starts one of the book's files, and isn't a sentence, is a heading too: e.g., each prayer in *Praying the Bible Together* is a file that starts ‘God of Grace,’.
 - **Bible references** in the text are found by `references.py` and become `cites` anchors: e.g., ‘John 3:16’, ‘2 Tim. 3:1–9’, ‘Rom 8:28, 31-39; 9:1’, ‘Mark 2-3:6’, or ‘Jude 5’.
     A book's name only counts when a number follows it (so ‘the Mark of a True Disciple’ isn't a reference). The registry's `context_book` is the Bible book
     that bare references (e.g., ‘(1:21-28)’, or ‘(1-2)’ for a one-chapter book) are in.
+    References in a chapter or under a heading that's a list (an index, contents, bibliography, glossary, or abbreviations) aren't counted as citations,
+    so a book's Scripture index doesn't make it cite every passage. Soft hyphens and zero-width spaces (hints for breaking lines) are removed.
 - **What it's about:** a chapter whose title names a passage (e.g., ‘Mark 1:1-20’ or ‘Pericope #1: Jude 1-4’) is `about` that passage, and so is the text under
     a heading that names one (e.g., ‘1:21-28 Jesus heals’), up to the next heading of the same or a higher level. So a book's chapters are found by the notes on a verse, like a commentary's.
 
 The registry gives each book's `download` address: the file is fetched once into `files` (under `build/downloads/`) and kept there.
-The first two, both from [books.freely.giving](https://books.freely.giving) and both CC0:
+There are thirty-five, all from [books.freely.giving](https://books.freely.giving), and all CC0 (or in the public domain). Five are in `sources.toml` itself:
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
 | `PritchardMark` *The Mark of a True Disciple* (Shelby and Elisabeth Pritchard, 2024): a study of Mark | `book` | 32 | 85,000 | 122 `about` and 571 `cites` |
-| `PritchardJude` *Jude: A Theological Commentary* (Shelby Pritchard, 2025) | `commentary` | 8 | 30,000 | 13 `about` and 144 `cites` |
+| `PritchardJude` *Jude: A Theological Commentary* (Shelby Pritchard, 2025) | `commentary` | 8 | 30,000 | 13 `about` and 143 `cites` |
+| `DoreanPrinciple` *The Dorean Principle* (Conley Owens, 2021) | `book` | 22 | 47,000 | 402 `cites` |
+| `DoctrineOfSimony` *The Doctrine of Simony: A Theological Retrieval and Appraisal* (Conley Owens, 2026; from [simony.info](https://simony.info)) | `book` | 27 | 100,000 | 6 `about` and 360 `cites` |
+| `AbolishTheJesusTrade` *Abolish the Jesus Trade* (Andrew Case, Conley Owens, Jon Here, and others, 2025) | `book` | 10 | 129,000 | 20 `about` and 933 `cites` |
 
-Both quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB) by those publishers' permission, so their notices are part of each manifest's `copyright`.
+The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
+so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
+
+The other thirty are every English book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
+(which `sources.toml` includes), written by
+
+    cd pipeline && python3 -m biblelastic_ingest.freely_giving
+
+which surveys the library (one request at a time), fetches each EPUB once, and takes each book's copyright from its own notices in its front matter
+(e.g., Common Weal Press's CC0 dedication of its editions of the Puritans, or the BSB's public-domain notice): run it again for books added since.
+They range from a 2,800-word essay (*On the Election of Infants*) to the first volume of Spurgeon's *Autobiography* (167,000 words), with 1.9 million words in all,
+mostly older works (Owen, Bunyan, Brooks, Watson, Flavel, Gouge, Perkins, Sibbes, Edwards, Spurgeon, the 1689 Baptist Confession) newly edited, and some recent ones.
+*Meditations on Psalm 119* has `context_book = "PSA"`, from its title. Books there that are only PDFs, web pages, or print (e.g., Calvin's *Institutes*,
+Spurgeon's *Morning and Evening*, Augustine's *Expositions on the Psalms*), or not in English, aren't included yet.
 
 ## Disclaimers
 
