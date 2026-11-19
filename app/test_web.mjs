@@ -76,7 +76,7 @@ try {
         const { Biblelastic } = await import('${origin}/app/build/web/engine/biblelastic.js');
         const engine = await Biblelastic.start();
         let modules = [];
-        for (const name of ['OET-RV.text', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng'])
+        for (const name of ['OET-RV.text', 'OET-LV.text', 'OET-LV--SR-GNT.align', 'OET-LV--UHB.align', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng'])
             modules = await engine.install(name, '${origin}/build/modules/' + name + '.blm');
         engine.stop();
         return modules.length;
@@ -85,12 +85,15 @@ try {
     await send('Page.reload', {}, sessionId);
     await sleep(6000);
     await shoot('2-reading');
-    await tap(120, 131); // A word in the first line (‘beginning’), for what it translates
+    await tap(206, 80); // ‘Both’: the Literal Version with the Readers' Version
+    await shoot('2a-both');
+    await tap(120, 162); // A word in the first verse (‘beginning’), for what it translates, and to mark the words linked to it
     await shoot('2b-word');
     await tap(108, 662); // ‘Every place it’s translated’
     await shoot('2c-places');
     await tap(28, 27); // Back to the sheet
     await tap(200, 60); // Outside the sheet, to close it
+    await shoot('2d-linked'); // The words that translate the same Greek word are marked in both versions
     await tap(22, 752); // The number of John 1:14, for the notes on it (where it is depends on the text and the fonts: check the screenshot)
     await shoot('3-notes');
     await tap(200, 60); // Outside the sheet, to close it
@@ -105,6 +108,9 @@ try {
     await tap(100, 700); // A passage in the results: it should open in its section, with the verse marked (check the screenshot before for what's there)
     await sleep(1500);
     await shoot('5-landed');
+    await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId);
+    await sleep(1500);
+    await shoot('6-wide'); // Side by side
     if (errors.length) { console.log(`Errors in the page:\n${errors.join('\n')}`); failed = true; }
 } catch (error) { console.log(`FAILED: ${error.message}`); failed = true; }
 finally {

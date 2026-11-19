@@ -2,21 +2,23 @@
 import 'package:flutter/material.dart';
 
 import 'engine/engine.dart';
-import 'main.dart' show edition;
 import 'strings.dart';
 
 /// A sheet about one word of the text. It closes with a reference (e.g., `JHN 3:16`) if the reader should go there.
 class WordSheet extends StatelessWidget {
-  const WordSheet({super.key, required this.engine, required this.slot});
+  const WordSheet({super.key, required this.engine, required this.edition, required this.word});
   final Engine engine;
-  final int slot;
+  /// The edition that the word is in
+  final String edition;
+  /// The engine's answer to `word` for it
+  final Future<Map<String, dynamic>> word;
 
   @override
   Widget build(BuildContext context) {
     final strings = Strings(Localizations.localeOf(context));
     final theme = Theme.of(context);
     return SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: FutureBuilder<Map<String, dynamic>>(
-      future: engine.request({'command': 'word', 'edition': edition, 'slot': '$slot'}),
+      future: word,
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('${snapshot.error}')));
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
@@ -47,7 +49,7 @@ class WordSheet extends StatelessWidget {
             if (original['lemma'] != '') Align(alignment: Alignment.centerLeft, child: TextButton(
               onPressed: () async {
                 final reference = await Navigator.of(context).push(MaterialPageRoute<String>(builder: (context) =>
-                    LemmaPage(engine: engine, original: original['edition'] as String, lemma: original['lemma'] as String, transliteration: original['lemmaTransliteration'] as String)));
+                    LemmaPage(engine: engine, edition: edition, original: original['edition'] as String, lemma: original['lemma'] as String, transliteration: original['lemmaTransliteration'] as String)));
                 if (reference != null && context.mounted) Navigator.of(context).pop(reference);
               },
               child: Text(strings.everyPlace),
@@ -61,9 +63,10 @@ class WordSheet extends StatelessWidget {
 
 /// Every verse where an original-language word is translated. It closes with the reference that was chosen.
 class LemmaPage extends StatelessWidget {
-  const LemmaPage({super.key, required this.engine, required this.original, required this.lemma, required this.transliteration});
+  const LemmaPage({super.key, required this.engine, required this.edition, required this.original, required this.lemma, required this.transliteration});
   final Engine engine;
-  final String original, lemma, transliteration;
+  /// The translation to list the verses of, and the original-language edition and dictionary form to find in it
+  final String edition, original, lemma, transliteration;
 
   @override
   Widget build(BuildContext context) {

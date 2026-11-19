@@ -27,6 +27,9 @@ class Strings {
   String get modulesFrom => _pick(['Modules come from', 'Los módulos vienen de']);
   String get noCatalogue => _pick(["The list of modules couldn't be fetched.", 'No se pudo obtener la lista de módulos.']);
   String get searchHint => _pick(['Words, e.g., grace truth', 'Palabras, p. ej., grace truth']);
+  String get readersVersion => _pick(['Readers’', 'Lectores']);
+  String get literalVersion => _pick(['Literal', 'Literal']);
+  String get bothVersions => _pick(['Both', 'Ambas']);
   String get topic => _pick(['Topic', 'Tema']);
   String get together => _pick(['Sentence', 'Oración']);
   String get originalTerms => _pick(['Originals', 'Originales']);

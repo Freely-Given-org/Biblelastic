@@ -1,6 +1,7 @@
 // The Biblelastic app: so far a minimal reader, with search, notes on a verse, and module installing.
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'engine/engine.dart';
 import 'modules_page.dart';
@@ -10,6 +11,8 @@ import 'word_sheet.dart';
 
 /// The edition that's read (the only Bible that the reader offers so far)
 const edition = 'OET-RV';
+/// The edition that can be shown with it, for the same verses
+const literal = 'OET-LV';
 
 void main() => runApp(const BiblelasticApp());
 
@@ -54,11 +57,47 @@ class _ReaderPageState extends State<ReaderPage> {
   String? focus;
   final GlobalKey focusKey = GlobalKey();
   final List<TapGestureRecognizer> recognisers = [];
+  /// What's shown: `rv` (the Readers' Version), `lv` (the Literal Version), or `both`. It's remembered.
+  String view = 'rv';
+  bool literalAvailable = false;
+  /// The Literal Version of the section's verses: each verse's pieces, by the verse's name (e.g., `3:16`)
+  Map<String, List<dynamic>> literalVerses = {};
+  /// The words to mark, by edition: the ones that translate the same original word as the word that was tapped
+  Map<String, Set<int>> linked = {};
 
   @override
   void initState() {
     super.initState();
     start();
+  }
+
+  Future<void> setView(String newView) async {
+    setState(() => view = newView);
+    try { await (await SharedPreferences.getInstance()).setString('view', newView); } catch (_) {} // Not being able to remember it doesn't matter much
+    if (newView != 'rv' && literalVerses.isEmpty) {
+      await loadLiteral();
+      if (mounted) setState(() {});
+    }
+  }
+
+  /// The Literal Version for the verses of the section that's showing (nothing, if there are none, or if it isn't installed)
+  Future<void> loadLiteral() async {
+    literalVerses = {};
+    final passage = section?['passage'] as String? ?? '';
+    if (view == 'rv' || !literalAvailable || !passage.contains(':')) return;
+    try {
+      final reading = await engine.request({'command': 'read', 'edition': literal, 'detail': 'words', 'passage': passage});
+      String? verse;
+      for (final paragraph in reading['paragraphs'] as List<dynamic>) {
+        for (final piece in paragraph['pieces'] as List<dynamic>) {
+          if (piece['c'] != null) continue; // (Chapters are marked in the Readers' Version)
+          if (piece['r'] != null) verse = piece['r'] as String;
+          if (verse != null) literalVerses.putIfAbsent(verse, () => []).add(piece);
+        }
+      }
+    } on EngineException {
+      // e.g., a book that the Literal Version doesn't have
+    }
   }
 
   @override
@@ -70,6 +109,7 @@ class _ReaderPageState extends State<ReaderPage> {
   Future<void> start() async {
     try {
       if (!started) await engine.start();
+      try { view = (await SharedPreferences.getInstance()).getString('view') ?? view; } catch (_) {}
       started = true;
       await loadContents();
     } catch (error) {
@@ -82,6 +122,12 @@ class _ReaderPageState extends State<ReaderPage> {
     try {
       final response = await engine.request({'command': 'contents', 'edition': edition});
       books = [for (final document in response['documents'] as List<dynamic>) Book(document['name'] as String, document['chapters'] as int, document['introduction'] as bool)];
+      try {
+        await engine.request({'command': 'contents', 'edition': literal});
+        literalAvailable = true;
+      } on EngineException {
+        literalAvailable = false;
+      }
       final current = section;
       if (current != null && books.any((book) => book.code == current['document'])) {
         await showSection(current['document'] as String, current['section'] as int);
@@ -95,8 +141,9 @@ class _ReaderPageState extends State<ReaderPage> {
 
   Future<void> show(Map<String, String> which, String? verse) async {
     try {
-      final response = await engine.request({'command': 'read', 'edition': edition, 'detail': 'words', ...which});
-      setState(() { section = response; focus = verse; problem = null; });
+      section = await engine.request({'command': 'read', 'edition': edition, 'detail': 'words', ...which});
+      await loadLiteral();
+      setState(() { focus = verse; linked = {}; problem = null; });
       // Once it's laid out, bring the wanted verse into view (or go back to the top)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final target = focusKey.currentContext;
@@ -138,9 +185,14 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 
   /// What a word translates (which can lead to another passage)
-  Future<void> showWord(int slot) async {
+  /// and marks the words of each version that translate the same original word
+  Future<void> showWord(int slot, String ofEdition) async {
+    final word = engine.request({'command': 'word', 'edition': ofEdition, 'slot': '$slot'});
+    word.then((answer) {
+      if (mounted) setState(() => linked = {for (final link in answer['linked'] as List<dynamic>? ?? const []) link['edition'] as String: {...(link['slots'] as List<dynamic>).cast<int>()}});
+    }, onError: (_) {});
     final reference = await showModalBottomSheet<String>(context: context, isScrollControlled: true, showDragHandle: true, useSafeArea: true,
-        builder: (context) => WordSheet(engine: engine, slot: slot));
+        builder: (context) => WordSheet(engine: engine, edition: ofEdition, word: word));
     if (reference != null) await showPassage(reference);
   }
 
@@ -185,28 +237,72 @@ class _ReaderPageState extends State<ReaderPage> {
     }
     for (final recogniser in recognisers) { recogniser.dispose(); }
     recognisers.clear();
-    var inFocus = false, keyUsed = false; // Whether the verse being laid out is the one to mark (a verse can run on into the next paragraph)
-    final paragraphs = <Widget>[];
-    for (final data in (current['paragraphs'] as List<dynamic>).cast<Map<String, dynamic>>()) {
-      final (widget, hasFocus, stillInFocus) = paragraph(context, data, inFocus);
-      inFocus = stillInFocus;
-      paragraphs.add(hasFocus && !keyUsed ? KeyedSubtree(key: focusKey, child: widget) : widget);
-      keyUsed = keyUsed || hasFocus;
+    final theme = Theme.of(context);
+    final showLiteral = view != 'rv' && literalVerses.isNotEmpty;
+    final wide = view == 'both' && MediaQuery.sizeOf(context).width >= 840;
+    // The Readers' Version is laid out in runs of paragraphs that end where a verse ends, so that the Literal Version
+    // of the same verses can go beside each run (on a wide screen) or after it
+    final paragraphs = (current['paragraphs'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final runs = <Widget>[];
+    var readers = <Widget>[];
+    var verses = <String>[];
+    var inFocus = false, runHasFocus = false, keyUsed = false;
+    void finishRun() {
+      final literalText = showLiteral && verses.isNotEmpty ? literalBlock(context, verses) : null;
+      if (readers.isNotEmpty || literalText != null) {
+        final Widget run = literalText == null ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: readers)
+            : view == 'lv' ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [...readers, literalText])
+            : wide ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: readers)),
+                const SizedBox(width: 32),
+                Expanded(child: literalText),
+              ])
+            : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [...readers, literalText]);
+        runs.add(runHasFocus && !keyUsed ? KeyedSubtree(key: focusKey, child: run) : run);
+        keyUsed = keyUsed || runHasFocus;
+      }
+      readers = []; verses = []; runHasFocus = false;
     }
+    for (var index = 0; index < paragraphs.length; index++) {
+      final data = paragraphs[index];
+      final pieces = data['pieces'] as List<dynamic>;
+      final names = [for (final piece in pieces) if (piece['r'] != null) piece['r'] as String];
+      verses.addAll(names);
+      runHasFocus = runHasFocus || names.contains(focus) || (inFocus && pieces.isNotEmpty && pieces.first['r'] == null);
+      // With only the Literal Version, the Readers' Version's headings are still shown, to find the way by
+      if (view != 'lv' || data['kind'] != 'body' || !showLiteral) {
+        final (widget, stillInFocus) = paragraph(context, data, inFocus);
+        inFocus = stillInFocus;
+        readers.add(widget);
+      }
+      final next = index + 1 < paragraphs.length ? paragraphs[index + 1] : null;
+      final nextPieces = next?['pieces'] as List<dynamic>? ?? const [];
+      if (next == null || next['kind'] != 'body' || nextPieces.isEmpty || nextPieces.first['r'] != null || nextPieces.first['c'] != null) finishRun();
+    }
+    finishRun();
     // A section is short enough to lay out whole, which lets a verse anywhere in it be scrolled to.
     // The key makes each section start again from the top.
     return SelectionArea(child: SingleChildScrollView(
-      key: ValueKey('${current['document']} ${current['section']}'),
+      key: ValueKey('${current['document']} ${current['section']} $view'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        ...paragraphs,
-        Padding(padding: const EdgeInsets.only(top: 24), child: Text(strings.tapVerse, style: Theme.of(context).textTheme.bodySmall)),
+      child: Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: wide ? 1100 : 640), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (literalAvailable) Center(child: SegmentedButton<String>(
+          segments: [
+            ButtonSegment(value: 'rv', label: Text(strings.readersVersion)),
+            ButtonSegment(value: 'both', label: Text(strings.bothVersions)),
+            ButtonSegment(value: 'lv', label: Text(strings.literalVersion)),
+          ],
+          selected: {view}, showSelectedIcon: false, style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          onSelectionChanged: (chosen) => setView(chosen.first),
+        )),
+        ...runs,
+        Padding(padding: const EdgeInsets.only(top: 24), child: Text(strings.tapVerse, style: theme.textTheme.bodySmall)),
       ]))),
     ));
   }
 
-  /// One paragraph, laid out by its style and kind. Also says whether the verse to mark starts in it, and whether that verse is still going at its end.
-  (Widget, bool, bool) paragraph(BuildContext context, Map<String, dynamic> data, bool inFocus) {
+  /// One paragraph of the Readers' Version, laid out by its style and kind. Also says whether the verse to mark is still going at its end.
+  (Widget, bool) paragraph(BuildContext context, Map<String, dynamic> data, bool inFocus) {
     final theme = Theme.of(context);
     final style = data['style'] as String, kind = data['kind'] as String;
     var base = theme.textTheme.bodyLarge!.copyWith(height: 1.5);
@@ -225,38 +321,58 @@ class _ReaderPageState extends State<ReaderPage> {
     } else if (style == 'd') {
       base = base.copyWith(fontStyle: FontStyle.italic);
     }
-    final marked = theme.colorScheme.tertiaryContainer;
-    var hasFocus = false;
+    final (spans, stillInFocus) = pieceSpans(context, data['pieces'] as List<dynamic>, base, edition, inFocus, markFocus: kind != 'heading');
+    return (Padding(padding: padding, child: Text.rich(TextSpan(children: spans, style: base), textAlign: align)), stillInFocus);
+  }
+
+  /// The Literal Version of some verses, as one block
+  Widget literalBlock(BuildContext context, List<String> verses) {
+    final theme = Theme.of(context);
+    final base = theme.textTheme.bodyLarge!.copyWith(height: 1.5, color: theme.colorScheme.onSurfaceVariant);
+    final (spans, _) = pieceSpans(context, [for (final verse in verses) ...?literalVerses[verse]], base, literal, false);
+    if (view == 'both') spans.insert(0, TextSpan(text: 'LV  ', style: theme.textTheme.labelSmall!.copyWith(color: theme.colorScheme.outline, fontWeight: FontWeight.bold)));
+    final text = Text.rich(TextSpan(children: spans, style: base));
+    return view == 'lv' ? Padding(padding: const EdgeInsets.only(top: 8), child: text)
+        : Container(margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.only(left: 12),
+            decoration: BoxDecoration(border: Border(left: BorderSide(color: theme.colorScheme.outlineVariant, width: 3))), child: text);
+  }
+
+  /// Text spans for a paragraph's pieces (chapter and verse numbers, and words). Also says whether the verse to mark is still going at the end.
+  (List<InlineSpan>, bool) pieceSpans(BuildContext context, List<dynamic> pieces, TextStyle base, String ofEdition, bool inFocus, {bool markFocus = true}) {
+    final theme = Theme.of(context);
+    final focusColour = theme.colorScheme.tertiaryContainer, linkedColour = theme.colorScheme.secondaryContainer;
+    final linkedHere = linked[ofEdition] ?? const <int>{};
     final spans = <InlineSpan>[];
-    for (final piece in data['pieces'] as List<dynamic>) {
+    for (final piece in pieces) {
       if (piece['c'] != null) { // A chapter starts with the next verse
         spans.add(TextSpan(text: '${piece['c']} ', style: TextStyle(fontSize: base.fontSize! * 1.5, fontWeight: FontWeight.bold, color: theme.colorScheme.primary, height: 1)));
       } else if (piece['v'] != null) {
         final name = piece['r'] as String;
         inFocus = name == focus;
-        hasFocus = hasFocus || inFocus;
         final recogniser = TapGestureRecognizer()..onTap = () => showNotes(name);
         recognisers.add(recogniser);
         spans.add(TextSpan(text: '${piece['v']} ', recognizer: recogniser,
-            style: TextStyle(fontSize: base.fontSize! * 0.72, color: theme.colorScheme.primary, fontWeight: FontWeight.bold, backgroundColor: inFocus ? marked : null)));
+            style: TextStyle(fontSize: base.fontSize! * 0.72, color: theme.colorScheme.primary, fontWeight: FontWeight.bold, backgroundColor: inFocus && markFocus ? focusColour : null)));
       } else {
         final marks = (piece['s'] as List<dynamic>? ?? const []).cast<String>();
         var text = base;
         if (marks.contains('wj')) text = text.copyWith(color: theme.brightness == Brightness.dark ? const Color(0xFFFF9E9E) : const Color(0xFF9B1C1C)); // Words of Jesus
         if (marks.contains('add')) text = text.copyWith(color: text.color?.withValues(alpha: 0.72)); // Words added by the translators
+        if (marks.contains('untr')) text = text.copyWith(color: text.color?.withValues(alpha: 0.5)); // Words of the original that aren't normally translated
         if (marks.contains('em') || marks.contains('it')) text = text.copyWith(fontStyle: FontStyle.italic);
         if (marks.contains('bd')) text = text.copyWith(fontWeight: FontWeight.bold);
-        if (inFocus && kind != 'heading') text = text.copyWith(backgroundColor: marked);
+        if (inFocus && markFocus) text = text.copyWith(backgroundColor: focusColour);
         TapGestureRecognizer? recogniser;
         final slot = piece['w'] as int?;
         if (slot != null) { // Each word can be asked about
-          recogniser = TapGestureRecognizer()..onTap = () => showWord(slot);
+          if (linkedHere.contains(slot)) text = text.copyWith(backgroundColor: linkedColour);
+          recogniser = TapGestureRecognizer()..onTap = () => showWord(slot, ofEdition);
           recognisers.add(recogniser);
         }
         spans.add(TextSpan(text: piece['t'] as String, style: text, recognizer: recogniser));
       }
     }
-    return (Padding(padding: padding, child: Text.rich(TextSpan(children: spans, style: base), textAlign: align)), hasFocus, inFocus);
+    return (spans, inFocus);
   }
 }
 

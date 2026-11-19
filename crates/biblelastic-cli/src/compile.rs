@@ -538,6 +538,7 @@ mod tests {
         assert_eq!((original.edition.as_str(), original.text.as_str(), original.lemma.as_str(), original.lemma_transliteration.as_str(), original.strong.as_str(), original.gloss.as_str()),
                    ("GR", "ἀγάπη", "ἀγάπη", "agapaʸ", "G0026", "love"));
         assert_eq!((original.occurrences, original.renderings.clone()), (1, vec![("love is".to_string(), 1)]));
+        assert_eq!(info.linked, [("EN".to_string(), vec![4, 5])]); // ‘Love is’ both translate ἀγάπη
         assert_eq!(query::word(&library, "EN", 3).unwrap().originals.len(), 0); // ‘us’ isn't linked to anything
         assert!(query::word(&library, "EN", 999).is_err());
         let verses = query::lemma_verses(&library, "EN", "GR", "ἀγαπάω", 5).unwrap();

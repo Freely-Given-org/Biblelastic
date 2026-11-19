@@ -416,6 +416,9 @@ pub struct WordInfo {
     pub text: String,
     pub reference: String,
     pub originals: Vec<Original>,
+    /// In every installed translation that's aligned to the same originals (this one included):
+    /// the words that translate them, e.g., to mark them in the OET-RV and the OET-LV side by side
+    pub linked: Vec<(String, Vec<u32>)>,
 }
 
 /// How many occurrences of a lemma are followed up to see how it's rendered
@@ -439,6 +442,7 @@ pub fn word(library: &Library, edition: &str, slot: u32) -> Result<WordInfo> {
     let text = Text::open(&*library.text_module(edition)?)?;
     if slot >= text.document_starts.get(text.document_starts.len() - 1) { return Err(format!("'{edition}' has no word {slot}").into()); }
     let mut originals = Vec::new();
+    let mut targets: Vec<(String, u32)> = Vec::new();
     for alignment in library.alignments_from(edition) {
         let (from, to) = (alignment.module.packed("links.from")?, alignment.module.packed("links.to")?);
         let mut link = from.lower_bound(slot);
@@ -448,6 +452,7 @@ pub fn word(library: &Library, edition: &str, slot: u32) -> Result<WordInfo> {
         while link < from.len() && from.get(link) == slot {
             let target = to.get(link);
             link += 1;
+            targets.push((alignment.to.clone(), target));
             let lemma = value("lemma", target)?;
             // Every occurrence of the lemma, and how each is rendered (as the translation's words in order, in lower case)
             let lemma_module = library.column_module(&alignment.to, "lemma");
@@ -468,7 +473,16 @@ pub fn word(library: &Library, edition: &str, slot: u32) -> Result<WordInfo> {
                                       morphology: value("morph", target)?, gloss, occurrences: occurrences.len(), counted: sample.len(), renderings, lemma });
         }
     }
-    Ok(WordInfo { text: text.text.get(slot), reference: text.reference(slot), originals })
+    let mut linked: BTreeMap<String, Vec<u32>> = BTreeMap::new();
+    for alignment in library.modules.iter().filter(|installed| installed.kind == "alignment") {
+        let wanted: Vec<u32> = targets.iter().filter(|(original, _)| *original == alignment.to).map(|&(_, target)| target).collect();
+        if wanted.is_empty() { continue; }
+        let slots = linked.entry(alignment.from.clone()).or_default();
+        for rendering in rendered_by(&alignment.module, &wanted)? { slots.extend(rendering); }
+        slots.sort_unstable();
+        slots.dedup();
+    }
+    Ok(WordInfo { text: text.text.get(slot), reference: text.reference(slot), originals, linked: linked.into_iter().collect() })
 }
 
 /// Every verse of a translation that has a word translating this original-language lemma

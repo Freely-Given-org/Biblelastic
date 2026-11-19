@@ -67,7 +67,10 @@ fn answer(library: &Library, request: &str) -> Result<String> {
                 quote(&original.edition), quote(&original.reference), quote(&original.text), quote(&original.transliteration), quote(&original.lemma), quote(&original.lemma_transliteration),
                 quote(&original.strong), quote(&original.morphology), quote(&original.gloss), original.occurrences, original.counted,
                 format!("[{}]", original.renderings.iter().map(|(words, count)| format!("[{},{count}]", quote(words))).collect::<Vec<_>>().join(",")))).collect();
-            Ok(format!("\"edition\":{},\"text\":{},\"reference\":{},\"originals\":[{}]", quote(edition), quote(&info.text), quote(&info.reference), originals.join(",")))
+            let linked: Vec<String> = info.linked.iter().map(|(edition, slots)| format!("{{\"edition\":{},\"slots\":[{}]}}", quote(edition),
+                slots.iter().map(u32::to_string).collect::<Vec<_>>().join(","))).collect();
+            Ok(format!("\"edition\":{},\"text\":{},\"reference\":{},\"originals\":[{}],\"linked\":[{}]", quote(edition), quote(&info.text), quote(&info.reference),
+                       originals.join(","), linked.join(",")))
         }
         "lemma" => { // The verses of a translation where an original-language lemma is translated
             let found = query::lemma_verses(library, edition, text("original", ""), text("lemma", ""), limit)?;
