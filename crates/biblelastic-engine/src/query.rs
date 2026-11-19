@@ -189,8 +189,9 @@ pub enum Piece {
     Chapter(String),
     /// A verse starts here: its name as the edition gives it, e.g., `3:16`
     Verse(String),
-    /// Some text, and the character styles that it has (e.g., `add`, `nd`, or `wj`)
-    Text(String, Vec<String>),
+    /// Some text, and the character styles that it has (e.g., `add`, `nd`, or `wj`).
+    /// When the words were asked for separately, each piece is one word with its punctuation, and has that word's slot.
+    Text(String, Vec<String>, Option<u32>),
 }
 
 pub struct Paragraph {
@@ -209,7 +210,7 @@ pub struct Reading {
 
 /// The text of a passage of Scripture, laid out for reading: whole chapters come with their headings,
 /// and chapter 0 is whatever comes before the first chapter (titles and an introduction).
-pub fn read(library: &Library, edition: &str, passage: &Passage) -> Result<Reading> {
+pub fn read(library: &Library, edition: &str, passage: &Passage, separate_words: bool) -> Result<Reading> {
     let module = library.text_module(edition)?;
     let text = Text::open(&module)?;
     let (Some(verses), true) = (&text.verses, module.has("node.chapter.starts")) else { return Err(format!("'{edition}' isn't divided into chapters and verses").into()) };
@@ -234,7 +235,7 @@ pub fn read(library: &Library, edition: &str, passage: &Passage) -> Result<Readi
         (start, end) = (range.start, range.end);
     }
     if start >= end { return Err(format!("'{edition}' doesn't have {passage}").into()); }
-    Ok(Reading { passage: passage.to_string(), paragraphs: lay_out(&module, &text, verses, start..end)? })
+    Ok(Reading { passage: passage.to_string(), paragraphs: lay_out(&module, &text, verses, start..end, separate_words)? })
 }
 
 /// What an edition is read in: its sections (from one heading to the next) if it has any, or else its chapters
@@ -266,7 +267,7 @@ pub struct SectionReading {
 }
 
 /// One section of Scripture laid out for reading: from one section heading to the next (which can cross from one chapter into another).
-pub fn read_section(library: &Library, edition: &str, wanted: Wanted) -> Result<SectionReading> {
+pub fn read_section(library: &Library, edition: &str, wanted: Wanted, separate_words: bool) -> Result<SectionReading> {
     let module = library.text_module(edition)?;
     let text = Text::open(&module)?;
     let Some(verses) = &text.verses else { return Err(format!("'{edition}' isn't divided into verses").into()) };
@@ -317,11 +318,11 @@ pub fn read_section(library: &Library, edition: &str, wanted: Wanted) -> Result<
         _ => name(document),
     };
     let title = if number == 0 { String::new() } else { units.names.get((first + number - 1) as u32) };
-    Ok(SectionReading { document: name(document), number, title, passage, previous, next, paragraphs: lay_out(&module, &text, verses, range)? })
+    Ok(SectionReading { document: name(document), number, title, passage, previous, next, paragraphs: lay_out(&module, &text, verses, range, separate_words)? })
 }
 
 /// Lay a range of slots out as paragraphs
-fn lay_out(module: &crate::format::Module, text: &Text, verses: &Nodes, range: std::ops::Range<u32>) -> Result<Vec<Paragraph>> {
+fn lay_out(module: &crate::format::Module, text: &Text, verses: &Nodes, range: std::ops::Range<u32>, separate_words: bool) -> Result<Vec<Paragraph>> {
     let (start, end) = (range.start, range.end);
     // The character styles that overlap the passage (they're in order of where they start, and none is very long)
     let mut overlapping: Vec<(std::ops::Range<u32>, String)> = Vec::new();
@@ -343,11 +344,11 @@ fn lay_out(module: &crate::format::Module, text: &Text, verses: &Nodes, range: s
         let attribute_text = attributes.get(paragraph as u32); // JSON, as the ingest writes it
         let kind = attribute_text.split_once("\"kind\": \"").and_then(|(_, rest)| rest.split_once('"')).map_or("other", |(kind, _)| kind).to_string();
         let mut pieces: Vec<Piece> = Vec::new();
-        let mut current: Option<(String, Vec<String>)> = None;
+        let mut current: Option<(String, Vec<String>, Option<u32>)> = None;
         for slot in range {
             while verse < verses.starts.len() && verses.starts.get(verse) <= slot {
                 if verses.starts.get(verse) == slot && verses.ends.get(verse) > slot {
-                    pieces.extend(current.take().map(|(words, styles)| Piece::Text(words, styles)));
+                    pieces.extend(current.take().map(|(words, styles, slot)| Piece::Text(words, styles, slot)));
                     let name = verses.names.get(verse as u32);
                     // A new chapter is marked before its first verse (but not at the start of a passage that starts part-way through a chapter)
                     if let Some((number, verse_number)) = verse_number(&name) {
@@ -363,11 +364,11 @@ fn lay_out(module: &crate::format::Module, text: &Text, verses: &Nodes, range: s
             styles.dedup();
             let words = format!("{}{}{}", text.before.get(slot), text.text.get(slot), text.after.get(slot));
             match &mut current {
-                Some((all, current_styles)) if *current_styles == styles => all.push_str(&words),
-                _ => { pieces.extend(current.replace((words, styles)).map(|(words, styles)| Piece::Text(words, styles))); }
+                Some((all, current_styles, None)) if *current_styles == styles && !separate_words => all.push_str(&words),
+                _ => { pieces.extend(current.replace((words, styles, separate_words.then_some(slot))).map(|(words, styles, slot)| Piece::Text(words, styles, slot))); }
             }
         }
-        pieces.extend(current.take().map(|(words, styles)| Piece::Text(words, styles)));
+        pieces.extend(current.take().map(|(words, styles, slot)| Piece::Text(words, styles, slot)));
         paragraphs.push(Paragraph { style: text.paragraphs.names.get(paragraph as u32), kind, pieces });
     }
     Ok(paragraphs)
@@ -390,6 +391,100 @@ fn verse_number(name: &str) -> Option<(u32, u32)> {
     let (chapter, verse) = name.split_once(':')?;
     let digits = |text: &str| text.chars().take_while(char::is_ascii_digit).collect::<String>().parse::<u32>().ok();
     Some((digits(chapter)?, digits(verse)?))
+}
+
+/// An original-language word that a word of a translation translates
+pub struct Original {
+    pub edition: String,
+    pub reference: String,
+    pub text: String,
+    pub transliteration: String,
+    pub lemma: String,
+    pub lemma_transliteration: String,
+    pub strong: String,
+    pub morphology: String,
+    pub gloss: String,
+    /// How many times the lemma occurs in its edition
+    pub occurrences: usize,
+    /// How many of those were looked at for the renderings (a very common word isn't followed up everywhere)
+    pub counted: usize,
+    /// How the translation renders the lemma, with how often, the commonest first
+    pub renderings: Vec<(String, usize)>,
+}
+
+pub struct WordInfo {
+    pub text: String,
+    pub reference: String,
+    pub originals: Vec<Original>,
+}
+
+/// How many occurrences of a lemma are followed up to see how it's rendered
+const RENDERINGS_SAMPLE: usize = 4000;
+
+/// The slots in the translation that each of these original-language slots is rendered by (in the same order)
+fn rendered_by(alignment: &crate::format::Module, targets: &[u32]) -> Result<Vec<Vec<u32>>> {
+    let (to, from) = (alignment.packed("rlinks.to")?, alignment.packed("rlinks.from")?);
+    Ok(targets.iter().map(|&target| {
+        let mut slots = Vec::new();
+        let mut link = to.lower_bound(target);
+        while link < to.len() && to.get(link) == target { slots.push(from.get(link)); link += 1; }
+        slots.sort_unstable();
+        slots
+    }).collect())
+}
+
+/// "What does this word translate?" Follows a word of a translation to the original-language word(s) behind it,
+/// with their details, and how else the translation renders the same lemma.
+pub fn word(library: &Library, edition: &str, slot: u32) -> Result<WordInfo> {
+    let text = Text::open(&*library.text_module(edition)?)?;
+    if slot >= text.document_starts.get(text.document_starts.len() - 1) { return Err(format!("'{edition}' has no word {slot}").into()); }
+    let mut originals = Vec::new();
+    for alignment in library.alignments_from(edition) {
+        let (from, to) = (alignment.module.packed("links.from")?, alignment.module.packed("links.to")?);
+        let mut link = from.lower_bound(slot);
+        if link >= from.len() || from.get(link) != slot { continue; }
+        let original_text = Text::open(&*library.text_module(&alignment.to)?)?;
+        let value = |column: &str, target: u32| -> Result<String> { Ok(library.column(&alignment.to, column)?.map_or(String::new(), |column| column.get(target))) };
+        while link < from.len() && from.get(link) == slot {
+            let target = to.get(link);
+            link += 1;
+            let lemma = value("lemma", target)?;
+            // Every occurrence of the lemma, and how each is rendered (as the translation's words in order, in lower case)
+            let lemma_module = library.column_module(&alignment.to, "lemma");
+            let occurrences = match (&lemma_module, lemma.is_empty()) { (Some(module), false) => find_terms(module, "col.lemma", std::slice::from_ref(&lemma))?.0, _ => Vec::new() };
+            let sample = &occurrences[..occurrences.len().min(RENDERINGS_SAMPLE)];
+            let mut counts: HashMap<String, usize> = HashMap::new();
+            for slots in rendered_by(&alignment.module, sample)? {
+                if slots.is_empty() { continue; }
+                let words: Vec<String> = slots.iter().map(|&slot| text.text.get(slot).to_lowercase()).collect();
+                *counts.entry(words.join(" ")).or_default() += 1;
+            }
+            let mut renderings: Vec<(String, usize)> = counts.into_iter().collect();
+            renderings.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+            renderings.truncate(12);
+            let gloss = match value("gloss", target)? { gloss if gloss.is_empty() => value("context_gloss", target)?, gloss => gloss };
+            originals.push(Original { edition: alignment.to.clone(), reference: original_text.reference(target), text: original_text.text.get(target),
+                                      transliteration: value("translit", target)?, lemma_transliteration: value("lemma_translit", target)?, strong: base_strong(&value("strong", target)?),
+                                      morphology: value("morph", target)?, gloss, occurrences: occurrences.len(), counted: sample.len(), renderings, lemma });
+        }
+    }
+    Ok(WordInfo { text: text.text.get(slot), reference: text.reference(slot), originals })
+}
+
+/// Every verse of a translation that has a word translating this original-language lemma
+pub fn lemma_verses(library: &Library, edition: &str, original_edition: &str, lemma: &str, limit: usize) -> Result<Found> {
+    let text = Text::open(&*library.text_module(edition)?)?;
+    let alignment = library.alignments_from(edition).into_iter().find(|alignment| alignment.to == original_edition)
+        .ok_or_else(|| format!("no alignment from '{edition}' to '{original_edition}' is installed"))?;
+    let lemma_module = library.column_module(original_edition, "lemma").ok_or_else(|| format!("'{original_edition}' has no lemmas installed"))?;
+    let occurrences = find_terms(&lemma_module, "col.lemma", &[lemma.to_string()])?.0;
+    let mut verse_starts: Vec<u32> = rendered_by(&alignment.module, &occurrences)?.into_iter().filter_map(|slots| slots.first().copied())
+        .map(|slot| text.verse(slot).map_or(slot, |verse| verse.start)).collect();
+    verse_starts.sort_unstable();
+    verse_starts.dedup();
+    let mut forms = BTreeMap::new();
+    forms.insert(lemma.to_string(), occurrences.len());
+    Ok(Found { total: verse_starts.len(), forms, examples: verse_starts.iter().take(limit).map(|&slot| example(&text, slot)).collect() })
 }
 
 /// What's said about (or what cites) a passage of Scripture, in one entry of a commentary, dictionary, etc.

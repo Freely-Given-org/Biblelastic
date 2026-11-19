@@ -6,6 +6,7 @@ import 'engine/engine.dart';
 import 'modules_page.dart';
 import 'search_page.dart';
 import 'strings.dart';
+import 'word_sheet.dart';
 
 /// The edition that's read (the only Bible that the reader offers so far)
 const edition = 'OET-RV';
@@ -94,7 +95,7 @@ class _ReaderPageState extends State<ReaderPage> {
 
   Future<void> show(Map<String, String> which, String? verse) async {
     try {
-      final response = await engine.request({'command': 'read', 'edition': edition, ...which});
+      final response = await engine.request({'command': 'read', 'edition': edition, 'detail': 'words', ...which});
       setState(() { section = response; focus = verse; problem = null; });
       // Once it's laid out, bring the wanted verse into view (or go back to the top)
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -133,6 +134,13 @@ class _ReaderPageState extends State<ReaderPage> {
 
   Future<void> openSearch() async {
     final reference = await Navigator.of(context).push(MaterialPageRoute<String>(builder: (context) => SearchPage(engine: engine)));
+    if (reference != null) await showPassage(reference);
+  }
+
+  /// What a word translates (which can lead to another passage)
+  Future<void> showWord(int slot) async {
+    final reference = await showModalBottomSheet<String>(context: context, isScrollControlled: true, showDragHandle: true, useSafeArea: true,
+        builder: (context) => WordSheet(engine: engine, slot: slot));
     if (reference != null) await showPassage(reference);
   }
 
@@ -239,7 +247,13 @@ class _ReaderPageState extends State<ReaderPage> {
         if (marks.contains('em') || marks.contains('it')) text = text.copyWith(fontStyle: FontStyle.italic);
         if (marks.contains('bd')) text = text.copyWith(fontWeight: FontWeight.bold);
         if (inFocus && kind != 'heading') text = text.copyWith(backgroundColor: marked);
-        spans.add(TextSpan(text: piece['t'] as String, style: text));
+        TapGestureRecognizer? recogniser;
+        final slot = piece['w'] as int?;
+        if (slot != null) { // Each word can be asked about
+          recogniser = TapGestureRecognizer()..onTap = () => showWord(slot);
+          recognisers.add(recogniser);
+        }
+        spans.add(TextSpan(text: piece['t'] as String, style: text, recognizer: recogniser));
       }
     }
     return (Padding(padding: padding, child: Text.rich(TextSpan(children: spans, style: base), textAlign: align)), hasFocus, inFocus);

@@ -31,6 +31,15 @@ void main() {
     expect((section['document'], section['passage'], (section['previous'] as Map<String, dynamic>)['section']), ('JHN', 'JHN 3:1-21', (section['section'] as int) - 1));
     expect(((section['paragraphs'] as List<dynamic>).first as Map<String, dynamic>)['kind'], 'heading');
 
+    // Each word can be asked about: ‘loves’ in John 3:16 translates a form of ἀγαπάω
+    final words = await engine.request({'command': 'read', 'edition': 'OET-RV', 'passage': 'JHN 3:16', 'detail': 'words'});
+    final loves = [for (final paragraph in words['paragraphs'] as List<dynamic>) ...paragraph['pieces'] as List<dynamic>].firstWhere((piece) => piece['t'] == 'loves ');
+    final word = await engine.request({'command': 'word', 'edition': 'OET-RV', 'slot': '${loves['w']}'});
+    final original = (word['originals'] as List<dynamic>).single as Map<String, dynamic>;
+    expect((original['lemma'], original['edition'], (original['renderings'] as List<dynamic>).first[0]), ('ἀγαπάω', 'SR-GNT', 'love'));
+    final places = await engine.request({'command': 'lemma', 'edition': 'OET-RV', 'original': 'SR-GNT', 'lemma': 'ἀγαπάω', 'limit': '3'});
+    expect(((places['examples'] as List<dynamic>).length, (places['total'] as int) > 90), (3, true));
+
     // Several requests at once are each answered (the engine runs in its own isolate)
     final together = await Future.wait([for (final chapter in [1, 2, 3]) engine.request({'command': 'read', 'edition': 'OET-RV', 'passage': 'JHN $chapter'})]);
     expect(together.map((reading) => reading['passage']), ['JHN 1', 'JHN 2', 'JHN 3']);

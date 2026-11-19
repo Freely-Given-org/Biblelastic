@@ -8,7 +8,7 @@
 //! words=love loves loved loving
 //! ```
 //!
-//! Commands: `info`, `contents`, `read`, `terms`, `find`, `marked`, `about`, `entry` and `topic`. The response is always a JSON object with `"ok"`.
+//! Commands: `info`, `contents`, `read`, `word`, `lemma`, `terms`, `find`, `marked`, `about`, `entry` and `topic`. The response is always a JSON object with `"ok"`.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -46,17 +46,32 @@ fn answer(library: &Library, request: &str) -> Result<String> {
         }
         "read" => { // A passage laid out for reading: each paragraph is a list of chapter numbers {"c"}, verse numbers {"v"} (with the verse's full name {"r"}),
             // and pieces of text {"t"} with any character styles {"s"}
+            // With detail=words, each piece of text is one word, with its number {"w"} for asking about it (see "word")
             let given = match text("passage", "") { "" => text("words", ""), given => given };
+            let separate_words = text("detail", "") == "words";
             if text("unit", "") == "section" || fields.contains_key("section") { // One section: the one a passage starts in, or by its number in a document
                 let passage = if fields.contains_key("section") { None } else { Some(Passage::parse(given)?) };
                 let wanted = match &passage { Some(passage) => Wanted::At(passage), None => Wanted::Number(text("document", ""), number("section", 0)?) };
-                let reading = query::read_section(library, edition, wanted)?;
+                let reading = query::read_section(library, edition, wanted, separate_words)?;
                 let neighbour = |neighbour: &Option<(String, usize)>| neighbour.as_ref().map_or("null".to_string(), |(document, number)| format!("{{\"document\":{},\"section\":{number}}}", quote(document)));
                 return Ok(format!("\"edition\":{},\"document\":{},\"section\":{},\"title\":{},\"passage\":{},\"previous\":{},\"next\":{},\"paragraphs\":{}", quote(edition), quote(&reading.document),
                                   reading.number, quote(&reading.title), quote(&reading.passage), neighbour(&reading.previous), neighbour(&reading.next), paragraphs(&reading.paragraphs)));
             }
-            let reading = query::read(library, edition, &Passage::parse(given)?)?;
+            let reading = query::read(library, edition, &Passage::parse(given)?, separate_words)?;
             Ok(format!("\"edition\":{},\"passage\":{},\"paragraphs\":{}", quote(edition), quote(&reading.passage), paragraphs(&reading.paragraphs)))
+        }
+        "word" => { // What a word of a translation translates: `slot` is the word's number, from "read" with detail=words
+            let info = query::word(library, edition, fields.get("slot").and_then(|slot| slot.parse().ok()).ok_or("word needs a slot number")?)?;
+            let originals: Vec<String> = info.originals.iter().map(|original| format!(
+                "{{\"edition\":{},\"reference\":{},\"text\":{},\"transliteration\":{},\"lemma\":{},\"lemmaTransliteration\":{},\"strong\":{},\"morphology\":{},\"gloss\":{},\"occurrences\":{},\"counted\":{},\"renderings\":{}}}",
+                quote(&original.edition), quote(&original.reference), quote(&original.text), quote(&original.transliteration), quote(&original.lemma), quote(&original.lemma_transliteration),
+                quote(&original.strong), quote(&original.morphology), quote(&original.gloss), original.occurrences, original.counted,
+                format!("[{}]", original.renderings.iter().map(|(words, count)| format!("[{},{count}]", quote(words))).collect::<Vec<_>>().join(",")))).collect();
+            Ok(format!("\"edition\":{},\"text\":{},\"reference\":{},\"originals\":[{}]", quote(edition), quote(&info.text), quote(&info.reference), originals.join(",")))
+        }
+        "lemma" => { // The verses of a translation where an original-language lemma is translated
+            let found = query::lemma_verses(library, edition, text("original", ""), text("lemma", ""), limit)?;
+            Ok(format!("\"forms\":{},\"total\":{},\"examples\":{}", counts(&found.forms, usize::MAX), found.total, examples(&found.examples)))
         }
         "terms" => {
             if words.is_empty() { return Err("terms needs at least one word".into()); }
@@ -113,8 +128,9 @@ fn paragraphs(paragraphs: &[Paragraph]) -> String {
         let pieces: Vec<String> = paragraph.pieces.iter().map(|piece| match piece {
             Piece::Chapter(number) => format!("{{\"c\":{}}}", quote(number)),
             Piece::Verse(name) => format!("{{\"v\":{},\"r\":{}}}", quote(name.split_once(':').map_or(name.as_str(), |(_, number)| number)), quote(name)),
-            Piece::Text(words, styles) if styles.is_empty() => format!("{{\"t\":{}}}", quote(words)),
-            Piece::Text(words, styles) => format!("{{\"t\":{},\"s\":[{}]}}", quote(words), styles.iter().map(|style| quote(style)).collect::<Vec<_>>().join(",")),
+            Piece::Text(words, styles, slot) => format!("{{\"t\":{}{}{}}}", quote(words),
+                if styles.is_empty() { String::new() } else { format!(",\"s\":[{}]", styles.iter().map(|style| quote(style)).collect::<Vec<_>>().join(",")) },
+                slot.map_or(String::new(), |slot| format!(",\"w\":{slot}"))),
         }).collect();
         format!("{{\"style\":{},\"kind\":{},\"pieces\":[{}]}}", quote(&paragraph.style), quote(&paragraph.kind), pieces.join(","))
     }).collect();

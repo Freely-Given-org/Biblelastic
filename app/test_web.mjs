@@ -85,6 +85,12 @@ try {
     await send('Page.reload', {}, sessionId);
     await sleep(6000);
     await shoot('2-reading');
+    await tap(120, 131); // A word in the first line (‘beginning’), for what it translates
+    await shoot('2b-word');
+    await tap(108, 662); // ‘Every place it’s translated’
+    await shoot('2c-places');
+    await tap(28, 27); // Back to the sheet
+    await tap(200, 60); // Outside the sheet, to close it
     await tap(22, 752); // The number of John 1:14, for the notes on it (where it is depends on the text and the fonts: check the screenshot)
     await shoot('3-notes');
     await tap(200, 60); // Outside the sheet, to close it

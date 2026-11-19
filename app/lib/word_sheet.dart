@@ -1,0 +1,94 @@
+// What a word translates: the original-language word behind it, and how else that word is translated.
+import 'package:flutter/material.dart';
+
+import 'engine/engine.dart';
+import 'main.dart' show edition;
+import 'strings.dart';
+
+/// A sheet about one word of the text. It closes with a reference (e.g., `JHN 3:16`) if the reader should go there.
+class WordSheet extends StatelessWidget {
+  const WordSheet({super.key, required this.engine, required this.slot});
+  final Engine engine;
+  final int slot;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = Strings(Localizations.localeOf(context));
+    final theme = Theme.of(context);
+    return SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: FutureBuilder<Map<String, dynamic>>(
+      future: engine.request({'command': 'word', 'edition': edition, 'slot': '$slot'}),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('${snapshot.error}')));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final word = snapshot.data!;
+        final originals = (word['originals'] as List<dynamic>).cast<Map<String, dynamic>>();
+        return ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
+          Text('‘${word['text']}’ · ${strings.reference(word['reference'] as String)}', style: theme.textTheme.titleMedium),
+          if (originals.isEmpty) Padding(padding: const EdgeInsets.only(top: 16), child: Text(strings.noOriginal)),
+          for (final original in originals) ...[
+            const SizedBox(height: 16),
+            // The word as it's written here, then its dictionary form
+            Text.rich(TextSpan(children: [
+              TextSpan(text: '${original['text']}', style: theme.textTheme.headlineSmall),
+              TextSpan(text: '   ${original['transliteration']}', style: theme.textTheme.titleMedium!.copyWith(fontStyle: FontStyle.italic)),
+            ])),
+            if (original['gloss'] != '') Text('‘${original['gloss']}’', style: theme.textTheme.bodyLarge),
+            const SizedBox(height: 8),
+            Text('${strings.lemma}: ${original['lemma']}  ${original['lemmaTransliteration']}'),
+            Text([original['strong'], original['morphology'], original['edition']].where((part) => part != '').join(' · '), style: theme.textTheme.bodySmall),
+            if ((original['renderings'] as List<dynamic>).isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(strings.translatedAs(original['counted'] as int, original['occurrences'] as int), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
+              const SizedBox(height: 4),
+              Wrap(spacing: 8, runSpacing: 4, children: [
+                for (final rendering in original['renderings'] as List<dynamic>) Chip(label: Text('${rendering[0]}  ${rendering[1]}'), visualDensity: VisualDensity.compact),
+              ]),
+            ],
+            if (original['lemma'] != '') Align(alignment: Alignment.centerLeft, child: TextButton(
+              onPressed: () async {
+                final reference = await Navigator.of(context).push(MaterialPageRoute<String>(builder: (context) =>
+                    LemmaPage(engine: engine, original: original['edition'] as String, lemma: original['lemma'] as String, transliteration: original['lemmaTransliteration'] as String)));
+                if (reference != null && context.mounted) Navigator.of(context).pop(reference);
+              },
+              child: Text(strings.everyPlace),
+            )),
+          ],
+        ]);
+      },
+    ));
+  }
+}
+
+/// Every verse where an original-language word is translated. It closes with the reference that was chosen.
+class LemmaPage extends StatelessWidget {
+  const LemmaPage({super.key, required this.engine, required this.original, required this.lemma, required this.transliteration});
+  final Engine engine;
+  final String original, lemma, transliteration;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = Strings(Localizations.localeOf(context));
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text('$lemma  $transliteration')),
+      body: SafeArea(child: FutureBuilder<Map<String, dynamic>>(
+        future: engine.request({'command': 'lemma', 'edition': edition, 'original': original, 'lemma': lemma, 'limit': '400'}),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('${snapshot.error}')));
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final examples = snapshot.data!['examples'] as List<dynamic>;
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            itemCount: examples.length + 1,
+            itemBuilder: (context, index) => index == 0
+                ? Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(strings.results(examples.length, snapshot.data!['total'] as int), style: theme.textTheme.bodySmall))
+                : ListTile(contentPadding: EdgeInsets.zero,
+                    title: Text(strings.reference(examples[index - 1]['reference'] as String), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
+                    subtitle: Text(examples[index - 1]['text'] as String),
+                    onTap: () => Navigator.of(context).pop(examples[index - 1]['reference'] as String)),
+          );
+        },
+      )),
+    );
+  }
+}

@@ -20,6 +20,8 @@ The engine refuses any module whose format version it doesn't know, so modules m
     target/release/biblelastic topic once saved, always saved  # What the Scriptures and the commentators say about a subject
     target/release/biblelastic find covenant grace --edition TOSN --within para   # A commentary's own words are searched like any other text
     target/release/biblelastic request command=find 'words=grace truth'   # The same as JSON, as an app gets it
+    target/release/biblelastic request command=read detail=words 'passage=JHN 3:16'   # … with each word's number
+    target/release/biblelastic request command=word slot=77783              # What that word (‘loves’) translates
     cargo test
 
 ## Design rules

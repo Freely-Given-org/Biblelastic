@@ -529,6 +529,21 @@ mod tests {
         assert!(biblelastic_engine::api::respond(&library, "command=topic\nedition=EN\nwords=divine affection").contains(r#""see":["God’s Love","Nothing Called This"],"contrast":[],"entries":[{"edition":"CM","#));
         assert!(biblelastic_engine::api::respond(&library, "command=topic\nedition=EN\nwords=nonsense").starts_with(r#"{"ok":true,"see":[],"contrast":[],"entries":[],"passages":[],"#));
 
+        // A word of the translation → the original word behind it, and how its lemma is rendered (two English words share one Greek word here)
+        let words = biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 4:10\ndetail=words");
+        assert!(words.contains(r#"{"v":"10","r":"4:10"},{"t":"Love ","w":4},{"t":"is ","w":5},{"t":"good,","w":6}"#), "{words}");
+        let info = query::word(&library, "EN", 4).unwrap();
+        assert_eq!((info.text.as_str(), info.reference.as_str(), info.originals.len()), ("Love", "JN1 4:10", 1));
+        let original = &info.originals[0];
+        assert_eq!((original.edition.as_str(), original.text.as_str(), original.lemma.as_str(), original.lemma_transliteration.as_str(), original.strong.as_str(), original.gloss.as_str()),
+                   ("GR", "ἀγάπη", "ἀγάπη", "agapaʸ", "G0026", "love"));
+        assert_eq!((original.occurrences, original.renderings.clone()), (1, vec![("love is".to_string(), 1)]));
+        assert_eq!(query::word(&library, "EN", 3).unwrap().originals.len(), 0); // ‘us’ isn't linked to anything
+        assert!(query::word(&library, "EN", 999).is_err());
+        let verses = query::lemma_verses(&library, "EN", "GR", "ἀγαπάω", 5).unwrap();
+        assert_eq!((verses.total, verses.examples[0].reference.as_str()), (1, "JN1 4:8"));
+        assert!(biblelastic_engine::api::respond(&library, "command=word\nedition=EN\nslot=2").contains(r#""lemma":"ἀγαπάω","lemmaTransliteration":"agapaō","strong":"G0025","morphology":"","gloss":"loves","occurrences":1,"counted":1,"renderings":[["loves",1]]"#));
+
         // Each tag is indexed separately
         let layer = library.column_module("GR", "tags").unwrap();
         assert_eq!(find_terms(&layer, "idx.tags", &["Y30".to_string()]).unwrap().0, [0, 1]);
