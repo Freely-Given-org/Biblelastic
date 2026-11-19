@@ -142,6 +142,35 @@ files = ["OpenBibleData/datasets/Tyndale/OET_TyndaleOpenResources/TyndaleOpenBib
 features = []
 item_documents = { Article = "Articles", Textbox = "Textboxes", Chart = "Charts", Map = "Maps", Picture = "Pictures" }
 
+# The United Bible Societies' open-licensed dictionaries and handbooks, as adapted for the OET (see ubs.py).
+#   The dictionaries give the meaning of each word in each place: they become a layer of the editions named here.
+#   The handbooks (on animals, plants, and objects) become a work of their own, and the words that they're about link to them.
+[[ubs]]
+id = "UBS"
+name = "UBS dictionaries of Biblical Hebrew and of the Greek New Testament, and the UBS handbooks, adapted for the OET"
+folder = "Forked/ubs-open-license/OET_ubs-open-license"
+copyright = "UBS Dictionary of Biblical Hebrew © United Bible Societies, 2026 (adapted from the Semantic Dictionary of Biblical Hebrew © 2000-2026 United Bible Societies). UBS Dictionary of New Testament Greek © United Bible Societies, 2023 (adapted from the Semantic Dictionary of Biblical Greek © United Bible Societies 2018-2023, which is adapted from the Greek-English Lexicon of the New Testament: Based on Semantic Domains, eds. J. P. Louw and Eugene A. Nida © United Bible Societies 1988, 1989)."
+licence = "CC BY-SA 4.0"
+attribution = "Adapted for the OET by Freely-Given.org: https://github.com/Freely-Given-org/OET_ubs-open-license"
+changes = "Names were changed by Freely-Given.org to the forms used in the OET (see ADAPTATION_NOTICE.md there), then each word's meaning was joined to the words of the UHB and the SR-GNT."
+licence_verified = false
+hebrew = { edition = "UHB", file = "dictionaries/hebrew/JSON/UBSHebrewDic-v0.9.4-en.JSON" }
+greek = { edition = "SR-GNT", file = "dictionaries/greek/JSON/UBSGreekNTDic-v1.1-en.JSON" }
+
+[ubs.handbooks]
+id = "UBSH"
+name = "UBS handbooks: Animals, Plants and Trees, and Objects in the Bible, adapted for the OET"
+language = "eng"
+script = "Latn"
+versification = "eng"
+copyright = "Animals in the Bible © United Bible Societies, 2025 (adapted from All Creatures Great and Small: Living Things in the Bible by Edward R. Hope, © 2005 United Bible Societies). Plants and Trees in the Bible and Objects in the Bible © United Bible Societies. The pictures (not included yet) have their own copyright."
+licence = "CC BY-SA 4.0"
+attribution = "Adapted for the OET by Freely-Given.org: https://github.com/Freely-Given-org/OET_ubs-open-license"
+changes = "Names were changed by Freely-Given.org to the forms used in the OET, then it was converted to the Biblelastic module format, without the pictures."
+redistributable = true
+licence_verified = false
+files = { Fauna = "flora-fauna-realia/XML/FAUNA_1.1_en.xml", Flora = "flora-fauna-realia/XML/FLORA_1.1_en.xml", Realia = "flora-fauna-realia/XML/REALIA_1.1_en.xml" }
+
 # Thesauruses connect the words that people search with to the titles of entries in the dictionaries and commentaries.
 #   Columns: term, see (entry titles on the subject), contrast (entry titles for the other side of a question), note. Lists are separated by semicolons.
 [[thesaurus]]

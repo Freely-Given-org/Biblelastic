@@ -1,6 +1,7 @@
 // What a word translates: the original-language word behind it, and how else that word is translated.
 import 'package:flutter/material.dart';
 
+import 'article_page.dart';
 import 'engine/engine.dart';
 import 'strings.dart';
 
@@ -38,6 +39,39 @@ class WordSheet extends StatelessWidget {
             const SizedBox(height: 8),
             Text('${strings.lemma}: ${original['lemma']}  ${original['lemmaTransliteration']}'),
             Text([original['strong'], original['morphology'], original['edition']].where((part) => part != '').join(' · '), style: theme.textTheme.bodySmall),
+            // Its meaning here, from a dictionary that gives meanings place by place, and the other words that mean something similar
+            if (original['meaning'] case final Map<String, dynamic> meaning) ...[
+              const SizedBox(height: 12),
+              Text(strings.meaningHere, style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
+              Text.rich(TextSpan(children: [
+                TextSpan(text: meaning['gloss'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
+                if (meaning['definition'] != '') TextSpan(text: ': ${meaning['definition']}'),
+                if (meaning['code'] != '') TextSpan(text: '  (${meaning['code']})', style: theme.textTheme.bodySmall),
+              ])),
+              if (meaning['note'] != '') Padding(padding: const EdgeInsets.only(top: 4), child: Text(meaning['note'] as String, style: theme.textTheme.bodySmall)),
+              if ((meaning['domains'] as List<dynamic>).isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(strings.similarMeaning, style: theme.textTheme.bodySmall),
+                Wrap(spacing: 8, runSpacing: 4, children: [
+                  for (final domain in meaning['domains'] as List<dynamic>) ActionChip(label: Text((domain as String).split(' > ').last), visualDensity: VisualDensity.compact,
+                      onPressed: () async {
+                        final reference = await Navigator.of(context).push(MaterialPageRoute<String>(builder: (context) =>
+                            DomainPage(engine: engine, translation: edition, original: original['edition'] as String, domain: domain)));
+                        if (reference != null && context.mounted) Navigator.of(context).pop(reference);
+                      }),
+                ]),
+              ],
+            ],
+            // Articles about the thing that the word refers to (e.g., an animal)
+            if ((original['articles'] as List<dynamic>? ?? const []).isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(strings.aboutThis, style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
+              for (final article in original['articles'] as List<dynamic>)
+                ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.menu_book_outlined, size: 20),
+                    title: Text(article['title'] as String), subtitle: Text('${article['edition']} · ${article['locator']}'),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) =>
+                        ArticlePage(engine: engine, locator: article['locator'] as String, edition: article['edition'] as String)))),
+            ],
             if ((original['renderings'] as List<dynamic>).isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(strings.translatedAs(original['counted'] as int, original['occurrences'] as int), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),

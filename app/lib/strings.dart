@@ -39,6 +39,12 @@ class Strings {
   String get otherSide => _pick(['The other side of the question', 'El otro lado de la cuestión']);
   String get inTheBible => _pick(['These words in one sentence', 'Estas palabras en una oración']);
   String get inTheNotes => _pick(['These words in notes and articles', 'Estas palabras en notas y artículos']);
+  String get meaningHere => _pick(['Meaning here', 'Significado aquí']);
+  String get similarMeaning => _pick(['Words with a similar meaning:', 'Palabras de significado parecido:']);
+  String get aboutThis => _pick(['About this:', 'Sobre esto:']);
+  String get seeAlso => _pick(['See also', 'Véase también']);
+  String domainWords(int total) => _pick(['$total words have a meaning in', '$total palabras tienen un significado en']);
+  String timesHere(int count) => count == 1 ? _pick(['once', 'una vez']) : _pick(['$count times', '$count veces']);
   String citedIn(String titles) => _pick(['In: $titles', 'En: $titles']);
   String get dictionary => _pick(['Dictionary', 'Diccionario']);
   String get noResults => _pick(['Nothing found.', 'No se encontró nada.']);

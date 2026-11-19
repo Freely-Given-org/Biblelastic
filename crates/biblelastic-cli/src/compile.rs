@@ -41,7 +41,8 @@ fn token_column_plan(column: &str) -> Option<(&'static str, Index)> {
     }
 }
 
-fn layer_column_plan(column: &str) -> Index { if column == "tags" { Index::Split(';') } else { Index::None } }
+/// Columns of several values (separated by semicolons) get an index of each value: tags, semantic domains, and handbook articles
+fn layer_column_plan(column: &str) -> Index { if matches!(column, "tags" | "domains" | "handbook") { Index::Split(';') } else { Index::None } }
 
 /// A feature column while it's being read: each distinct value is given a number as it's first seen
 #[derive(Default)]

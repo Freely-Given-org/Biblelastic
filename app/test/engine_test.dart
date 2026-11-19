@@ -40,6 +40,17 @@ void main() {
     final places = await engine.request({'command': 'lemma', 'edition': 'OET-RV', 'original': 'SR-GNT', 'lemma': 'ἀγαπάω', 'limit': '3'});
     expect(((places['examples'] as List<dynamic>).length, (places['total'] as int) > 90), (3, true));
 
+    // The UBS dictionaries give its meaning in this place, and the words that share its semantic domain
+    final meaning = original['meaning'] as Map<String, dynamic>?;
+    if (meaning != null) {
+      expect((meaning['gloss'] as String).contains('lov'), isTrue);
+      final domain = await engine.request({'command': 'domain', 'original': 'SR-GNT', 'domain': (meaning['domains'] as List<dynamic>).first as String, 'limit': '5'});
+      expect((domain['words'] as List<dynamic>).map((word) => word['lemma']), contains('ἀγαπάω'));
+    }
+    // A handbook article, whole
+    final article = await engine.request({'command': 'article', 'locator': 'Fauna 2.10'}).then((answer) => answer, onError: (_) => null);
+    if (article != null) expect((article['title'], (article['paragraphs'] as List<dynamic>).length > 10), ('Cattle, cow, ox, bull', true));
+
     // Several requests at once are each answered (the engine runs in its own isolate)
     final together = await Future.wait([for (final chapter in [1, 2, 3]) engine.request({'command': 'read', 'edition': 'OET-RV', 'passage': 'JHN $chapter'})]);
     expect(together.map((reading) => reading['passage']), ['JHN 1', 'JHN 2', 'JHN 3']);

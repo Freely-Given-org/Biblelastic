@@ -8,7 +8,7 @@
 //! words=love loves loved loving
 //! ```
 //!
-//! Commands: `info`, `contents`, `read`, `word`, `lemma`, `terms`, `find`, `marked`, `about`, `entry` and `topic`. The response is always a JSON object with `"ok"`.
+//! Commands: `info`, `contents`, `read`, `word`, `lemma`, `article`, `domain`, `terms`, `find`, `marked`, `about`, `entry` and `topic`. The response is always a JSON object with `"ok"`.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -63,15 +63,32 @@ fn answer(library: &Library, request: &str) -> Result<String> {
         }
         "word" => { // What a word of a translation translates: `slot` is the word's number, from "read" with detail=words
             let info = query::word(library, edition, fields.get("slot").and_then(|slot| slot.parse().ok()).ok_or("word needs a slot number")?)?;
+            let strings = |values: &[String]| format!("[{}]", values.iter().map(|value| quote(value)).collect::<Vec<_>>().join(","));
             let originals: Vec<String> = info.originals.iter().map(|original| format!(
-                "{{\"edition\":{},\"reference\":{},\"text\":{},\"transliteration\":{},\"lemma\":{},\"lemmaTransliteration\":{},\"strong\":{},\"morphology\":{},\"gloss\":{},\"occurrences\":{},\"counted\":{},\"renderings\":{}}}",
+                "{{\"edition\":{},\"reference\":{},\"text\":{},\"transliteration\":{},\"lemma\":{},\"lemmaTransliteration\":{},\"strong\":{},\"morphology\":{},\"gloss\":{},\"occurrences\":{},\"counted\":{},\"renderings\":{},\"meaning\":{},\"articles\":[{}]}}",
                 quote(&original.edition), quote(&original.reference), quote(&original.text), quote(&original.transliteration), quote(&original.lemma), quote(&original.lemma_transliteration),
                 quote(&original.strong), quote(&original.morphology), quote(&original.gloss), original.occurrences, original.counted,
-                format!("[{}]", original.renderings.iter().map(|(words, count)| format!("[{},{count}]", quote(words))).collect::<Vec<_>>().join(",")))).collect();
+                format!("[{}]", original.renderings.iter().map(|(words, count)| format!("[{},{count}]", quote(words))).collect::<Vec<_>>().join(",")),
+                original.meaning.as_ref().map_or("null".to_string(), |meaning| format!("{{\"gloss\":{},\"definition\":{},\"note\":{},\"code\":{},\"domains\":{}}}",
+                    quote(&meaning.gloss), quote(&meaning.definition), quote(&meaning.note), quote(&meaning.code), strings(&meaning.domains))),
+                original.articles.iter().map(|(edition, locator, title)| format!("{{\"edition\":{},\"locator\":{},\"title\":{}}}", quote(edition), quote(locator), quote(title))).collect::<Vec<_>>().join(","))).collect();
             let linked: Vec<String> = info.linked.iter().map(|(edition, slots)| format!("{{\"edition\":{},\"slots\":[{}]}}", quote(edition),
                 slots.iter().map(u32::to_string).collect::<Vec<_>>().join(","))).collect();
             Ok(format!("\"edition\":{},\"text\":{},\"reference\":{},\"originals\":[{}],\"linked\":[{}]", quote(edition), quote(&info.text), quote(&info.reference),
                        originals.join(","), linked.join(",")))
+        }
+        "article" => { // One whole entry of a commentary, dictionary, etc., e.g., locator=Fauna 2.10 (in any installed work, unless an edition is given)
+            let found = query::article(library, fields.get("edition").copied().filter(|edition| !edition.is_empty()), text("locator", ""))?;
+            let paragraphs: Vec<String> = found.paragraphs.iter().map(|(style, kind, words)| format!("{{\"style\":{},\"kind\":{},\"text\":{}}}", quote(style), quote(kind), quote(words))).collect();
+            let see: Vec<String> = found.see.iter().map(|(locator, title)| format!("{{\"locator\":{},\"title\":{}}}", quote(locator), quote(title))).collect();
+            Ok(format!("\"edition\":{},\"work\":{},\"locator\":{},\"title\":{},\"paragraphs\":[{}],\"see\":[{}]", quote(&found.edition), quote(&found.work),
+                       quote(&found.locator), quote(&found.title), paragraphs.join(","), see.join(",")))
+        }
+        "domain" => { // The words of an original-language edition that have a meaning in a semantic domain
+            let (total, words) = query::domain(library, text("original", ""), text("domain", ""), limit)?;
+            let words: Vec<String> = words.iter().map(|word| format!("{{\"lemma\":{},\"transliteration\":{},\"gloss\":{},\"count\":{}}}",
+                quote(&word.lemma), quote(&word.transliteration), quote(&word.gloss), word.count)).collect();
+            Ok(format!("\"domain\":{},\"total\":{},\"words\":[{}]", quote(text("domain", "")), total, words.join(",")))
         }
         "lemma" => { // The verses of a translation where an original-language lemma is translated
             let found = query::lemma_verses(library, edition, text("original", ""), text("lemma", ""), limit)?;

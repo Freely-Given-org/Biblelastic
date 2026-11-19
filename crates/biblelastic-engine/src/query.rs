@@ -430,6 +430,20 @@ pub struct Original {
     pub counted: usize,
     /// How the translation renders the lemma, with how often, the commonest first
     pub renderings: Vec<(String, usize)>,
+    /// The word's meaning in this place, from a dictionary that gives meanings place by place (the UBS dictionaries so far)
+    pub meaning: Option<Meaning>,
+    /// Articles about the thing that the word refers to (e.g., in a handbook of animals): (edition, locator, title)
+    pub articles: Vec<(String, String, String)>,
+}
+
+pub struct Meaning {
+    pub gloss: String,
+    pub definition: String,
+    pub note: String,
+    /// e.g., a Louw-Nida number such as 67.65
+    pub code: String,
+    /// The semantic domains that this meaning belongs to, e.g., `Time > A Point of Time with Reference to Duration of Time: Beginning, End`
+    pub domains: Vec<String>,
 }
 
 pub struct WordInfo {
@@ -488,9 +502,20 @@ pub fn word(library: &Library, edition: &str, slot: u32) -> Result<WordInfo> {
             renderings.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
             renderings.truncate(12);
             let gloss = match value("gloss", target)? { gloss if gloss.is_empty() => value("context_gloss", target)?, gloss => gloss };
+            let meaning = match value("meaning_gloss", target)? {
+                gloss if gloss.is_empty() && value("meaning_definition", target)?.is_empty() => None,
+                gloss => Some(Meaning { gloss, definition: value("meaning_definition", target)?, note: value("meaning_note", target)?, code: value("meaning_code", target)?,
+                                        domains: value("domains", target)?.split(';').filter(|domain| !domain.is_empty()).map(str::to_string).collect() }),
+            };
+            let mut articles = Vec::new();
+            for locator in value("handbook", target)?.split(';').filter(|locator| !locator.is_empty()) {
+                if let Some((installed, entry)) = find_entry(library, None, locator)? {
+                    articles.push((installed.edition.clone(), locator.to_string(), Column::open(&installed.module, "node.entry.title")?.get(entry)));
+                }
+            }
             originals.push(Original { edition: alignment.to.clone(), reference: original_text.reference(target), text: original_text.text.get(target),
                                       transliteration: value("translit", target)?, lemma_transliteration: value("lemma_translit", target)?, strong: base_strong(&value("strong", target)?),
-                                      morphology: value("morph", target)?, gloss, occurrences: occurrences.len(), counted: sample.len(), renderings, lemma });
+                                      morphology: value("morph", target)?, gloss, occurrences: occurrences.len(), counted: sample.len(), renderings, lemma, meaning, articles });
         }
     }
     let mut linked: BTreeMap<String, Vec<u32>> = BTreeMap::new();
@@ -519,6 +544,98 @@ pub fn lemma_verses(library: &Library, edition: &str, original_edition: &str, le
     let mut forms = BTreeMap::new();
     forms.insert(lemma.to_string(), occurrences.len());
     Ok(Found { total: verse_starts.len(), forms, examples: verse_starts.iter().take(limit).map(|&slot| example(&text, slot)).collect() })
+}
+
+/// The entry of a commentary, dictionary, etc. at a locator such as `Fauna 2.10` or `Articles Aaron` (the document, then the entry's name),
+/// in one edition or in whichever installed one has it
+pub fn find_entry<'a>(library: &'a Library, edition: Option<&'a str>, locator: &str) -> Result<Option<(&'a crate::library::Installed, u32)>> {
+    let Some((document, name)) = locator.split_once(' ') else { return Ok(None) };
+    for installed in library.item_modules(edition) {
+        let documents = installed.module.strings("documents.names")?;
+        let Some(number) = (0..documents.len()).find(|&number| documents.get(number) == document) else { continue };
+        let starts = installed.module.packed("documents.starts")?;
+        let entries = Nodes::open(&installed.module, "entry")?;
+        for entry in entries.starts.lower_bound(starts.get(number))..entries.starts.lower_bound(starts.get(number + 1)) {
+            if entries.names.get(entry as u32) == name { return Ok(Some((installed, entry as u32))); }
+        }
+    }
+    Ok(None)
+}
+
+/// One whole entry of a commentary, dictionary, etc., laid out for reading
+pub struct Article {
+    pub edition: String,
+    pub work: String,
+    pub locator: String,
+    pub title: String,
+    /// (style, kind, text) for each paragraph, e.g., (`h2`, `heading`, `Discussion:`)
+    pub paragraphs: Vec<(String, String, String)>,
+    /// The entries that it links to: (locator, title)
+    pub see: Vec<(String, String)>,
+}
+
+pub fn article(library: &Library, edition: Option<&str>, locator: &str) -> Result<Article> {
+    let (installed, entry) = find_entry(library, edition, locator)?.ok_or_else(|| format!("there's no entry '{locator}'"))?;
+    let module = &installed.module;
+    let text = Text::open(module)?;
+    let entries = Nodes::open(module, "entry")?;
+    let titles = Column::open(module, "node.entry.title")?;
+    let range = entries.range(entry as usize);
+    let attributes = Column::open(module, "node.para.attributes")?;
+    let mut paragraphs = Vec::new();
+    for paragraph in text.paragraphs.starts.lower_bound(range.start)..text.paragraphs.starts.lower_bound(range.end) {
+        let span = text.paragraphs.range(paragraph);
+        let attribute_text = attributes.get(paragraph as u32);
+        let kind = attribute_text.split_once("\"kind\": \"").and_then(|(_, rest)| rest.split_once('"')).map_or("body", |(kind, _)| kind).to_string();
+        let words = if span.is_empty() { attribute_text.split_once("\"text\": \"").and_then(|(_, rest)| rest.split_once('"')).map_or(String::new(), |(text, _)| text.to_string()) }
+                    else { text.render(span) };
+        paragraphs.push((text.paragraphs.names.get(paragraph as u32), kind, words));
+    }
+    let mut see = Vec::new();
+    if module.has("link.start") {
+        let (starts, targets) = (module.packed("link.start")?, module.packed("link.target")?);
+        for link in starts.lower_bound(range.start)..starts.lower_bound(range.end.max(range.start + 1)) {
+            let target = targets.get(link);
+            let item = (text.reference(entries.starts.get(target as usize)), titles.get(target));
+            if !see.contains(&item) { see.push(item); }
+        }
+    }
+    Ok(Article { edition: installed.edition.clone(), work: installed.work.clone(), locator: text.reference(range.start), title: titles.get(entry), paragraphs, see })
+}
+
+/// A word (in its dictionary form) that has a meaning in a semantic domain
+pub struct DomainWord {
+    pub lemma: String,
+    pub transliteration: String,
+    /// Its commonest gloss in this domain
+    pub gloss: String,
+    pub count: usize,
+}
+
+/// "What other words mean something like this?" Every dictionary form of an original-language edition that has a meaning
+/// in a semantic domain, the commonest first
+pub fn domain(library: &Library, original: &str, domain: &str, limit: usize) -> Result<(usize, Vec<DomainWord>)> {
+    let module = library.column_module(original, "domains").ok_or_else(|| format!("no semantic domains are installed for '{original}'"))?;
+    let (slots, _) = find_terms(&module, "idx.domains", &[domain.to_string()])?;
+    let lemmas = library.column(original, "lemma")?.ok_or_else(|| format!("'{original}' has no lemmas installed"))?;
+    let transliterations = library.column(original, "lemma_translit")?;
+    let glosses = library.column(original, "meaning_gloss")?;
+    let mut groups: BTreeMap<u32, (usize, u32, HashMap<u32, usize>)> = BTreeMap::new(); // lemma → (count, a slot, gloss counts)
+    for &slot in &slots {
+        let group = groups.entry(lemmas.ids.get(slot as usize)).or_insert((0, slot, HashMap::new()));
+        group.0 += 1;
+        if let Some(glosses) = &glosses { *group.2.entry(glosses.ids.get(slot as usize)).or_default() += 1; }
+    }
+    let mut words: Vec<(usize, u32, u32, HashMap<u32, usize>)> = groups.into_iter().map(|(lemma, (count, slot, glosses))| (count, lemma, slot, glosses)).collect();
+    words.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    let total = words.len();
+    let words = words.into_iter().take(limit).map(|(count, lemma, slot, gloss_counts)| DomainWord {
+        lemma: lemmas.dictionary.get(lemma as usize),
+        transliteration: transliterations.as_ref().map_or(String::new(), |column| column.get(slot)),
+        gloss: match (&glosses, gloss_counts.into_iter().max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(&a.0)))) { (Some(glosses), Some((gloss, _))) => glosses.dictionary.get(gloss as usize), _ => String::new() },
+        count,
+    }).collect();
+    Ok((total, words))
 }
 
 /// What's said about (or what cites) a passage of Scripture, in one entry of a commentary, dictionary, etc.

@@ -214,6 +214,37 @@ So far there are two, both from [Tyndale Open Resources](https://tyndaleopenreso
 | `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.12 million | 17,478 `about` and 55,554 `cites` |
 | `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.53 million | 47,393 `cites` |
 
+A third, `UBSH`, is the United Bible Societies' handbooks *Animals in the Bible*, *Plants and Trees in the Bible*, and *Objects in the Bible* (a `dictionary`,
+with the documents `Fauna`, `Flora`, and `Realia`: 762 articles). It comes from a different XML format, but becomes the same files: see the next section.
+
+## The UBS dictionaries and handbooks
+
+The [UBS open-licensed resources](https://github.com/ubsicap/ubs-open-license) are read from the [copies adapted for the OET](https://github.com/Freely-Given-org/OET_ubs-open-license)
+(CC BY-SA 4.0), by `pipeline/biblelastic_ingest/ubs.py`, after the editions that they're joined to. The registry's `[[ubs]]` entry says which.
+
+The *UBS Dictionary of Biblical Hebrew* and the *UBS Dictionary of the Greek New Testament* list each meaning of each word, with every place where the word has that meaning.
+Those places are joined to the words of the UHB and the SR-GNT, giving each a layer called `UBS` (`layers/UBS/<BBB>.features.tsv`, one row per word, as for other layers):
+
+| Column | Meaning |
+| --- | --- |
+| `meaning_gloss` | Short English glosses for the word's meaning in this place, e.g., `beginning, to begin` |
+| `meaning_definition` | The meaning's definition |
+| `meaning_note` | Any comment on it |
+| `meaning_code` | A Louw-Nida number for Greek, e.g., `67.65` |
+| `domains` | The semantic domains that the meaning is in, separated by semicolons, e.g., `Time;Time > A Point of Time with Reference to Duration of Time: Beginning, End` |
+| `handbook` | The handbook articles about the thing that the word refers to, as locators separated by semicolons, e.g., `Fauna 2.8` |
+
+UBS places are given as 14 digits (book, chapter, verse, and position), but they can't be used as they are:
+the positions count each part of a Hebrew word (e.g., a prefix) separately, and the Old Testament verse numbers are the Hebrew ones, while the UHB's are mostly the English ones.
+So each book's words are aligned in order with the places, by Strong's number (Hebrew) or lemma (Greek). That joins 260,028 of 289,216 Hebrew places and 120,298 of 128,164 Greek ones,
+which gives a meaning to 87% of the original-language words (about what the dictionaries cover: the Hebrew one is still about 90% complete).
+Of the joined places, 99.9% of the Greek ones are in the same verse; for Hebrew it's 93%, and the rest are in the known blocks where the Hebrew and English verse numbers differ.
+
+Definitions and comments are made plain: links to other words become just the words, references are shown as, e.g., `1Kgs 4:19`, and Louw-Nida numbers as `§93.32`.
+
+The handbooks' articles list the Hebrew and Greek words that they're about, with their places. Those are joined to words in the same way (18,542 of about 22,000),
+giving the `handbook` column. Their text has its own references (shown readably, and anchored as `cites`), links to other articles (`see`), and pictures (only the captions are kept).
+
 ## Thesauruses
 
 A thesaurus connects the words that people search with to the entries of the dictionaries and commentaries, which are found by their titles.
@@ -258,7 +289,10 @@ empty character markers, and unknown paragraph markers.
 - Syntax (`nesting`) isn't yet turned into clause and phrase nodes.
 - OET deuterocanonical books keep their `row` numbers, but there's no original-language edition for them to link to yet.
 - No English lemmas or stems.
-- Commentaries and dictionaries can only be read from Tyndale's XML format so far.
+- Commentaries and dictionaries can only be read from Tyndale's XML format, and the UBS handbooks from theirs, so far.
+- The UBS dictionaries are only used for the meaning of each word (and their domains): there's no browsable dictionary of their own entries yet,
+    and Hebrew prefixes and suffixes (which UBS counts as words of their own) don't get meanings.
+- The UBS handbooks' pictures, the MARBLE index's picture and map links, the Bible routes, HOTTP, and the parallel passages aren't used yet.
 - A few source references can't be understood and are left out (16 of about 120,000 in the two Tyndale works: they're listed in `report.json`).
     Most are mistakes in the source, e.g., `Gen.1.3-2` where the text says 1:3–2:3. Parts of verses (e.g., 16b) are treated as the whole verse.
 - References are only found where the source marks them as links: plain text like ‘v 13’ isn't recognised.

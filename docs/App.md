@@ -15,7 +15,10 @@ It can:
     With both, the LV of the same verses goes under each run of RV paragraphs, or beside it on a wide screen, and a verse that's marked is marked in both.
     The LV has no headings of its own, so it's read in the RV's sections (and with only the LV, the RV's headings are still shown)
 - show what a word translates (tap the word, in either version), and mark the words of both versions that translate the same Hebrew or Greek word: the Hebrew or Greek word, its transliteration, dictionary form, gloss, Strong's number, and form,
-    how else the OET-RV translates that dictionary form (with counts), and every verse where it's translated
+    how else the OET-RV translates that dictionary form (with counts), and every verse where it's translated.
+    Where the UBS dictionaries cover it, it also shows what the word means in this place (e.g., ἀρχή in John 1:1: ‘beginning, to begin: a point of time at the beginning of a duration’),
+    with its semantic domains, each of which lists the other words with a meaning in it, and any UBS handbook article about the thing it refers to (e.g., ‘Camel, dromedary’)
+- read a whole article of a dictionary or handbook (from a word, or from a search result), and follow its links to others
 - search: a subject (the articles about it, the passages they refer to most, the other side of the question, and where the words themselves are found), words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
 
 Its own words are in English and Spanish (`app/lib/strings.dart`), chosen by the device's language.
@@ -45,6 +48,9 @@ Four requests were added for the app:
     with their details and how the translation renders the same dictionary form. For a very common word (e.g., καί, 8,957 times) only the first 4,000 places are counted.
     It also gives `linked`: for every installed translation that's aligned to the same originals (the OET-RV and the OET-LV so far), the numbers of the words that translate them.
 - `lemma` (with `original` and `lemma`) lists the verses of a translation where an original-language dictionary form is translated.
+- `word` also gives each original's `meaning` (gloss, definition, note, code, and domains) and `articles`, where a meanings layer is installed.
+- `article` (with `locator`, e.g., `Fauna 2.8`) gives one whole entry of a dictionary, handbook, or commentary, as paragraphs, with the entries it links to.
+- `domain` (with `original` and `domain`) lists the words of an original-language edition with a meaning in a semantic domain, the commonest first.
 
 ## Building and running
 
@@ -85,7 +91,7 @@ The OET-LV with the OET-RV (19 November) was checked in headless Chrome by scree
 - **Verse numbers are still small targets**, though the area that can be tapped is wider than the number. A word and a verse number are told apart only by where the finger lands.
 - **The counts of a word's renderings** group words by exactly how they're spelt (so ‘love’ and ‘loves’ are counted apart).
 - **The marked words can be hidden** behind the word's sheet until it's closed, on a small screen.
-- **Search results and notes are plain text**, and dictionary entries are cut short, not opened in full. A passage that's opened from a search has only its first verse marked.
+- **Search results and notes are plain text** (an article opened in full is too: its italics, tables, and pictures aren't shown). A passage that's opened from a search has only its first verse marked.
 - **Modules are only fetched from a development address**, with no resuming of a broken download, no checking of what was downloaded, and no licence or attribution shown.
 - **Only debug builds were made**: no release build, signing, app icon, or store listing. A debug build is 155 MB; a release build will be far smaller.
 - **Linux desktop is set up but untried**, and there's nothing for iOS, macOS, or Windows yet.

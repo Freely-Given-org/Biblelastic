@@ -24,7 +24,7 @@ import sys
 import time
 import tomllib
 
-from . import items, normalise, usfm
+from . import items, normalise, ubs, usfm
 
 PIPELINE_FOLDER = Path( __file__ ).resolve().parent.parent
 REPOSITORY_FOLDER = PIPELINE_FOLDER.parent
@@ -199,12 +199,17 @@ def ingest_file( edition:dict, sourcePath:str, BBB:str, table:tuple|None, output
 def ingest_items( edition:dict, document:str, sourceNames:list, itemSources:list, outputFolder:str ) -> dict:
     """ Worker: parse the items (study notes, articles, etc.) of one document of a commentary or dictionary, check them, and write the files. """
     parsed = items.parse( itemSources, edition['item_documents'], edition['script'] )
+    return write_items( parsed, document, sourceNames, hashlib.sha256( ''.join( itemSources ).encode( 'utf-8' ) ).hexdigest(), outputFolder, edition['script'] )
+
+
+def write_items( parsed, document:str, sourceNames:list, digest:str, outputFolder:str, script:str ) -> dict:
+    """ Write the files of one document of a commentary or dictionary, and return its statistics """
     doc, tokens = parsed.doc, parsed.doc.tokens
-    normaliser = normalise.NORMALISERS[edition['script']]
+    normaliser = normalise.NORMALISERS[script]
     nodeCounts, anchorCounts = {}, {}
     for node in doc.nodes: nodeCounts[node[0]] = nodeCounts.get( node[0], 0 ) + 1
     for anchor in parsed.anchors: anchorCounts[anchor[2]] = anchorCounts.get( anchor[2], 0 ) + 1
-    stats = { 'BBB':document, 'source':', '.join( sourceNames ), 'sha256':hashlib.sha256( ''.join( itemSources ).encode( 'utf-8' ) ).hexdigest(),
+    stats = { 'BBB':document, 'source':', '.join( sourceNames ), 'sha256':digest,
               'tokens':len(tokens), 'entries':len(parsed.entries), 'anchors':anchorCounts, 'links':len(parsed.links), 'nodes':nodeCounts,
               'text_ok':not parsed.text_differences, 'row_marks_ok':True, 'bad_references':parsed.bad_references,
               'warnings':doc.warnings, 'unknown_markers':{} }
@@ -221,6 +226,89 @@ def ingest_items( edition:dict, document:str, sourceNames:list, itemSources:list
     # Only for the cross-document check of the links (not kept in the report)
     stats['entry_locations'] = [ f'{document} {entry[2]}' for entry in parsed.entries ]
     stats['link_targets'] = [ link[3] for link in parsed.links ]
+    return stats
+
+
+def ingest_ubs( entry:dict, output:Path, sourceRoot:Path ) -> dict:
+    """
+    The UBS dictionaries and handbooks (see ubs.py): a layer with the meaning of each word of the original-language editions,
+    and the handbooks as a work of their own. Needs those editions' token files (from this run or an earlier one).
+    """
+    folder = sourceRoot / entry['folder']
+    stats, places, references = {}, {}, {} # places: reference → (edition, BBB, token index)
+    meanings, books, verses = {}, {}, {} # (edition, BBB) → (header, tokens) and token index → (chapter, verse)
+    for language in ('hebrew', 'greek'):
+        if language not in entry: continue
+        edition = entry[language]['edition']
+        documents = output / edition / 'documents'
+        if not documents.is_dir(): print( f"ERROR: {edition} must be ingested before the UBS {language} dictionary" ); return {'failed':True}
+        editionMeanings, editionReferences = ubs.load_dictionary( str(folder / entry[language]['file']), language == 'greek' )
+        meanings.update( editionMeanings )
+        linked = total = 0
+        for BBB, bookReferences in editionReferences.items():
+            tokensPath = documents / f'{BBB}.tokens.tsv'
+            if not tokensPath.exists(): continue
+            with open( tokensPath, encoding='utf-8', newline='' ) as tokensFile:
+                rows = list( csv.reader( tokensFile, delimiter='\t', quoting=csv.QUOTE_NONE ) )
+            books[(edition, BBB)] = (rows[0], rows[1:])
+            verseOf = verses[(edition, BBB)] = {}
+            for nodeType, start, end, name, _attributes in list( csv.reader( open( documents / f'{BBB}.nodes.tsv', encoding='utf-8', newline='' ), delimiter='\t', quoting=csv.QUOTE_NONE ) )[1:]:
+                if nodeType == 'verse' and ':' in name:
+                    chapter, verse = name.split( ':', 1 )
+                    for ix in range( int(start), int(end) ): verseOf[ix] = (int(chapter), int(re.match( r'\d*', verse ).group() or 0))
+            for reference, ix in ubs.link_book( rows[1:], rows[0], bookReferences, language == 'greek' ).items():
+                places[reference] = (edition, BBB, ix)
+            byReference = { reference[3]:reference[5] for reference in bookReferences }
+            references.update( { reference:byReference[reference] for reference in byReference if reference in places } )
+            linked += sum( 1 for reference in byReference if reference in places ); total += len(byReference)
+        stats[edition] = { 'references':total, 'linked':linked }
+
+    def place_of( reference:str ):
+        edition, BBB, ix = places.get( reference[-14:], (None, None, None) )
+        verse = verses.get( (edition, BBB), {} ).get( ix )
+        return (BBB,) + verse if verse else None
+
+    # The handbooks: a work of their own, and links from the words that each article is about
+    handbooks = entry.get( 'handbooks' )
+    wordLinks = {} # (edition, BBB, token index) → [locator, …]
+    if handbooks:
+        handbookFolder = output / handbooks['id'] / 'documents'
+        if handbookFolder.parent.is_dir(): shutil.rmtree( handbookFolder.parent )
+        handbookFolder.mkdir( parents=True )
+        documents = []
+        for document, file in handbooks['files'].items():
+            parsed, links = ubs.parse_handbook( str(folder / file), document, place_of )
+            documents.append( write_items( parsed, document, [Path( file ).name], hashlib.sha256( (folder / file).read_bytes() ).hexdigest(), str(handbookFolder), 'Latn' ) )
+            for reference, name in links:
+                if reference[-14:] in places: wordLinks.setdefault( places[reference[-14:]], [] ).append( f'{document} {name}' )
+            stats[handbooks['id']] = stats.get( handbooks['id'], 0 ) + len(links)
+        stats['handbook_word_links'] = sum( len(links) for links in wordLinks.values() )
+        locations = { location for document in documents for location in document.pop( 'entry_locations' ) }
+        brokenLinks = sorted( { target for document in documents for target in document.pop( 'link_targets' ) if target not in locations } )
+        manifest = { 'format_version':usfm.FORMAT_VERSION, 'generated':date.today().isoformat(), 'kind':'dictionary' }
+        manifest.update( { key:value for key,value in handbooks.items() if key != 'files' } )
+        manifest.update( { 'token_columns':['before','text','after','norm'], 'layers':[], 'broken_links':brokenLinks,
+                           'documents':[ { key:document[key] for key in ('BBB','source','sha256','tokens') } for document in documents ] } )
+        (handbookFolder.parent / 'manifest.json').write_text( json.dumps( manifest, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
+        stats['handbook_entries'] = sum( document['entries'] for document in documents )
+
+    # The layer: for every word of each edition, its meaning there, and the handbook articles about it
+    byToken = { place:references[reference] for reference, place in places.items() if reference in references }
+    for (edition, BBB), (header, tokens) in books.items():
+        layerFolder = output / edition / 'layers' / entry['id']
+        layerFolder.mkdir( parents=True, exist_ok=True )
+        rows = []
+        for ix in range( len(tokens) ):
+            meaning = meanings.get( byToken.get( (edition, BBB, ix) ), ['', '', '', '', ''] )
+            rows.append( meaning + [ ';'.join( dict.fromkeys( wordLinks.get( (edition, BBB, ix), [] ) ) ) ] )
+        write_tsv( layerFolder / f'{BBB}.features.tsv', ubs.LAYER_COLUMNS, rows )
+    for language in ('hebrew', 'greek'):
+        if language not in entry: continue
+        manifestPath = output / entry[language]['edition'] / 'manifest.json'
+        manifest = json.loads( manifestPath.read_text( encoding='utf-8' ) )
+        manifest['layers'] = [ layer for layer in manifest.get( 'layers', [] ) if layer.get( 'id' ) != entry['id'] ] + [
+            { 'id':entry['id'], 'kind':'features', 'columns':ubs.LAYER_COLUMNS } | { key:entry[key] for key in ('name','copyright','licence','attribution','changes','licence_verified') if key in entry } ]
+        manifestPath.write_text( json.dumps( manifest, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
     return stats
 
 
@@ -363,6 +451,18 @@ def main() -> int:
         write_tsv( arguments.output / 'thesaurus' / f"{thesaurus['language']}.tsv", rows[0], rows[1:] )
         report['thesauruses'][thesaurus['language']] = { 'terms':len(rows)-1, 'licence':thesaurus.get( 'licence', '' ) }
         print( f"Thesaurus ({thesaurus['language']}): {len(rows)-1} terms" )
+
+    # The UBS dictionaries and handbooks (after the editions that they're joined to)
+    report['ubs'] = {}
+    for entry in registry.get( 'ubs', [] ):
+        wanted = { entry[language]['edition'] for language in ('hebrew','greek') if language in entry } | ({ entry['handbooks']['id'] } if 'handbooks' in entry else set())
+        if wantedEditions and not wanted & wantedEditions: continue
+        stats = ingest_ubs( entry, arguments.output, arguments.source_root )
+        if stats.get( 'failed' ): failures += 1; continue
+        report['ubs'][entry['id']] = stats
+        for edition, counts in stats.items():
+            if isinstance( counts, dict ): print( f"UBS {edition}: {counts['linked']:,} of {counts['references']:,} dictionary references joined to words" )
+        if 'handbook_entries' in stats: print( f"UBS handbooks: {stats['handbook_entries']:,} entries; {stats['handbook_word_links']:,} of their word references joined to words" )
 
     (arguments.output / 'report.json').write_text( json.dumps( report, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
     print( f"{'FAILED' if failures else 'Done'} in {time.time()-startTime:.1f}s -- output in {arguments.output}" )

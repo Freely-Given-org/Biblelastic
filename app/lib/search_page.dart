@@ -2,6 +2,7 @@
 // the original-language terms behind words, and dictionary entries.
 import 'package:flutter/material.dart';
 
+import 'article_page.dart';
 import 'engine/engine.dart';
 import 'main.dart' show edition;
 import 'strings.dart';
@@ -61,7 +62,9 @@ class _SearchPageState extends State<SearchPage> {
     final isTopic = answer != null && answer['passages'] != null;
     List<dynamic> list(String name) => (answer?[name] as List<dynamic>?) ?? const [];
     Widget heading(String text) => Padding(padding: const EdgeInsets.only(top: 20, bottom: 4), child: Text(text, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary)));
-    Widget article(dynamic entry) => ListTile(contentPadding: EdgeInsets.zero, title: Text('${entry['title']}'), subtitle: Text('${entry['edition']} · ${entry['type']}\n${entry['text']}'));
+    void openArticle(dynamic entry) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) =>
+        ArticlePage(engine: widget.engine, locator: entry['locator'] as String, edition: entry['edition'] as String)));
+    Widget article(dynamic entry) => ListTile(contentPadding: EdgeInsets.zero, title: Text('${entry['title']}'), subtitle: Text('${entry['edition']} · ${entry['type']}\n${entry['text']}'), onTap: () => openArticle(entry));
     Widget passage(dynamic found) => ListTile(contentPadding: EdgeInsets.zero,
         title: Text(strings.reference(found['passage'] as String), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
         subtitle: Text('${found['text']}\n${strings.citedIn((found['sources'] as List<dynamic>).join('; '))}'), onTap: () => open(found['passage'] as String));
@@ -118,7 +121,8 @@ class _SearchPageState extends State<SearchPage> {
           for (final entry in isTopic ? const [] : entries)
             ListTile(contentPadding: EdgeInsets.zero,
                 title: Text('${entry['title']}'),
-                subtitle: Text('${entry['edition']} · ${entry['type']}\n${entry['text']}${(entry['see'] as List<dynamic>).isEmpty ? '' : '\n→ ${(entry['see'] as List<dynamic>).join('; ')}'}')),
+                subtitle: Text('${entry['edition']} · ${entry['type']}\n${entry['text']}${(entry['see'] as List<dynamic>).isEmpty ? '' : '\n→ ${(entry['see'] as List<dynamic>).join('; ')}'}'),
+                onTap: () => openArticle(entry)),
         ])),
       ])),
     );

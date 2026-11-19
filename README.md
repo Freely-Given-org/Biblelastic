@@ -105,7 +105,8 @@ and checked periodically for updated versions.
 ### Current status
 
 There's the start of the build pipeline and engine, and a minimal app (for Android and browsers) that reads, searches, and shows notes (see [docs/App.md](docs/App.md)).
-Four Bible editions (OET-RV, OET-LV, SR-GNT, and UHB), one commentary (Tyndale Open Study Notes), and one dictionary (Tyndale Open Bible Dictionary)
+Four Bible editions (OET-RV, OET-LV, SR-GNT, and UHB), one commentary (Tyndale Open Study Notes), one dictionary (Tyndale Open Bible Dictionary),
+the UBS Hebrew and Greek dictionaries (as the meaning of each original-language word), and the UBS handbooks on animals, plants, and objects
 can be converted and compiled, and three of the example searches above already work (the third only as a first sketch):
 
     cd pipeline && python3 -m biblelastic_ingest && cd ..      # Source texts → build/intermediate/

@@ -21,7 +21,9 @@ The engine refuses any module whose format version it doesn't know, so modules m
     target/release/biblelastic find covenant grace --edition TOSN --within para   # A commentary's own words are searched like any other text
     target/release/biblelastic request command=find 'words=grace truth'   # The same as JSON, as an app gets it
     target/release/biblelastic request command=read detail=words 'passage=JHN 3:16'   # … with each word's number
-    target/release/biblelastic request command=word slot=77783              # What that word (‘loves’) translates
+    target/release/biblelastic request command=word slot=77783              # What that word (‘loves’) translates, and what it means there
+    target/release/biblelastic request command=article 'locator=Fauna 2.8'  # A whole article
+    target/release/biblelastic request command=domain original=SR-GNT 'domain=Time'   # The Greek words with a meaning in a semantic domain
     cargo test
 
 ## Design rules
@@ -63,7 +65,8 @@ The smallest useful download, `OET-RV.text.blm`, is 6.4 MB.
 
 A commentary or a dictionary is an edition too, and so far each is a single `text` module:
 `TOSN.text.blm` (Tyndale Open Study Notes) is 7.8 MB and `TOBD.text.blm` (Tyndale Open Bible Dictionary) is 9.2 MB.
-With the thesaurus (2 kB) that makes fifteen modules and 59 MB altogether.
+With the thesaurus (2 kB), the UBS meanings layers (`UHB.UBS.blm`, 2.1 MB, and `SR-GNT.UBS.blm`, 1.6 MB), and the UBS handbooks (`UBSH.text.blm`, 2.1 MB),
+that makes eighteen modules and 65 MB altogether.
 
 ## File layout
 

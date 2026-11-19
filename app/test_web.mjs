@@ -76,7 +76,7 @@ try {
         const { Biblelastic } = await import('${origin}/app/build/web/engine/biblelastic.js');
         const engine = await Biblelastic.start();
         let modules = [];
-        for (const name of ['OET-RV.text', 'OET-LV.text', 'OET-LV--SR-GNT.align', 'OET-LV--UHB.align', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng'])
+        for (const name of ['OET-RV.text', 'OET-LV.text', 'OET-LV--SR-GNT.align', 'OET-LV--UHB.align', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng', 'UHB.UBS', 'SR-GNT.UBS', 'UBSH.text'])
             modules = await engine.install(name, '${origin}/build/modules/' + name + '.blm');
         engine.stop();
         return modules.length;
@@ -89,7 +89,10 @@ try {
     await shoot('2a-both');
     await tap(120, 162); // A word in the first verse (‘beginning’), for what it translates, and to mark the words linked to it
     await shoot('2b-word');
-    await tap(108, 662); // ‘Every place it’s translated’
+    await tap(66, 611); // The narrower domain of its meaning here: the words that share it
+    await shoot('2c-domain');
+    await tap(28, 27); // Back to the sheet
+    await tap(108, 828); // ‘Every place it’s translated’
     await shoot('2c-places');
     await tap(28, 27); // Back to the sheet
     await tap(200, 60); // Outside the sheet, to close it
