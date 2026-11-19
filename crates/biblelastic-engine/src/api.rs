@@ -55,7 +55,8 @@ fn answer(library: &Library, request: &str) -> Result<String> {
                 let reading = query::read_section(library, edition, wanted, separate_words)?;
                 let neighbour = |neighbour: &Option<(String, usize)>| neighbour.as_ref().map_or("null".to_string(), |(document, number)| format!("{{\"document\":{},\"section\":{number}}}", quote(document)));
                 return Ok(format!("\"edition\":{},\"document\":{},\"section\":{},\"title\":{},\"passage\":{},\"previous\":{},\"next\":{},\"paragraphs\":{}", quote(edition), quote(&reading.document),
-                                  reading.number, quote(&reading.title), quote(&reading.passage), neighbour(&reading.previous), neighbour(&reading.next), paragraphs(&reading.paragraphs)));
+                                  reading.number, quote(&reading.title), quote(&reading.passage), neighbour(&reading.previous), neighbour(&reading.next), paragraphs(&reading.paragraphs))
+                    + &format!(",\"noted\":[{}]", reading.noted.iter().map(|verse| quote(verse)).collect::<Vec<_>>().join(",")));
             }
             let reading = query::read(library, edition, &Passage::parse(given)?, separate_words)?;
             Ok(format!("\"edition\":{},\"passage\":{},\"paragraphs\":{}", quote(edition), quote(&reading.passage), paragraphs(&reading.paragraphs)))

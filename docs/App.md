@@ -8,7 +8,9 @@ It can:
 - install and remove modules, from a list (`index.json`) at a web address
 - read the OET-RV a section at a time (from one section heading to the next, whichever chapters that covers), with its poetry indents, words of Jesus, and translators' additions shown differently
 - step to the next or previous section, right through from one book into the next, or choose a book and chapter
-- show what the installed commentaries and dictionaries say about a verse (tap its number)
+- show what the installed commentaries and dictionaries say about a verse (tap its number). A verse with a note of its own has its number underlined;
+    the others still show the notes on the passage around them. If there's nothing at all (e.g., in Judith, which the Tyndale notes don't cover),
+    ‘No notes for v4’ appears for a couple of seconds instead, so that it's clear the tap worked
 - show the OET-LV with the OET-RV: a switch above the text chooses the Readers' Version, the Literal Version, or both (remembered on the device).
     With both, the LV of the same verses goes under each run of RV paragraphs, or beside it on a wide screen, and a verse that's marked is marked in both.
     The LV has no headings of its own, so it's read in the RV's sections (and with only the LV, the RV's headings are still shown)
@@ -38,6 +40,7 @@ Four requests were added for the app:
     With `unit=section` it gives the section that a passage starts in (or, with `document` and `section`, a section by its number), together with its heading, the verses it covers,
     and which sections come before and after it. Section 0 of a document is whatever comes before its first heading, and an edition without headings is read by chapter.
     With `detail=words`, each piece of text is one word (with its punctuation) and has the word's number, `w`.
+- With `unit=section`, `read` also gives `noted`: the verses that an installed commentary has a note of its own on (one that starts at that verse).
 - `word` (with `slot`, a word's number) follows a word of a translation through the alignment modules to the original-language word(s) it translates,
     with their details and how the translation renders the same dictionary form. For a very common word (e.g., καί, 8,957 times) only the first 4,000 places are counted.
     It also gives `linked`: for every installed translation that's aligned to the same originals (the OET-RV and the OET-LV so far), the numbers of the words that translate them.
@@ -79,7 +82,7 @@ The OET-LV with the OET-RV (19 November) was checked in headless Chrome by scree
 - **Only the OET-RV and OET-LV can be read**, the reader doesn't remember where you were, and there's no chapter view to choose in place of the section view.
 - **The OET-LV's word joiners** (`_`) are shown as they are, as decided for the ingest. The OET website shows them more subtly.
 - **Sections aren't listed anywhere**: a book's section headings would make a better way in than chapter numbers.
-- **Verse numbers are small targets** for a finger. Words are larger targets, but a word and a verse number are told apart only by where the finger lands.
+- **Verse numbers are still small targets**, though the area that can be tapped is wider than the number. A word and a verse number are told apart only by where the finger lands.
 - **The counts of a word's renderings** group words by exactly how they're spelt (so ‘love’ and ‘loves’ are counted apart).
 - **The marked words can be hidden** behind the word's sheet until it's closed, on a small screen.
 - **Search results and notes are plain text**, and dictionary entries are cut short, not opened in full. A passage that's opened from a search has only its first verse marked.

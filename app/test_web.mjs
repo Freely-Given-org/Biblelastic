@@ -94,7 +94,7 @@ try {
     await tap(28, 27); // Back to the sheet
     await tap(200, 60); // Outside the sheet, to close it
     await shoot('2d-linked'); // The words that translate the same Greek word are marked in both versions
-    await tap(22, 752); // The number of John 1:14, for the notes on it (where it is depends on the text and the fonts: check the screenshot)
+    await tap(25, 636); // The number of John 1:6, for the notes on it (where it is depends on the text and the fonts: check the screenshot)
     await shoot('3-notes');
     await tap(200, 60); // Outside the sheet, to close it
     await tap(352, 27); // The search button

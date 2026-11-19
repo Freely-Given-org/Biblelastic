@@ -64,6 +64,8 @@ class _ReaderPageState extends State<ReaderPage> {
   Map<String, List<dynamic>> literalVerses = {};
   /// The words to mark, by edition: the ones that translate the same original word as the word that was tapped
   Map<String, Set<int>> linked = {};
+  /// The verses of the section that have a note of their own, e.g., `3:16`
+  Set<String> get noted => {...(section?['noted'] as List<dynamic>? ?? const []).cast<String>()};
 
   @override
   void initState() {
@@ -196,9 +198,20 @@ class _ReaderPageState extends State<ReaderPage> {
     if (reference != null) await showPassage(reference);
   }
 
-  void showNotes(String verse) {
+  /// The notes on a verse (which can be on the passage around it). If there are none at all, a brief message says so, so that it's clear the tap worked.
+  Future<void> showNotes(String verse) async {
+    final strings = Strings(Localizations.localeOf(context));
+    final messenger = ScaffoldMessenger.of(context);
     final passage = '${section!['document']} $verse';
-    showModalBottomSheet<void>(context: context, isScrollControlled: true, showDragHandle: true, useSafeArea: true, builder: (context) => NotesSheet(engine: engine, passage: passage));
+    void say(String message) => messenger..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(message), duration: const Duration(milliseconds: 1800), behavior: SnackBarBehavior.floating));
+    try {
+      final notes = await engine.request({'command': 'about', 'passage': passage, 'limit': '30', 'length': '1200'});
+      if (!mounted) return;
+      if ((notes['comments'] as List<dynamic>).isEmpty) return say(strings.noNotesFor(verse.split(':').last));
+      await showModalBottomSheet<void>(context: context, isScrollControlled: true, showDragHandle: true, useSafeArea: true, builder: (context) => NotesSheet(passage: passage, notes: notes));
+    } catch (error) {
+      say('$error');
+    }
   }
 
   @override
@@ -349,10 +362,16 @@ class _ReaderPageState extends State<ReaderPage> {
       } else if (piece['v'] != null) {
         final name = piece['r'] as String;
         inFocus = name == focus;
-        final recogniser = TapGestureRecognizer()..onTap = () => showNotes(name);
-        recognisers.add(recogniser);
-        spans.add(TextSpan(text: '${piece['v']} ', recognizer: recogniser,
-            style: TextStyle(fontSize: base.fontSize! * 0.72, color: theme.colorScheme.primary, fontWeight: FontWeight.bold, backgroundColor: inFocus && markFocus ? focusColour : null)));
+        final hasOwnNote = noted.contains(name);
+        // A widget rather than plain text, so that the area that can be tapped is wider than the number itself
+        spans.add(WidgetSpan(alignment: PlaceholderAlignment.baseline, baseline: TextBaseline.alphabetic, child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => showNotes(name),
+          child: Padding(padding: const EdgeInsets.only(left: 6, right: 7), child: Text('${piece['v']}', style: TextStyle(
+            fontSize: base.fontSize! * 0.75, height: base.height, color: theme.colorScheme.primary, fontWeight: FontWeight.bold,
+            backgroundColor: inFocus && markFocus ? focusColour : null,
+            decoration: hasOwnNote ? TextDecoration.underline : null, decorationColor: theme.colorScheme.primary, decorationThickness: 2))),
+        )));
       } else {
         final marks = (piece['s'] as List<dynamic>? ?? const []).cast<String>();
         var text = base;
@@ -416,31 +435,24 @@ class _BookPickerState extends State<BookPicker> {
 
 /// What the installed commentaries and dictionaries say about one verse
 class NotesSheet extends StatelessWidget {
-  const NotesSheet({super.key, required this.engine, required this.passage});
-  final Engine engine;
+  const NotesSheet({super.key, required this.passage, required this.notes});
   final String passage;
+  /// The engine's answer to `about` for the passage
+  final Map<String, dynamic> notes;
 
   @override
   Widget build(BuildContext context) {
     final strings = Strings(Localizations.localeOf(context));
     final theme = Theme.of(context);
-    return SizedBox(height: MediaQuery.of(context).size.height * 0.7, child: FutureBuilder<Map<String, dynamic>>(
-      future: engine.request({'command': 'about', 'passage': passage, 'limit': '30', 'length': '1200'}),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) return Center(child: Text('${snapshot.error}'));
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final comments = snapshot.data!['comments'] as List<dynamic>;
-        return ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
+    final comments = notes['comments'] as List<dynamic>;
+    return SizedBox(height: MediaQuery.of(context).size.height * 0.7, child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
           Text('${strings.notes}: ${strings.reference(passage)}', style: theme.textTheme.titleMedium),
-          if (comments.isEmpty) Padding(padding: const EdgeInsets.only(top: 16), child: Text(strings.noNotes)),
           for (final comment in comments)
             Padding(padding: const EdgeInsets.only(top: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${comment['edition']} · ${comment['title'] == '' ? strings.reference(comment['locator'] as String) : '${comment['title']} (${strings.reference(comment['passage'] as String)})'}',
                   style: theme.textTheme.labelMedium!.copyWith(color: comment['kind'] == 'about' ? theme.colorScheme.primary : theme.colorScheme.outline)),
               SelectableText(comment['text'] as String, style: theme.textTheme.bodyMedium),
             ])),
-        ]);
-      },
-    ));
+    ]));
   }
 }

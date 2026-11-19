@@ -264,6 +264,8 @@ pub struct SectionReading {
     pub previous: Option<(String, usize)>,
     pub next: Option<(String, usize)>,
     pub paragraphs: Vec<Paragraph>,
+    /// The verses that an installed commentary has a note of their own on (one that starts at that verse), e.g., `3:16`
+    pub noted: Vec<String>,
 }
 
 /// One section of Scripture laid out for reading: from one section heading to the next (which can cross from one chapter into another).
@@ -318,7 +320,25 @@ pub fn read_section(library: &Library, edition: &str, wanted: Wanted, separate_w
         _ => name(document),
     };
     let title = if number == 0 { String::new() } else { units.names.get((first + number - 1) as u32) };
-    Ok(SectionReading { document: name(document), number, title, passage, previous, next, paragraphs: lay_out(&module, &text, verses, range, separate_words)? })
+    let noted = match (inside.iter().min(), inside.iter().max()) {
+        (Some(&from), Some(&to)) => noted_verses(library, &name(document), from, to)?.into_iter().map(|(chapter, verse)| format!("{chapter}:{verse}")).collect(),
+        _ => Vec::new(),
+    };
+    Ok(SectionReading { document: name(document), number, title, passage, previous, next, paragraphs: lay_out(&module, &text, verses, range, separate_words)?, noted })
+}
+
+/// The verses from `from` to `to` (in one book) that an installed commentary has a note on that starts at that verse
+fn noted_verses(library: &Library, book: &str, from: (u32, u32), to: (u32, u32)) -> Result<BTreeSet<(u32, u32)>> {
+    let mut noted = BTreeSet::new();
+    for installed in library.item_modules(None) {
+        if !installed.module.has("anchor.from") { continue; }
+        let anchors = Anchors::open(&installed.module)?;
+        let Some(number) = anchors.books.find(book) else { continue };
+        for anchor in anchors.from.lower_bound(pack(number as u32, from))..anchors.from.upper_bound(pack(number as u32, to)) {
+            if anchors.kind.get(anchor) == 0 { noted.insert(unpack(anchors.from.get(anchor)).1); }
+        }
+    }
+    Ok(noted)
 }
 
 /// Lay a range of slots out as paragraphs

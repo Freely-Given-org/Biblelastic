@@ -513,7 +513,9 @@ mod tests {
         let section = biblelastic_engine::api::respond(&library, "command=read\nedition=EN\nunit=section\npassage=JN1 4:10");
         assert!(section.starts_with(r#"{"ok":true,"edition":"EN","document":"JN1","section":1,"title":"4","passage":"JN1 4:8-10","previous":{"document":"FRT","section":0},"next":null,"paragraphs":[{"style":"p","#), "{section}");
         let front = biblelastic_engine::api::respond(&library, "command=read\nedition=EN\ndocument=FRT\nsection=0");
-        assert_eq!(front, r#"{"ok":true,"edition":"EN","document":"FRT","section":0,"title":"","passage":"FRT","previous":null,"next":{"document":"JN1","section":1},"paragraphs":[{"style":"mt1","kind":"other","pieces":[{"t":"Title"}]}]}"#);
+        assert_eq!(front, r#"{"ok":true,"edition":"EN","document":"FRT","section":0,"title":"","passage":"FRT","previous":null,"next":{"document":"JN1","section":1},"paragraphs":[{"style":"mt1","kind":"other","pieces":[{"t":"Title"}]}],"noted":[]}"#);
+        // The commentary has a note of its own on 4:8 (and a theme note that starts at 4:7, which isn't in this translation)
+        assert!(section.ends_with(r#""noted":["4:8"]}"#), "{section}");
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\ndocument=JN1\nsection=2").contains("JN1 has no section 2"));
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=EN\npassage=JN1 5").contains("doesn't have JN1 5"));
         assert!(biblelastic_engine::api::respond(&library, "command=read\nedition=CM\npassage=JN1 4").contains("isn't divided into chapters"));

@@ -43,8 +43,8 @@ class Strings {
   String get dictionary => _pick(['Dictionary', 'Diccionario']);
   String get noResults => _pick(['Nothing found.', 'No se encontró nada.']);
   String get notes => _pick(['Notes', 'Notas']);
-  String get noNotes => _pick(['No notes on this verse are installed.', 'No hay notas instaladas sobre este versículo.']);
-  String get tapVerse => _pick(['Tap a word to see what it translates, or a verse number for notes on it.', 'Toque una palabra para ver qué traduce, o un número de versículo para ver las notas.']);
+  String noNotesFor(String verse) => _pick(['No notes for v$verse', 'No hay notas para el v. $verse']);
+  String get tapVerse => _pick(['Tap a word to see what it translates, or a verse number for notes on it (an underlined number has a note of its own).', 'Toque una palabra para ver qué traduce, o un número de versículo para ver las notas (un número subrayado tiene su propia nota).']);
   String get noOriginal => _pick(["This word isn't linked to a word of the original (it may have been added to make the meaning clear).", 'Esta palabra no está enlazada con ninguna palabra del original (puede haberse añadido para aclarar el sentido).']);
   String get lemma => _pick(['Dictionary form', 'Forma de diccionario']);
   String get everyPlace => _pick(['Every place it’s translated', 'Todos los lugares donde se traduce']);
