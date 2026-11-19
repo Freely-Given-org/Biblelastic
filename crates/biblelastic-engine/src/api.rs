@@ -8,7 +8,7 @@
 //! words=love loves loved loving
 //! ```
 //!
-//! Commands: `info`, `contents`, `read`, `word`, `lemma`, `article`, `domain`, `terms`, `find`, `marked`, `about`, `entry` and `topic`. The response is always a JSON object with `"ok"`.
+//! Commands: `info`, `contents`, `read`, `word`, `lemma`, `article`, `toc`, `domain`, `terms`, `find`, `marked`, `about`, `entry` and `topic`. The response is always a JSON object with `"ok"`.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -35,8 +35,9 @@ fn answer(library: &Library, request: &str) -> Result<String> {
     match text("command", "") {
         "info" => {
             let modules: Vec<String> = library.modules.iter().map(|installed| format!(
-                "{{\"name\":{},\"kind\":{},\"work\":{},\"edition\":{},\"layer\":{},\"from\":{},\"to\":{},\"sections\":{}}}", quote(&installed.name), quote(&installed.kind), quote(&installed.work),
-                quote(&installed.edition), quote(&installed.layer), quote(&installed.from), quote(&installed.to), installed.module.entries().len())).collect();
+                "{{\"name\":{},\"kind\":{},\"work\":{},\"edition\":{},\"layer\":{},\"title\":{},\"disclaimer\":{},\"from\":{},\"to\":{},\"sections\":{}}}", quote(&installed.name), quote(&installed.kind),
+                quote(&installed.work), quote(&installed.edition), quote(&installed.layer), quote(&installed.title), quote(&installed.disclaimer), quote(&installed.from), quote(&installed.to),
+                installed.module.entries().len())).collect();
             Ok(format!("\"modules\":[{}]", modules.join(",")))
         }
         "contents" => { // The documents of an edition, and how many chapters each has
@@ -81,8 +82,14 @@ fn answer(library: &Library, request: &str) -> Result<String> {
             let found = query::article(library, fields.get("edition").copied().filter(|edition| !edition.is_empty()), text("locator", ""))?;
             let paragraphs: Vec<String> = found.paragraphs.iter().map(|(style, kind, words)| format!("{{\"style\":{},\"kind\":{},\"text\":{}}}", quote(style), quote(kind), quote(words))).collect();
             let see: Vec<String> = found.see.iter().map(|(locator, title)| format!("{{\"locator\":{},\"title\":{}}}", quote(locator), quote(title))).collect();
-            Ok(format!("\"edition\":{},\"work\":{},\"locator\":{},\"title\":{},\"paragraphs\":[{}],\"see\":[{}]", quote(&found.edition), quote(&found.work),
-                       quote(&found.locator), quote(&found.title), paragraphs.join(","), see.join(",")))
+            let neighbour = |neighbour: &Option<String>| neighbour.as_ref().map_or("null".to_string(), |locator| quote(locator));
+            Ok(format!("\"edition\":{},\"work\":{},\"locator\":{},\"title\":{},\"paragraphs\":[{}],\"see\":[{}],\"previous\":{},\"next\":{}", quote(&found.edition), quote(&found.work),
+                       quote(&found.locator), quote(&found.title), paragraphs.join(","), see.join(","), neighbour(&found.previous), neighbour(&found.next)))
+        }
+        "toc" => { // The entries of a commentary, dictionary, book, etc., in order (e.g., a book's chapters)
+            let entries = query::contents_of(library, text("edition", ""))?;
+            let entries: Vec<String> = entries.iter().map(|(locator, title, kind)| format!("{{\"locator\":{},\"title\":{},\"type\":{}}}", quote(locator), quote(title), quote(kind))).collect();
+            Ok(format!("\"edition\":{},\"entries\":[{}]", quote(text("edition", "")), entries.join(",")))
         }
         "domain" => { // The words of an original-language edition that have a meaning in a semantic domain
             let (total, words) = query::domain(library, text("original", ""), text("domain", ""), limit)?;

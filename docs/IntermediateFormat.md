@@ -217,6 +217,36 @@ So far there are two, both from [Tyndale Open Resources](https://tyndaleopenreso
 A third, `UBSH`, is the United Bible Societies' handbooks *Animals in the Bible*, *Plants and Trees in the Bible*, and *Objects in the Bible* (a `dictionary`,
 with the documents `Fauna`, `Flora`, and `Realia`: 762 articles). It comes from a different XML format, but becomes the same files: see the next section.
 
+## Books
+
+A book is read from an EPUB file by `pipeline/biblelastic_ingest/epub.py`, and becomes the same files as a commentary or dictionary,
+with one document, `Chapter`: each top-level item of the book's table of contents is an entry (so locators are `Chapter 1`, `Chapter 2`, …, and each entry's title is its item in the contents).
+
+- **Paragraphs** are the book's blocks (paragraphs, list items, table cells), styled `h1`–`h3` (headings), `p`, `li`, or `note` (footnotes and endnotes;
+    the footnote markers in the text are left out). A heading is an h1–h6 element, a block that the contents points to below its top level,
+    or a block whose text the book's stylesheet makes bold and large (that's how some word processors mark headings).
+- **Bible references** in the text are found by `references.py` and become `cites` anchors: e.g., ‘John 3:16’, ‘2 Tim. 3:1–9’, ‘Rom 8:28, 31-39; 9:1’, ‘Mark 2-3:6’, or ‘Jude 5’.
+    A book's name only counts when a number follows it (so ‘the Mark of a True Disciple’ isn't a reference). The registry's `context_book` is the Bible book
+    that bare references (e.g., ‘(1:21-28)’, or ‘(1-2)’ for a one-chapter book) are in.
+- **What it's about:** a chapter whose title names a passage (e.g., ‘Mark 1:1-20’ or ‘Pericope #1: Jude 1-4’) is `about` that passage, and so is the text under
+    a heading that names one (e.g., ‘1:21-28 Jesus heals’), up to the next heading of the same or a higher level. So a book's chapters are found by the notes on a verse, like a commentary's.
+
+The registry gives each book's `download` address: the file is fetched once into `files` (under `build/downloads/`) and kept there.
+The first two, both from [books.freely.giving](https://books.freely.giving) and both CC0:
+
+| Edition | Kind | Entries | Words | Anchors |
+| --- | --- | --- | --- | --- |
+| `PritchardMark` *The Mark of a True Disciple* (Shelby and Elisabeth Pritchard, 2024): a study of Mark | `book` | 32 | 85,000 | 122 `about` and 571 `cites` |
+| `PritchardJude` *Jude: A Theological Commentary* (Shelby Pritchard, 2025) | `commentary` | 8 | 30,000 | 13 `about` and 144 `cites` |
+
+Both quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB) by those publishers' permission, so their notices are part of each manifest's `copyright`.
+
+## Disclaimers
+
+The registry's `[disclaimers]` table gives text (a little HTML: `<em>` and `<a>`) for each kind of work, which is put in the manifest as `disclaimer`
+and must be shown wherever such a work's words are shown. So far it's the same for books and commentaries: that the material is included in good faith,
+but the views are its authors' and not necessarily the design decisions of the Open English Translation.
+
 ## The UBS dictionaries and handbooks
 
 The [UBS open-licensed resources](https://github.com/ubsicap/ubs-open-license) are read from the [copies adapted for the OET](https://github.com/Freely-Given-org/OET_ubs-open-license)
@@ -289,7 +319,9 @@ empty character markers, and unknown paragraph markers.
 - Syntax (`nesting`) isn't yet turned into clause and phrase nodes.
 - OET deuterocanonical books keep their `row` numbers, but there's no original-language edition for them to link to yet.
 - No English lemmas or stems.
-- Commentaries and dictionaries can only be read from Tyndale's XML format, and the UBS handbooks from theirs, so far.
+- Commentaries and dictionaries can only be read from Tyndale's XML format, the UBS handbooks from theirs, and books from EPUB, so far.
+- References in a book are only found in its text as written: a chapter that says ‘verse 5’, or a printed table of contents that lists passages, isn't understood as such
+    (the table of contents in *The Mark of a True Disciple*'s preface is taken as citing each passage). Tables, pictures, and links within a book aren't kept.
 - The UBS dictionaries are only used for the meaning of each word (and their domains): there's no browsable dictionary of their own entries yet,
     and Hebrew prefixes and suffixes (which UBS counts as words of their own) don't get meanings.
 - The UBS handbooks' pictures, the MARBLE index's picture and map links, the Bible routes, HOTTP, and the parallel passages aren't used yet.

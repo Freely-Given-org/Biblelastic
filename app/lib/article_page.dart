@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'engine/engine.dart';
 import 'strings.dart';
+import 'works.dart';
 import 'word_sheet.dart' show LemmaPage;
 
 /// One whole entry of a commentary, dictionary, or handbook, e.g., `Fauna 2.10`. It can lead on to the entries it links to.
@@ -27,15 +28,25 @@ class ArticlePage extends StatelessWidget {
           final article = snapshot.data!;
           final see = article['see'] as List<dynamic>;
           return SelectionArea(child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
-            Text('${article['edition']} · ${article['locator']}', style: theme.textTheme.labelMedium!.copyWith(color: theme.colorScheme.primary)),
+            Text('${titleOf(article['edition'] as String)} · ${article['locator']}', style: theme.textTheme.labelMedium!.copyWith(color: theme.colorScheme.primary)),
             for (final paragraph in article['paragraphs'] as List<dynamic>)
               if ((paragraph['text'] as String).isNotEmpty) switch (paragraph['style'] as String) {
                 'h1' => Padding(padding: const EdgeInsets.only(top: 8), child: Text(paragraph['text'] as String, style: theme.textTheme.titleLarge)),
                 'h2' || 'h3' => Padding(padding: const EdgeInsets.only(top: 16), child: Text(paragraph['text'] as String, style: theme.textTheme.titleSmall!.copyWith(fontWeight: FontWeight.bold))),
-                'caption' || 'lemma' => Padding(padding: const EdgeInsets.only(top: 4), child: Text(paragraph['text'] as String, style: theme.textTheme.bodySmall)),
+                'caption' || 'lemma' || 'note' => Padding(padding: const EdgeInsets.only(top: 4), child: Text(paragraph['text'] as String, style: theme.textTheme.bodySmall)),
+                'li' => Padding(padding: const EdgeInsets.only(top: 4, left: 12), child: Text('•  ${paragraph['text']}', style: theme.textTheme.bodyLarge!.copyWith(height: 1.45))),
                 _ => Padding(padding: const EdgeInsets.only(top: 8), child: Text(paragraph['text'] as String, style: theme.textTheme.bodyLarge!.copyWith(height: 1.45))),
               },
             if (see.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 20), child: Text(strings.seeAlso, style: theme.textTheme.titleSmall)),
+            Disclaimers(editions: [article['edition'] as String]),
+            // On through the work, e.g., to the next chapter of a book
+            Padding(padding: const EdgeInsets.only(top: 16), child: Row(children: [
+              if (article['previous'] case final String previous) TextButton.icon(icon: const Icon(Icons.chevron_left), label: Text(strings.previous),
+                  onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (context) => ArticlePage(engine: engine, locator: previous, edition: article['edition'] as String)))),
+              const Spacer(),
+              if (article['next'] case final String next) TextButton.icon(icon: const Icon(Icons.chevron_right), label: Text(strings.next),
+                  onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (context) => ArticlePage(engine: engine, locator: next, edition: article['edition'] as String)))),
+            ])),
             for (final link in see)
               ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.arrow_forward, size: 18), title: Text(link['title'] as String),
                   onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => ArticlePage(engine: engine, locator: link['locator'] as String, edition: article['edition'] as String)))),

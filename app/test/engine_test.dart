@@ -48,8 +48,21 @@ void main() {
       expect((domain['words'] as List<dynamic>).map((word) => word['lemma']), contains('ἀγαπάω'));
     }
     // A handbook article, whole
-    final article = await engine.request({'command': 'article', 'locator': 'Fauna 2.10'}).then((answer) => answer, onError: (_) => null);
+    Map<String, dynamic>? article;
+    try { article = await engine.request({'command': 'article', 'locator': 'Fauna 2.10'}); } on EngineException { article = null; }
     if (article != null) expect((article['title'], (article['paragraphs'] as List<dynamic>).length > 10), ('Cattle, cow, ox, bull', true));
+
+    // A book: its chapters, read in order, and the disclaimer that goes with it
+    final installed = (await engine.request({'command': 'info'}))['modules'] as List<dynamic>;
+    final book = installed.where((module) => module['edition'] == 'PritchardJude' && module['kind'] == 'text').firstOrNull;
+    if (book != null) {
+      expect((book['work'], (book['disclaimer'] as String).startsWith('This material is included in good faith')), ('commentary', true));
+      final contents = await engine.request({'command': 'toc', 'edition': 'PritchardJude'});
+      final chapters = contents['entries'] as List<dynamic>;
+      expect(chapters.map((chapter) => chapter['title']), contains('Pericope #1: Jude 1-4'));
+      final first = await engine.request({'command': 'article', 'edition': 'PritchardJude', 'locator': chapters.first['locator'] as String});
+      expect((first['previous'], first['next']), (null, chapters[1]['locator']));
+    }
 
     // Several requests at once are each answered (the engine runs in its own isolate)
     final together = await Future.wait([for (final chapter in [1, 2, 3]) engine.request({'command': 'read', 'edition': 'OET-RV', 'passage': 'JHN $chapter'})]);

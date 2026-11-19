@@ -66,7 +66,7 @@ The smallest useful download, `OET-RV.text.blm`, is 6.4 MB.
 A commentary or a dictionary is an edition too, and so far each is a single `text` module:
 `TOSN.text.blm` (Tyndale Open Study Notes) is 7.8 MB and `TOBD.text.blm` (Tyndale Open Bible Dictionary) is 9.2 MB.
 With the thesaurus (2 kB), the UBS meanings layers (`UHB.UBS.blm`, 2.1 MB, and `SR-GNT.UBS.blm`, 1.6 MB), and the UBS handbooks (`UBSH.text.blm`, 2.1 MB),
-that makes eighteen modules and 65 MB altogether.
+and two books (`PritchardMark.text.blm`, 0.6 MB, and `PritchardJude.text.blm`, 0.2 MB), that makes twenty modules and 65 MB altogether.
 
 ## File layout
 
@@ -120,7 +120,9 @@ In every module:
 | Section | Encoding | Content |
 | --- | --- | --- |
 | `module.kind` | Raw | `text`, `features`, or `alignment` |
-| `module.work` | Raw | For text and features modules: what the edition is (`scripture`, `commentary`, or `dictionary`) |
+| `module.work` | Raw | For text and features modules: what the edition is (`scripture`, `commentary`, `dictionary`, or `book`) |
+| `module.title` | Raw | What the work is called, e.g., `The Mark of a True Disciple` |
+| `module.disclaimer` | Raw | Anything that must be shown with what the work says (HTML: only `<em>` and `<a>`), if there is anything |
 | `module.edition`, `module.layer` | Raw | For text and features modules |
 | `module.from`, `module.to` | Raw | For alignment modules |
 | `manifest` | Raw | The edition's intermediate-format manifest (JSON), including its copyright and licence details |

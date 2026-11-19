@@ -572,6 +572,9 @@ pub struct Article {
     pub paragraphs: Vec<(String, String, String)>,
     /// The entries that it links to: (locator, title)
     pub see: Vec<(String, String)>,
+    /// The entries before and after it in its work (e.g., the chapters of a book)
+    pub previous: Option<String>,
+    pub next: Option<String>,
 }
 
 pub fn article(library: &Library, edition: Option<&str>, locator: &str) -> Result<Article> {
@@ -600,7 +603,19 @@ pub fn article(library: &Library, edition: Option<&str>, locator: &str) -> Resul
             if !see.contains(&item) { see.push(item); }
         }
     }
-    Ok(Article { edition: installed.edition.clone(), work: installed.work.clone(), locator: text.reference(range.start), title: titles.get(entry), paragraphs, see })
+    let locator_of = |entry: usize| text.reference(entries.starts.get(entry));
+    let previous = (entry > 0).then(|| locator_of(entry as usize - 1));
+    let next = ((entry as usize) + 1 < entries.starts.len()).then(|| locator_of(entry as usize + 1));
+    Ok(Article { edition: installed.edition.clone(), work: installed.work.clone(), locator: text.reference(range.start), title: titles.get(entry), paragraphs, see, previous, next })
+}
+
+/// The entries of a commentary, dictionary, book, etc., in order: (locator, title, type)
+pub fn contents_of(library: &Library, edition: &str) -> Result<Vec<(String, String, String)>> {
+    let installed = library.item_modules(Some(edition)).next().ok_or_else(|| format!("'{edition}' isn't installed, or has no entries"))?;
+    let text = Text::open(&installed.module)?;
+    let entries = Nodes::open(&installed.module, "entry")?;
+    let (titles, types) = (Column::open(&installed.module, "node.entry.title")?, Column::open(&installed.module, "node.entry.type")?);
+    Ok((0..entries.starts.len()).map(|entry| (text.reference(entries.starts.get(entry)), titles.get(entry as u32), types.get(entry as u32))).collect())
 }
 
 /// A word (in its dictionary form) that has a meaning in a semantic domain

@@ -208,7 +208,21 @@ impl Items {
 /// A top-level text value from a manifest, as the ingest writes it (one key to a line, indented by one space)
 fn manifest_value(manifest: &[u8], key: &str) -> Option<String> {
     let start = format!(" \"{key}\": \"");
-    String::from_utf8_lossy(manifest).lines().find_map(|line| line.strip_prefix(&start).map(|rest| rest.trim_end_matches(',').trim_end_matches('"').to_string()))
+    let value = String::from_utf8_lossy(manifest).lines().find_map(|line| line.strip_prefix(&start).map(|rest| rest.trim_end().trim_end_matches(',').strip_suffix('"').unwrap_or(rest).to_string()))?;
+    // Undo JSON's escapes (the ingest writes everything else as it is)
+    let mut unescaped = String::with_capacity(value.len());
+    let mut characters = value.chars();
+    while let Some(character) = characters.next() {
+        if character != '\\' { unescaped.push(character); continue; }
+        match characters.next() {
+            Some('n') => unescaped.push('\n'),
+            Some('t') => unescaped.push('\t'),
+            Some('u') => { let code: String = characters.by_ref().take(4).collect(); unescaped.extend(u32::from_str_radix(&code, 16).ok().and_then(char::from_u32)); }
+            Some(other) => unescaped.push(other),
+            None => {}
+        }
+    }
+    Some(unescaped)
 }
 
 fn save(output: &Path, name: &str, writer: ModuleWriter) -> Result<Written> {
@@ -277,12 +291,16 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     let slots = *starts.last().unwrap() as usize;
 
     let work = manifest_value(&manifest, "kind").unwrap_or_else(|| "scripture".to_string());
+    // What the work is called, and anything that must be shown with it (HTML, e.g., that the views are its authors')
+    let (title, disclaimer) = (manifest_value(&manifest, "name").unwrap_or_else(|| id.clone()), manifest_value(&manifest, "disclaimer").unwrap_or_default());
     let new_module = |layer: &str, kind: &str| {
         let mut writer = options.writer();
         writer.raw("module.kind", kind.as_bytes());
         writer.raw("module.work", work.as_bytes());
         writer.raw("module.edition", id.as_bytes());
         writer.raw("module.layer", layer.as_bytes());
+        writer.raw("module.title", title.as_bytes());
+        if !disclaimer.is_empty() { writer.raw("module.disclaimer", disclaimer.as_bytes()); }
         writer.raw("manifest", &manifest);
         writer.strings("documents.names", &documents);
         writer.packed("documents.starts", &starts);

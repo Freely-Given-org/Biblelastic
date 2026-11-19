@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'engine/engine.dart';
+import 'library_page.dart';
 import 'modules_page.dart';
 import 'search_page.dart';
 import 'strings.dart';
 import 'word_sheet.dart';
+import 'works.dart';
 
 /// The edition that's read (the only Bible that the reader offers so far)
 const edition = 'OET-RV';
@@ -122,6 +124,7 @@ class _ReaderPageState extends State<ReaderPage> {
   /// Find out which books are installed, then show a section
   Future<void> loadContents() async {
     try {
+      await loadWorks(engine);
       final response = await engine.request({'command': 'contents', 'edition': edition});
       books = [for (final document in response['documents'] as List<dynamic>) Book(document['name'] as String, document['chapters'] as int, document['introduction'] as bool)];
       try {
@@ -181,6 +184,8 @@ class _ReaderPageState extends State<ReaderPage> {
     await loadContents();
   }
 
+  Future<void> openLibrary() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => LibraryPage(engine: engine)));
+
   Future<void> openSearch() async {
     final reference = await Navigator.of(context).push(MaterialPageRoute<String>(builder: (context) => SearchPage(engine: engine)));
     if (reference != null) await showPassage(reference);
@@ -230,7 +235,10 @@ class _ReaderPageState extends State<ReaderPage> {
           if (current != null) IconButton(tooltip: strings.nextSection, icon: const Icon(Icons.chevron_right),
               onPressed: next == null ? null : () => showSection(next['document'] as String, next['section'] as int)),
           if (current != null) IconButton(tooltip: strings.search, icon: const Icon(Icons.search), onPressed: openSearch),
-          if (started) IconButton(tooltip: strings.modules, icon: const Icon(Icons.download), onPressed: openModules),
+          if (started) PopupMenuButton<String>(tooltip: strings.more, onSelected: (choice) => choice == 'library' ? openLibrary() : openModules(), itemBuilder: (context) => [
+            if (current != null) PopupMenuItem(value: 'library', child: ListTile(leading: const Icon(Icons.local_library_outlined), title: Text(strings.library))),
+            PopupMenuItem(value: 'modules', child: ListTile(leading: const Icon(Icons.download), title: Text(strings.modules))),
+          ]),
         ],
       ),
       body: SafeArea(child: body(context, strings)),
@@ -449,10 +457,11 @@ class NotesSheet extends StatelessWidget {
           Text('${strings.notes}: ${strings.reference(passage)}', style: theme.textTheme.titleMedium),
           for (final comment in comments)
             Padding(padding: const EdgeInsets.only(top: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${comment['edition']} · ${comment['title'] == '' ? strings.reference(comment['locator'] as String) : '${comment['title']} (${strings.reference(comment['passage'] as String)})'}',
+              Text('${titleOf(comment['edition'] as String)} · ${comment['title'] == '' ? strings.reference(comment['locator'] as String) : '${comment['title']} (${strings.reference(comment['passage'] as String)})'}',
                   style: theme.textTheme.labelMedium!.copyWith(color: comment['kind'] == 'about' ? theme.colorScheme.primary : theme.colorScheme.outline)),
               SelectableText(comment['text'] as String, style: theme.textTheme.bodyMedium),
             ])),
+          Disclaimers(editions: [for (final comment in comments) comment['edition'] as String]),
     ]));
   }
 }

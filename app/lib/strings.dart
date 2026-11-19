@@ -42,6 +42,13 @@ class Strings {
   String get meaningHere => _pick(['Meaning here', 'Significado aquí']);
   String get similarMeaning => _pick(['Words with a similar meaning:', 'Palabras de significado parecido:']);
   String get aboutThis => _pick(['About this:', 'Sobre esto:']);
+  String get library => _pick(['Library', 'Biblioteca']);
+  String get books => _pick(['Books', 'Libros']);
+  String get commentaries => _pick(['Commentaries', 'Comentarios']);
+  String get dictionaries => _pick(['Dictionaries and handbooks', 'Diccionarios y manuales']);
+  String get more => _pick(['More', 'Más']);
+  String get previous => _pick(['Previous', 'Anterior']);
+  String get next => _pick(['Next', 'Siguiente']);
   String get seeAlso => _pick(['See also', 'Véase también']);
   String domainWords(int total) => _pick(['$total words have a meaning in', '$total palabras tienen un significado en']);
   String timesHere(int count) => count == 1 ? _pick(['once', 'una vez']) : _pick(['$count times', '$count veces']);

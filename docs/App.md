@@ -19,6 +19,8 @@ It can:
     Where the UBS dictionaries cover it, it also shows what the word means in this place (e.g., ἀρχή in John 1:1: ‘beginning, to begin: a point of time at the beginning of a duration’),
     with its semantic domains, each of which lists the other words with a meaning in it, and any UBS handbook article about the thing it refers to (e.g., ‘Camel, dromedary’)
 - read a whole article of a dictionary or handbook (from a word, or from a search result), and follow its links to others
+- browse the installed books, commentaries, and dictionaries (the Library, in the ⋮ menu), and read them entry by entry (e.g., a book chapter by chapter, with Previous and Next)
+- show each book's and commentary's disclaimer wherever its words are shown: under the notes on a verse, at the end of an article or chapter, and with its contents
 - search: a subject (the articles about it, the passages they refer to most, the other side of the question, and where the words themselves are found), words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
 
 Its own words are in English and Spanish (`app/lib/strings.dart`), chosen by the device's language.
@@ -50,6 +52,7 @@ Four requests were added for the app:
 - `lemma` (with `original` and `lemma`) lists the verses of a translation where an original-language dictionary form is translated.
 - `word` also gives each original's `meaning` (gloss, definition, note, code, and domains) and `articles`, where a meanings layer is installed.
 - `article` (with `locator`, e.g., `Fauna 2.8`) gives one whole entry of a dictionary, handbook, or commentary, as paragraphs, with the entries it links to.
+- `toc` (with `edition`) lists a work's entries in order, and `article` also gives the `previous` and `next` ones; `info` gives each module's `title` and `disclaimer`.
 - `domain` (with `original` and `domain`) lists the words of an original-language edition with a meaning in a semantic domain, the commonest first.
 
 ## Building and running
@@ -91,6 +94,7 @@ The OET-LV with the OET-RV (19 November) was checked in headless Chrome by scree
 - **Verse numbers are still small targets**, though the area that can be tapped is wider than the number. A word and a verse number are told apart only by where the finger lands.
 - **The counts of a word's renderings** group words by exactly how they're spelt (so ‘love’ and ‘loves’ are counted apart).
 - **The marked words can be hidden** behind the word's sheet until it's closed, on a small screen.
+- **The disclaimer's link isn't followed** when it's tapped (it's only shown underlined), and a book's references aren't links to the passages yet.
 - **Search results and notes are plain text** (an article opened in full is too: its italics, tables, and pictures aren't shown). A passage that's opened from a search has only its first verse marked.
 - **Modules are only fetched from a development address**, with no resuming of a broken download, no checking of what was downloaded, and no licence or attribution shown.
 - **Only debug builds were made**: no release build, signing, app icon, or store listing. A debug build is 155 MB; a release build will be far smaller.

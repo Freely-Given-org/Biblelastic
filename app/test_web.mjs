@@ -76,7 +76,7 @@ try {
         const { Biblelastic } = await import('${origin}/app/build/web/engine/biblelastic.js');
         const engine = await Biblelastic.start();
         let modules = [];
-        for (const name of ['OET-RV.text', 'OET-LV.text', 'OET-LV--SR-GNT.align', 'OET-LV--UHB.align', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng', 'UHB.UBS', 'SR-GNT.UBS', 'UBSH.text'])
+        for (const name of ['OET-RV.text', 'OET-LV.text', 'OET-LV--SR-GNT.align', 'OET-LV--UHB.align', 'OET-RV--SR-GNT.align', 'OET-RV--UHB.align', 'SR-GNT.text', 'SR-GNT.morph', 'SR-GNT.OET', 'UHB.text', 'UHB.morph', 'UHB.OET', 'TOSN.text', 'TOBD.text', 'Thesaurus.eng', 'UHB.UBS', 'SR-GNT.UBS', 'UBSH.text', 'PritchardMark.text', 'PritchardJude.text'])
             modules = await engine.install(name, '${origin}/build/modules/' + name + '.blm');
         engine.stop();
         return modules.length;
@@ -111,6 +111,19 @@ try {
     await tap(100, 700); // A passage in the results: it should open in its section, with the verse marked (check the screenshot before for what's there)
     await sleep(1500);
     await shoot('5-landed');
+    await tap(392, 27); // The ‘More’ menu
+    await shoot('7a-menu');
+    await tap(300, 40); // Library (the first item)
+    await shoot('7-library');
+    await tap(120, 116); // The first book
+    await shoot('8-contents');
+    await tap(120, 290); // Its fourth entry
+    await sleep(1000);
+    await shoot('9-chapter');
+    for (let n = 0; n < 60; n++) await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 200, y: 500, deltaX: 0, deltaY: 3000 }, sessionId); // To the end
+    await sleep(1000);
+    await shoot('9b-chapter-end');
+    for (let n = 0; n < 3; n++) await tap(28, 27); // Back to the reader
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId);
     await sleep(1500);
     await shoot('6-wide'); // Side by side

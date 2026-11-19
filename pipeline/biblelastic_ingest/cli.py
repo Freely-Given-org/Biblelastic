@@ -23,8 +23,9 @@ import shutil
 import sys
 import time
 import tomllib
+import urllib.request
 
-from . import items, normalise, ubs, usfm
+from . import epub, items, normalise, ubs, usfm
 
 PIPELINE_FOLDER = Path( __file__ ).resolve().parent.parent
 REPOSITORY_FOLDER = PIPELINE_FOLDER.parent
@@ -312,6 +313,25 @@ def ingest_ubs( entry:dict, output:Path, sourceRoot:Path ) -> dict:
     return stats
 
 
+def ingest_book( edition:dict, path:str, outputFolder:str ) -> dict:
+    """ Worker: a book (EPUB), with one entry for each top-level item of its contents """
+    parsed, _contents = epub.parse( path, edition.get( 'context_book' ) )
+    return write_items( parsed, 'Chapter', [Path( path ).name], hashlib.sha256( Path( path ).read_bytes() ).hexdigest(), outputFolder, edition['script'] )
+
+
+def fetch( edition:dict, sourceRoot:Path ) -> None:
+    """ Download an edition's file if it isn't here yet (it's then kept, so that it's only fetched once) """
+    if 'download' not in edition or len(edition['files']) != 1: return
+    path = sourceRoot / edition['files'][0]
+    if path.exists(): return
+    path.parent.mkdir( parents=True, exist_ok=True )
+    print( f"Fetching {edition['download']} …" )
+    request = urllib.request.Request( edition['download'], headers={'User-Agent':'Biblelastic-ingest'} )
+    with urllib.request.urlopen( request, timeout=120 ) as response: data = response.read()
+    partial = path.with_suffix( path.suffix + '.part' )
+    partial.write_bytes( data ); partial.rename( path )
+
+
 def read_column( path:Path, columnName:str ) -> list:
     with open( path, encoding='utf-8', newline='' ) as tsvFile:
         columnIndex = tsvFile.readline().rstrip( '\n' ).split( '\t' ).index( columnName )
@@ -359,8 +379,12 @@ def main() -> int:
             for layerKey in ('layer','variants'):
                 if layerKey in edition: (arguments.output / edition['id'] / 'layers' / edition[layerKey]['id']).mkdir( parents=True, exist_ok=True )
             tableHeader, rowTable = load_row_table( edition, arguments.source_root ) if 'row_table' in edition else (None, None)
+            fetch( edition, arguments.source_root )
             paths = sorted( path for pattern in edition['files'] for path in arguments.source_root.glob( pattern ) )
             if not paths: print( f"ERROR: no source files found for {edition['id']} under {arguments.source_root}" ); failures += 1
+            if edition.get( 'format' ) == 'EPUB': # A book
+                futures[edition['id']] = [ pool.submit( ingest_book, edition, str(path), str(folder) ) for path in paths[:1] ]
+                continue
             if 'item_documents' in edition: # A commentary or dictionary: split the files into items, and handle each document's items together
                 groups = {}
                 for path in paths:
@@ -381,8 +405,9 @@ def main() -> int:
             manifest.update( { key:value for key,value in edition.items() if not key.startswith( 'row_table' ) and key not in ('files','layer','variants') } )
             manifest['layers'] = [ { key:(list( value ) if key == 'columns' else value) for key,value in edition[layerKey].items() if key != 'filter_values' }
                                     | { 'kind':'features' if layerKey == 'layer' else 'variants' } for layerKey in ('layer','variants') if layerKey in edition ]
-            manifest['token_columns'] = ['before','text','after','norm'] + edition['features']
-            if 'item_documents' in edition: # Check that every link between items leads somewhere
+            manifest['token_columns'] = ['before','text','after','norm'] + edition.get( 'features', [] )
+            if manifest['kind'] in registry.get( 'disclaimers', {} ): manifest['disclaimer'] = registry['disclaimers'][manifest['kind']]
+            if 'item_documents' in edition or edition.get( 'format' ) == 'EPUB': # Check that every link between items leads somewhere
                 # (ignoring case, because the sources aren't consistent about it, e.g., AbrahamSBosom for AbrahamsBosom)
                 locations = { location.casefold() for document in documents for location in document.pop( 'entry_locations' ) }
                 targets = [ target.casefold() for document in documents for target in document.pop( 'link_targets' ) ]
@@ -400,7 +425,7 @@ def main() -> int:
                 for name, count in document['unknown_markers'].items(): unknownMarkers[name] = unknownMarkers.get( name, 0 ) + count
             totalTokens = sum( document['tokens'] for document in documents )
             print( f"{edition['id']}: {len(documents)} documents, {totalTokens:,} tokens, {len(documents)-len(bad)}/{len(documents)} passed the text checks" )
-            if 'item_documents' in edition:
+            if 'item_documents' in edition or edition.get( 'format' ) == 'EPUB':
                 anchorCounts = {}
                 for document in documents:
                     for kind, count in document['anchors'].items(): anchorCounts[kind] = anchorCounts.get( kind, 0 ) + count

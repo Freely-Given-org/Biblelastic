@@ -102,6 +102,11 @@ licence = "CC BY-SA 4.0"
 licence_verified = false
 columns = { gloss = "WordGloss", context_gloss = "ContextualWordGloss", morpheme_glosses = "MorphemeGlosses", context_morpheme_glosses = "ContextualMorphemeGlosses", role = "Role", nesting = "Nesting", tags = "Tags", row_type = "RowType" }
 
+# Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
+[disclaimers]
+commentary = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."
+book = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."
+
 # Commentaries and dictionaries are made of items (study notes, articles, etc.). Each item becomes an entry in a document:
 #   item_documents says which document each type of item goes into ("*" means one document for each Bible book that the items are about).
 #   Types that aren't listed are left out.
@@ -141,6 +146,45 @@ licence_verified = false
 files = ["OpenBibleData/datasets/Tyndale/OET_TyndaleOpenResources/TyndaleOpenBibleDictionary/*/*.xml"]
 features = []
 item_documents = { Article = "Articles", Textbox = "Textboxes", Chart = "Charts", Map = "Maps", Picture = "Pictures" }
+
+# Books (EPUB): each top-level item of a book's contents becomes an entry. Bible references in the text are found and anchored (see references.py).
+#   download: where to fetch the file from, if it isn't in files yet (it's then kept there). context_book: the Bible book that bare references (e.g., ‘1:21-28’) are in.
+
+[[edition]]
+id = "PritchardMark"
+kind = "book"
+name = "The Mark of a True Disciple"
+author = "Shelby Pritchard and Elisabeth Pritchard"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/shelby-pritchard/the-mark-of-a-true-disciple/"
+download = "https://files.books.freelygiv.ing/the-mark-of-a-true-disciple/the-mark-of-a-true-disciple.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-mark-of-a-true-disciple.epub"]
+context_book = "MRK"
+copyright = "“The Mark of a True Disciple” 2024, Shelby and Elisabeth Pritchard. To the extent possible under law, Shelby Pritchard and Elisabeth Pritchard have waived all copyright and related or neighboring rights to The Mark of a True Disciple (https://creativecommons.org/publicdomain/zero/1.0/). Scripture quotations marked CSB have been taken from the Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission. Christian Standard Bible® and CSB® are federally registered trademarks of Holman Bible Publishers. Scripture quotations marked (LEB) are from the Lexham English Bible. Copyright 2012 Logos Bible Software. Lexham is a registered trademark of Logos Bible Software. Scriptures marked KJV are taken from the KING JAMES VERSION (KJV): KING JAMES VERSION, public domain. Quotations designated (NET) are from the NET Bible® copyright ©1996, 2019 by Biblical Studies Press, L.L.C. https://netbible.com All rights reserved. Scriptures marked ESV are taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION (ESV): Scriptures taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION ® Copyright© 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. Scripture quotations taken from the (LSB®) Legacy Standard Bible®, Copyright © 2021 by The Lockman Foundation. Used by permission. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc. LSBible.org and 316publishing.com. Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, copyright 1996, 2004. Used by permission of Tyndale House Publishers, Inc., Wheaton, Illinois 60189. Scripture quotations taken from the NASB (New American Standard Bible) Copyright 2020 by The Lockman Foundation. Used by permission. All rights reserved."
+licence = "CC0 1.0 (the Bible quotations: as their notices say)"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "PritchardJude"
+kind = "commentary"
+name = "Jude: A Theological Commentary"
+author = "Shelby Pritchard"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/shelby-pritchard/jude-a-theological-commentary/"
+download = "https://files.books.freelygiv.ing/jude-a-theological-commentary/jude-a-theological-commentary.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/jude-a-theological-commentary.epub"]
+context_book = "JDE"
+copyright = "“Jude: A Theological Commentary” 2025, Shelby Pritchard. Dedicated to the public domain (CC0: https://creativecommons.org/publicdomain/zero/1.0/), as its listing on books.freely.giving says. (Its copyright page names The Mark of a True Disciple, apparently copied from that book.) Scripture quotations marked CSB have been taken from the Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission. Christian Standard Bible® and CSB® are federally registered trademarks of Holman Bible Publishers. Scripture quotations marked (LEB) are from the Lexham English Bible. Copyright 2012 Logos Bible Software. Lexham is a registered trademark of Logos Bible Software. Scriptures marked KJV are taken from the KING JAMES VERSION (KJV): KING JAMES VERSION, public domain. Quotations designated (NET) are from the NET Bible® copyright ©1996, 2019 by Biblical Studies Press, L.L.C. https://netbible.com All rights reserved. Scriptures marked ESV are taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION (ESV): Scriptures taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION ® Copyright© 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. Scripture quotations taken from the (LSB®) Legacy Standard Bible®, Copyright © 2021 by The Lockman Foundation. Used by permission. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc. LSBible.org and 316publishing.com. Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, copyright 1996, 2004. Used by permission of Tyndale House Publishers, Inc., Wheaton, Illinois 60189. The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain."
+licence = "CC0 1.0 (the Bible quotations: as their notices say)"
+redistributable = true
+licence_verified = false
 
 # The United Bible Societies' open-licensed dictionaries and handbooks, as adapted for the OET (see ubs.py).
 #   The dictionaries give the meaning of each word in each place: they become a layer of the editions named here.
