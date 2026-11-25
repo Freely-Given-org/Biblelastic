@@ -1,5 +1,5 @@
 """
-Add the books of https://books.freely.giving to the registry: every English book that's CC0 or in the public domain, and has an EPUB.
+Add the books of https://books.freely.giving to the registry: every English or Spanish book that's CC0 or in the public domain, and has an EPUB.
 
     python3 -m biblelastic_ingest.freely_giving
 
@@ -27,8 +27,10 @@ OUTPUT = PIPELINE_FOLDER / 'books-freely-giving.toml'
 DOWNLOADS = REPOSITORY_FOLDER / 'build' / 'downloads'
 HEADERS = {'User-Agent':'Biblelastic-ingest'}
 LICENCES = { 'CC0':'CC0 1.0', 'Public Domain':'Public domain' } # As the site gives them → as the registry records them
+LANGUAGES = { 'en':'eng', 'es':'spa' } # The site's language codes → ours (for the books that are included)
 # Paragraphs of a book's front matter that say who may do what with it, or where its Bible quotations are from
-NOTICE_RE = re.compile( r'(?i)copyright|waived|public domain|creative ?commons|\bCC0\b|scripture (quotations|taken|texts?)|used by permission|all rights reserved|translations?,? including' )
+NOTICE_RE = re.compile( r'(?i)copyright|waived|public domain|creative ?commons|\bCC0\b|scripture (quotations|taken|texts?)|used by permission|all rights reserved|translations?,? including'
+                         r'|dominio público|derechos reservados|citas (bíblicas|de la escritura)|tomadas de la (versión|biblia|reina|nueva)|con permiso' ) # (and in Spanish)
 
 
 class _NoRedirect( urllib.request.HTTPRedirectHandler ):
@@ -68,7 +70,7 @@ def byline_of( text:str, title:str ) -> str:
 
 
 def survey() -> list:
-    """ Every book in the library: [{href, slug, title, lang, authors, year, licence, epub}, …] (the last two only for English books) """
+    """ Every book in the library: [{href, slug, title, lang, authors, year, licence, epub}, …] (the last two only for English and Spanish books) """
     library = get( f'{SITE}/library/' )
     library = library[library.find( 'id="by-title"' ):library.find( 'id="by-author"' )]
     books = []
@@ -80,7 +82,7 @@ def survey() -> list:
                         'authors':[ html.unescape( author ) for author in re.findall( r'/people/[^"]+" class="text-reset">([^<]+)</a>', card ) ],
                         'year':year.group( 1 ) if year else '' } )
     for book in books:
-        if book['lang'] != 'en': continue
+        if book['lang'] not in LANGUAGES: continue
         page = get( SITE + book['href'] )
         text = text_of( page )
         book['licence'] = licence_of( text )
@@ -95,9 +97,9 @@ def survey() -> list:
 
 
 def identifier( slug:str ) -> str:
-    """ the-dorean-principle → DoreanPrinciple (a leading ‘the’ is dropped) """
+    """ the-dorean-principle → DoreanPrinciple, el-nombre-divino → NombreDivino (a leading ‘the’, ‘el’, ‘la’, etc., is dropped) """
     words = [ word for word in re.split( r'[^A-Za-z0-9]+', slug ) if word ]
-    if words and words[0] == 'the' and len(words) > 1: words = words[1:]
+    if words and words[0] in ('the', 'el', 'la', 'los', 'las') and len(words) > 1: words = words[1:]
     if words and words[0].isdigit(): words = words[1:] + words[:1] # An identifier mustn't start with a number: 1689 Baptist Confession → BaptistConfession…1689
     return ''.join( word[:1].upper() + word[1:] for word in words )
 
@@ -121,9 +123,9 @@ def main() -> int:
     registry = tomllib.loads( (PIPELINE_FOLDER / 'sources.toml').read_text( encoding='utf-8' ) )
     already = { edition.get( 'source' ) for edition in registry.get( 'edition', [] ) }
     books = survey()
-    wanted = [ book for book in books if book['lang'] == 'en' and book.get( 'licence' ) in LICENCES and book.get( 'epub' ) and SITE + book['href'] not in already ]
+    wanted = [ book for book in books if book['lang'] in LANGUAGES and book.get( 'licence' ) in LICENCES and book.get( 'epub' ) and SITE + book['href'] not in already ]
     skipped = [ book for book in books if book not in wanted and SITE + book['href'] not in already ]
-    entries = [ '# Books from https://books.freely.giving: every English book there that is CC0 or in the public domain, and has an EPUB.',
+    entries = [ '# Books from https://books.freely.giving: every English or Spanish book there that is CC0 or in the public domain, and has an EPUB.',
                 '# Written by `python3 -m biblelastic_ingest.freely_giving`: run it again (rather than editing this) to pick up new books.',
                 '# The copyright of each is the book\'s own notices, as found in its front matter: check them before publishing.', '' ]
     ids = set()
@@ -139,21 +141,22 @@ def main() -> int:
         ident = identifier( book['slug'] )
         while ident in ids: ident += 'X'
         ids.add( ident )
-        kind = 'commentary' if re.search( r'(?i)\bcommentary\b', book['title'] ) else 'book'
+        language = LANGUAGES[book['lang']]
+        kind = 'commentary' if re.search( r'(?i)\b(commentary|comentario)\b', book['title'] ) else 'book'
         # A book about one book of the Bible (e.g., Meditations on Psalm 119): bare references in it are taken to be in that book
-        named = references.find( book['title'] )
+        named = references.find( book['title'], language=language )
         context = named[0][2][0].split()[0] if len(named) == 1 else None
         found = notices( path )
         copyright = f"{book['title']}, {book['year']}" + (f", by {book['byline']}. " if book['byline'] else '. ') + (found or f"{LICENCES[book['licence']]}, according to its page on books.freely.giving.")
         entries += [ '[[edition]]', f'id = "{ident}"', f'kind = "{kind}"', f"name = {toml_string( book['title'] )}", ] + ([ f"author = {toml_string( book['byline'] )}" ] if book['byline'] else []) + [
-                     'language = "eng"', 'script = "Latn"', 'versification = "eng"', 'format = "EPUB"', f'source = "{SITE}{book["href"]}"', f'download = "{book["epub"]}"',
+                     f'language = "{language}"', 'script = "Latn"', 'versification = "eng"', 'format = "EPUB"', f'source = "{SITE}{book["href"]}"', f'download = "{book["epub"]}"',
                      f'files = ["Biblelastic/build/downloads/{folder}/{path.name}"]' ] + ([ f'context_book = "{context}"' ] if context else []) + [
                      f'copyright = {toml_string( copyright )}', f'licence = "{LICENCES[book["licence"]]}"', 'redistributable = true', 'licence_verified = false', '' ]
         print( f'{ident:40} {kind:10} {len(found):5} characters of notices' )
     OUTPUT.write_text( '\n'.join( entries ), encoding='utf-8' )
     print( f'{len(wanted)} books written to {OUTPUT.relative_to( REPOSITORY_FOLDER )}. Not included:' )
     for book in skipped:
-        reason = 'not English' if book['lang'] != 'en' else f"licence: {book.get( 'licence' ) or 'not given'}" if book.get( 'licence' ) not in LICENCES else 'no EPUB'
+        reason = 'not English or Spanish' if book['lang'] not in LANGUAGES else f"licence: {book.get( 'licence' ) or 'not given'}" if book.get( 'licence' ) not in LICENCES else 'no EPUB'
         print( f"    {book['title'][:70]} ({reason})" )
     return 0
 

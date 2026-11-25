@@ -11,9 +11,9 @@ import 'strings.dart';
 import 'word_sheet.dart';
 import 'works.dart';
 
-/// The edition that's read (the only Bible that the reader offers so far)
-const edition = 'OET-RV';
-/// The edition that can be shown with it, for the same verses
+/// The Bible that's read: one of the installed ones (see [readableBibles]), which is remembered
+String edition = 'OET-RV';
+/// The edition that can be shown with the OET-RV, for the same verses
 const literal = 'OET-LV';
 
 void main() => runApp(const BiblelasticApp());
@@ -114,6 +114,7 @@ class _ReaderPageState extends State<ReaderPage> {
     try {
       if (!started) await engine.start();
       try { view = (await SharedPreferences.getInstance()).getString('view') ?? view; } catch (_) {}
+      try { chosenBible = (await SharedPreferences.getInstance()).getString('bible'); } catch (_) {}
       started = true;
       await loadContents();
     } catch (error) {
@@ -121,20 +122,36 @@ class _ReaderPageState extends State<ReaderPage> {
     }
   }
 
-  /// Find out which books are installed, then show a section
-  Future<void> loadContents() async {
+  /// The Bible that was chosen (if one was), which is read if it's installed
+  String? chosenBible;
+
+  /// Which Bible to read: the one chosen, or else one in the language of the phone, or else the first
+  String whichBible(List<String> bibles) {
+    if (chosenBible != null && bibles.contains(chosenBible)) return chosenBible!;
+    final language = Localizations.localeOf(context).languageCode == 'es' ? 'spa' : 'eng';
+    return bibles.firstWhere((bible) => works[bible]?['language'] == language, orElse: () => bibles.first);
+  }
+
+  /// Find out which books are installed, then show a section (or the section that a passage starts in, e.g., after choosing another Bible)
+  Future<void> loadContents({String? passage}) async {
     try {
       await loadWorks(engine);
+      final bibles = readableBibles();
+      if (bibles.isNotEmpty) edition = whichBible(bibles);
       final response = await engine.request({'command': 'contents', 'edition': edition});
       books = [for (final document in response['documents'] as List<dynamic>) Book(document['name'] as String, document['chapters'] as int, document['introduction'] as bool)];
       try {
+        if (edition != 'OET-RV') throw const EngineException('The Literal Version goes with the Readers’ Version');
         await engine.request({'command': 'contents', 'edition': literal});
         literalAvailable = true;
       } on EngineException {
         literalAvailable = false;
+        literalVerses = {};
       }
       final current = section;
-      if (current != null && books.any((book) => book.code == current['document'])) {
+      if (passage != null && books.any((book) => passage.startsWith('${book.code} '))) {
+        await showPassage(passage, mark: false);
+      } else if (current != null && books.any((book) => book.code == current['document'])) {
         await showSection(current['document'] as String, current['section'] as int);
       } else {
         await showPassage(books.any((book) => book.code == 'JHN') ? 'JHN 1:1' : '${books.first.code} 1:1', mark: false);
@@ -184,6 +201,22 @@ class _ReaderPageState extends State<ReaderPage> {
     await loadContents();
   }
 
+  /// Read another of the installed Bibles, at the same place
+  Future<void> chooseBible() async {
+    final strings = Strings(Localizations.localeOf(context));
+    final chosen = await showModalBottomSheet<String>(context: context, showDragHandle: true, useSafeArea: true, builder: (context) => ListView(shrinkWrap: true, children: [
+      ListTile(title: Text(strings.chooseBible, style: Theme.of(context).textTheme.titleMedium)),
+      for (final bible in readableBibles())
+        ListTile(title: Text(titleOf(bible)), subtitle: Text(bible), selected: bible == edition, trailing: bible == edition ? const Icon(Icons.check) : null,
+            onTap: () => Navigator.of(context).pop(bible)),
+    ]));
+    if (chosen == null || chosen == edition) return;
+    chosenBible = chosen;
+    try { await (await SharedPreferences.getInstance()).setString('bible', chosen); } catch (_) {}
+    final passage = section?['passage'] as String?;
+    await loadContents(passage: passage?.replaceFirst(RegExp(r'-.*'), '')); // Where the section that's showing starts
+  }
+
   Future<void> openLibrary() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => LibraryPage(engine: engine)));
 
   Future<void> openSearch() async {
@@ -212,7 +245,12 @@ class _ReaderPageState extends State<ReaderPage> {
     try {
       final notes = await engine.request({'command': 'about', 'passage': passage, 'limit': '30', 'length': '1200'});
       if (!mounted) return;
-      if ((notes['comments'] as List<dynamic>).isEmpty) return say(strings.noNotesFor(verse.split(':').last));
+      final comments = notes['comments'] as List<dynamic>;
+      if (comments.isEmpty) return say(strings.noNotesFor(verse.split(':').last));
+      // The notes in the language of the Bible that's being read come first (e.g., the Spanish ones, while reading a Spanish Bible)
+      final language = works[edition]?['language'];
+      bool inLanguage(dynamic comment) => works[comment['edition']]?['language'] == language;
+      notes['comments'] = [...comments.where(inLanguage), ...comments.where((comment) => !inLanguage(comment))];
       await showModalBottomSheet<void>(context: context, isScrollControlled: true, showDragHandle: true, useSafeArea: true, builder: (context) => NotesSheet(passage: passage, notes: notes));
     } catch (error) {
       say('$error');
@@ -235,7 +273,8 @@ class _ReaderPageState extends State<ReaderPage> {
           if (current != null) IconButton(tooltip: strings.nextSection, icon: const Icon(Icons.chevron_right),
               onPressed: next == null ? null : () => showSection(next['document'] as String, next['section'] as int)),
           if (current != null) IconButton(tooltip: strings.search, icon: const Icon(Icons.search), onPressed: openSearch),
-          if (started) PopupMenuButton<String>(tooltip: strings.more, onSelected: (choice) => choice == 'library' ? openLibrary() : openModules(), itemBuilder: (context) => [
+          if (started) PopupMenuButton<String>(tooltip: strings.more, onSelected: (choice) => switch (choice) { 'bible' => chooseBible(), 'library' => openLibrary(), _ => openModules() }, itemBuilder: (context) => [
+            if (current != null && readableBibles().length > 1) PopupMenuItem(value: 'bible', child: ListTile(leading: const Icon(Icons.menu_book_outlined), title: Text(strings.bible), subtitle: Text(edition))),
             if (current != null) PopupMenuItem(value: 'library', child: ListTile(leading: const Icon(Icons.local_library_outlined), title: Text(strings.library))),
             PopupMenuItem(value: 'modules', child: ListTile(leading: const Icon(Icons.download), title: Text(strings.modules))),
           ]),
@@ -391,7 +430,7 @@ class _ReaderPageState extends State<ReaderPage> {
         if (inFocus && markFocus) text = text.copyWith(backgroundColor: focusColour);
         TapGestureRecognizer? recogniser;
         final slot = piece['w'] as int?;
-        if (slot != null) { // Each word can be asked about
+        if (slot != null && aligned.contains(ofEdition)) { // Each word can be asked about (what it translates)
           if (linkedHere.contains(slot)) text = text.copyWith(backgroundColor: linkedColour);
           recogniser = TapGestureRecognizer()..onTap = () => showWord(slot, ofEdition);
           recognisers.add(recogniser);

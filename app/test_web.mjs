@@ -114,7 +114,7 @@ try {
     await shoot('5-landed');
     await tap(392, 27); // The ‘More’ menu
     await shoot('7a-menu');
-    await tap(300, 40); // Library (the first item)
+    await tap(300, 104); // Library (the second item, after Bible)
     await shoot('7-library');
     await tap(120, 116); // The first book
     await shoot('8-contents');
@@ -125,6 +125,20 @@ try {
     await sleep(1000);
     await shoot('9b-chapter-end');
     for (let n = 0; n < 3; n++) await tap(28, 27); // Back to the reader
+    // A Spanish Bible, chosen from the menu, with its notes (the Spanish ones first)
+    await tap(392, 27); // The ‘More’ menu
+    await tap(300, 50); // Bible (the first item)
+    await shoot('10a-bibles');
+    await tap(200, 780); // The Aquifer Spanish text (the second): the same passage, in Spanish
+    await sleep(1000);
+    await shoot('10b-spanish');
+    await tap(25, 280); // The number of John 15:4, for its notes: the Spanish ones should come first
+    await shoot('10c-spanish-notes');
+    await tap(200, 60); // Outside the sheet, to close it
+    await tap(392, 27); // Back to the OET, for the rest
+    await tap(300, 50);
+    await tap(200, 715);
+    await sleep(1000);
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId);
     await sleep(1500);
     await shoot('6-wide'); // Side by side

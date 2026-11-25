@@ -235,7 +235,7 @@ with one document, `Chapter`: each top-level item of the book's table of content
     a heading that names one (e.g., ‘1:21-28 Jesus heals’), up to the next heading of the same or a higher level. So a book's chapters are found by the notes on a verse, like a commentary's.
 
 The registry gives each book's `download` address: the file is fetched once into `files` (under `build/downloads/`) and kept there.
-There are thirty-five, all from [books.freely.giving](https://books.freely.giving), and all CC0 (or in the public domain). Five are in `sources.toml` itself:
+There are sixty-two, all from [books.freely.giving](https://books.freely.giving), and all CC0 (or in the public domain). Five are in `sources.toml` itself:
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
@@ -248,23 +248,53 @@ There are thirty-five, all from [books.freely.giving](https://books.freely.givin
 The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
 so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
 
-The other thirty are every English book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
+The other fifty-seven are every English or Spanish book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
 (which `sources.toml` includes), written by
 
     cd pipeline && python3 -m biblelastic_ingest.freely_giving
 
 which surveys the library (one request at a time), fetches each EPUB once, and takes each book's copyright from its own notices in its front matter
 (e.g., Common Weal Press's CC0 dedication of its editions of the Puritans, or the BSB's public-domain notice): run it again for books added since.
-They range from a 2,800-word essay (*On the Election of Infants*) to the first volume of Spurgeon's *Autobiography* (167,000 words), with 1.9 million words in all,
-mostly older works (Owen, Bunyan, Brooks, Watson, Flavel, Gouge, Perkins, Sibbes, Edwards, Spurgeon, the 1689 Baptist Confession) newly edited, and some recent ones.
-*Meditations on Psalm 119* has `context_book = "PSA"`, from its title. Books there that are only PDFs, web pages, or print (e.g., Calvin's *Institutes*,
-Spurgeon's *Morning and Evening*, Augustine's *Expositions on the Psalms*), or not in English, aren't included yet.
+They range from a 2,800-word essay (*On the Election of Infants*) to Edwards's *Religious Affections* (179,000 words),
+mostly older works (Owen, Bunyan, Brooks, Watson, Flavel, Gouge, Perkins, Sibbes, Edwards, Spurgeon, the 1689 Baptist Confession) newly edited,
+many of them also in a modernised edition (e.g., `AllOfGraceModern`), and some recent ones. Three are in Spanish (`language = "spa"`):
+*Meditaciones sobre el Salmo 119*, *Pronunciando y traduciendo el Nombre Divino* (`NombreDivino`), and *Sobre la elección de los infantes*,
+whose references are found with the Bible's books' Spanish names (e.g., ‘Juan 3:16’, ‘Sal 119:105’, ‘1 Co 13:4-7’).
+*Meditations on Psalm 119* and its Spanish edition have `context_book = "PSA"`, from their titles. Books there that are only PDFs, web pages, or print (e.g., Calvin's *Institutes*,
+Spurgeon's *Morning and Evening*, Augustine's *Expositions on the Psalms*, and the two Spanish editions of *Our Sin, His Mercy*) aren't included yet.
 
 ## Disclaimers
 
 The registry's `[disclaimers]` table gives text (a little HTML: `<em>` and `<a>`) for each kind of work, which is put in the manifest as `disclaimer`
 and must be shown wherever such a work's words are shown. So far it's the same for books and commentaries: that the material is included in good faith,
 but the views are its authors' and not necessarily the design decisions of the Open English Translation.
+A table for a language (e.g., `[disclaimers.spa]`) gives it in that language, for the works in it: so far a Spanish translation, which is still to be checked.
+
+## Spanish
+
+Two Spanish Bibles and the Spanish study notes and Bible dictionary come from the [Bible Aquifer](https://github.com/BibleAquifer), in `/srv/Bibles/BibleAquifer`:
+
+| Edition | Kind | From | Licence |
+| --- | --- | --- | --- |
+| `ASBRT` *Texto Bíblico de Referencia en Español de Aquifer* (Aquifer Spanish Bible Reference Text, 2026) | `scripture` | USFM | CC BY-SA 4.0 |
+| `RV1909` *Reina-Valera 1909* (with Strong's numbers on its words) | `scripture` | USFM | Public domain |
+| `AOSN-ES` *Notas de estudio abiertas de Aquifer*: 13,303 study notes (on 43 books so far), 66 book introductions, and 124 profiles | `commentary` | JSON | CC BY-SA 4.0 |
+| `AOBD-ES` *Diccionario bíblico abierto de Aquifer*: 5,886 articles | `dictionary` | JSON | CC BY-SA 4.0 |
+
+The notes and dictionary are the Aquifer's translations of the Tyndale Open Study Notes and Tyndale Open Bible Dictionary.
+
+- **The Bibles** have no section headings, so the registry's `sections_from = "OET-RV"` gives each the OET-RV's sections, starting at the same verses
+    (at the next verse, where a section would start inside a combined verse, e.g., ‘6-7’). Those sections have no titles: the reader shows the passage.
+    Their files are named like `43JHNASBRT.SFM` (the book's code after its number). A `\w` of the RV1909 can hold several words that translate one Hebrew or Greek word
+    (e.g., ‘el principio’ for ἀρχῇ): each becomes a token of its own, with the same Strong's number.
+- **The notes and articles** (`format = "Aquifer"`, read by `pipeline/biblelastic_ingest/aquifer.py`) become the same documents as the Tyndale works:
+    a study note goes into the document of the book that it's about (named by its verses, e.g., `3:16` or `1:1-2:3`), and introductions, profiles, and articles
+    into `Intros`, `Profiles`, and `Articles`. A note or introduction is `about` its passage; the Bible references in the text (`<data class="bible-ref">`) are `cites`
+    anchors, and the links to other items (`<data class="resource-ref">`) are `see` links (those to the other work, e.g., from a note to the dictionary, aren't kept yet).
+    A profile's or article's list of passages (every place where its subject is named, up to hundreds) isn't taken as what it's about.
+
+Searching folds accents, as the ingest does (so ‘corazón’ finds ‘corazon’ in `norm`). The Aquifer also has Spanish words aligned to the Hebrew and Greek
+(`alignments/` in each Bible's folder), which could let a Spanish word be tapped like an OET one: not used yet.
 
 ## The UBS dictionaries and handbooks
 

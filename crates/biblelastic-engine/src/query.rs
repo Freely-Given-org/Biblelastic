@@ -921,5 +921,25 @@ fn example(text: &Text, slot: u32) -> Example {
 /// `c:d:H0776` → `H0776` (drops the prefixes that mark attached Hebrew particles)
 fn base_strong(strong: &str) -> String { strong.rsplit(':').next().unwrap_or(strong).to_string() }
 
-/// Provisional: matches the ingest's `norm` column only for unaccented words
-fn normalise(words: &[String]) -> Vec<String> { words.iter().map(|word| word.to_lowercase()).collect() }
+/// As the ingest's `norm` column has them for Latin script: lower case, without accents or modifier letters (so `Corazón` → `corazon`, and `ñ` → `n`).
+/// (Provisional for Greek and Hebrew, whose words are only lower-cased.)
+fn normalise(words: &[String]) -> Vec<String> { words.iter().map(|word| fold_latin(&word.to_lowercase())).collect() }
+
+const ACCENTED: &str = "ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöùúûüýÿĀāĂăĄąĆćĈĉĊċČčĎďĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĨĩĪīĬĭĮįİĴĵĶķĹĺĻļĽľŃńŅņŇňŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽž";
+const UNACCENTED: &str = "AAAAAACEEEEIIIINOOOOOUUUUYaaaaaaceeeeiiiinooooouuuuyyAaAaAaCcCcCcCcDdEeEeEeEeEeGgGgGgGgHhIiIiIiIiIJjKkLlLlLlNnNnNnOoOoOoRrRrRrSsSsSsSsTtTtUuUuUuUuUuUuWwYyYZzZzZz";
+
+fn fold_latin(word: &str) -> String {
+    word.chars().filter(|&character| !matches!(character, '\u{0300}'..='\u{036F}' | '\u{02B0}'..='\u{02FF}'))
+        .map(|character| ACCENTED.chars().position(|accented| accented == character).and_then(|ix| UNACCENTED.chars().nth(ix)).unwrap_or(character))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_words_are_folded_as_the_ingest_folds_them() {
+        assert_eq!(normalise(&["Corazón".to_string(), "Señor".to_string(), "Yaʸsous".to_string(), "λόγος".to_string()]), ["corazon", "senor", "yasous", "λόγος"]);
+    }
+}

@@ -6,11 +6,28 @@ import 'engine/engine.dart';
 /// The installed works, by edition: {'title', 'work', 'disclaimer'} (from the engine's `info`). Kept up to date by [loadWorks].
 final Map<String, Map<String, dynamic>> works = {};
 
+/// The editions whose words are linked to the original words that they translate (so a word can be tapped to see what it translates)
+final Set<String> aligned = {};
+
 Future<void> loadWorks(Engine engine) async {
   final info = await engine.request({'command': 'info'});
+  final modules = (info['modules'] as List<dynamic>).cast<Map<String, dynamic>>();
   works
     ..clear()
-    ..addAll({for (final module in info['modules'] as List<dynamic>) if (module['kind'] == 'text') module['edition'] as String: module as Map<String, dynamic>});
+    ..addAll({for (final module in modules) if (module['kind'] == 'text') module['edition'] as String: module});
+  aligned
+    ..clear()
+    ..addAll([for (final module in modules) if (module['kind'] == 'alignment') module['from'] as String]);
+}
+
+/// The installed Bibles that can be read (translations, not the original-language texts, nor the OET's Literal Version, which goes with the Readers' Version),
+/// the OET first, then the Aquifer Spanish text, then the others by title
+List<String> readableBibles() {
+  const first = ['OET-RV', 'ASBRT'];
+  final bibles = [for (final MapEntry(key: edition, value: work) in works.entries)
+      if (work['work'] == 'scripture' && edition != 'OET-LV' && !const {'grc', 'hbo', 'arc'}.contains(work['language'])) edition];
+  int rank(String edition) => first.contains(edition) ? first.indexOf(edition) : first.length;
+  return bibles..sort((a, b) => rank(a) != rank(b) ? rank(a) - rank(b) : titleOf(a).compareTo(titleOf(b)));
 }
 
 /// A work's title, or its edition's code if it isn't known

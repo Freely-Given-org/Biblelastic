@@ -293,6 +293,7 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     let work = manifest_value(&manifest, "kind").unwrap_or_else(|| "scripture".to_string());
     // What the work is called, and anything that must be shown with it (HTML, e.g., that the views are its authors')
     let (title, disclaimer) = (manifest_value(&manifest, "name").unwrap_or_else(|| id.clone()), manifest_value(&manifest, "disclaimer").unwrap_or_default());
+    let language = manifest_value(&manifest, "language").unwrap_or_default(); // e.g., `eng` or `spa`
     let new_module = |layer: &str, kind: &str| {
         let mut writer = options.writer();
         writer.raw("module.kind", kind.as_bytes());
@@ -300,6 +301,7 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
         writer.raw("module.edition", id.as_bytes());
         writer.raw("module.layer", layer.as_bytes());
         writer.raw("module.title", title.as_bytes());
+        if !language.is_empty() { writer.raw("module.language", language.as_bytes()); }
         if !disclaimer.is_empty() { writer.raw("module.disclaimer", disclaimer.as_bytes()); }
         writer.raw("manifest", &manifest);
         writer.strings("documents.names", &documents);

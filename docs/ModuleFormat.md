@@ -66,7 +66,8 @@ The smallest useful download, `OET-RV.text.blm`, is 6.4 MB.
 A commentary or a dictionary is an edition too, and so far each is a single `text` module:
 `TOSN.text.blm` (Tyndale Open Study Notes) is 7.8 MB and `TOBD.text.blm` (Tyndale Open Bible Dictionary) is 9.2 MB.
 With the thesaurus (2 kB), the UBS meanings layers (`UHB.UBS.blm`, 2.1 MB, and `SR-GNT.UBS.blm`, 1.6 MB), and the UBS handbooks (`UBSH.text.blm`, 2.1 MB),
-and thirty-five books (0.03 to 1.1 MB each, 14.7 MB in all), that makes fifty-three modules and 79 MB altogether.
+sixty-two books (0.03 to 1.1 MB each, 27.7 MB in all), and the Spanish Bibles, study notes, and dictionary (`ASBRT`, `RV1909` with its Strong's numbers, `AOSN-ES`, and `AOBD-ES`: 25.5 MB),
+that makes eighty-five modules and 117 MB altogether.
 
 ## File layout
 

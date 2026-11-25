@@ -107,7 +107,8 @@ and checked periodically for updated versions.
 There's the start of the build pipeline and engine, and a minimal app (for Android and browsers) that reads, searches, and shows notes (see [docs/App.md](docs/App.md)).
 Four Bible editions (OET-RV, OET-LV, SR-GNT, and UHB), one commentary (Tyndale Open Study Notes), one dictionary (Tyndale Open Bible Dictionary),
 the UBS Hebrew and Greek dictionaries (as the meaning of each original-language word), the UBS handbooks on animals, plants, and objects,
-and thirty-five free books from books.freely.giving (every English one there that's CC0 or in the public domain and has an EPUB: from Puritan classics to a study of Mark and a commentary on Jude)
+sixty-two free books from books.freely.giving (every English or Spanish one there that's CC0 or in the public domain and has an EPUB: from Puritan classics to a study of Mark and a commentary on Jude),
+and in Spanish two Bibles (the Aquifer Spanish Bible Reference Text and the Reina-Valera 1909) with the Aquifer's Spanish study notes and Bible dictionary
 can be converted and compiled, and three of the example searches above already work (the third only as a first sketch):
 
     cd pipeline && python3 -m biblelastic_ingest && cd ..      # Source texts → build/intermediate/

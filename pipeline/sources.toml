@@ -105,10 +105,78 @@ licence = "CC BY-SA 4.0"
 licence_verified = false
 columns = { gloss = "WordGloss", context_gloss = "ContextualWordGloss", morpheme_glosses = "MorphemeGlosses", context_morpheme_glosses = "ContextualMorphemeGlosses", role = "Role", nesting = "Nesting", tags = "Tags", row_type = "RowType" }
 
+# Spanish Bibles, from the Bible Aquifer (https://github.com/BibleAquifer). Neither has section headings, so each takes the OET-RV's sections (at the same verses).
+[[edition]]
+id = "ASBRT"
+name = "Texto Bíblico de Referencia en Español de Aquifer" # Aquifer Spanish Bible Reference Text
+language = "spa"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "Aquifer Spanish Bible Reference Text © 2026 Mission Mutual (https://missionmutual.org), revised from Biblica's Open Nueva Biblia Viva"
+licence = "CC BY-SA 4.0"
+redistributable = true
+licence_verified = false
+source = "https://github.com/BibleAquifer/AquiferSpanishBibleReferenceText"
+files = ["../Bibles/BibleAquifer/AquiferSpanishBibleReferenceText/spa/usfm/*.SFM"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "RV1909"
+name = "Reina-Valera 1909"
+language = "spa"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "Reina-Valera 1909: public domain (CC0), as published by the Bible Aquifer"
+licence = "Public domain"
+redistributable = true
+licence_verified = false
+source = "https://github.com/BibleAquifer/ReinaValera1909"
+files = ["../Bibles/BibleAquifer/ReinaValera1909/spa/usfm/*.SFM"]
+features = ["strong"]
+sections_from = "OET-RV"
+
 # Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
 [disclaimers]
 commentary = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."
 book = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."
+
+[disclaimers.spa] # For works in Spanish (a translation of the above: to be checked)
+commentary = "Este material se incluye de buena fe, pero las opiniones expresadas son las de su(s) autor(es) y no coinciden necesariamente con las decisiones de diseño de la <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> de la Biblia</em>."
+book = "Este material se incluye de buena fe, pero las opiniones expresadas son las de su(s) autor(es) y no coinciden necesariamente con las decisiones de diseño de la <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> de la Biblia</em>."
+
+# Spanish study notes and Bible dictionary from the Bible Aquifer: translations of the Tyndale Open Study Notes and Tyndale Open Bible Dictionary
+[[edition]]
+id = "AOSN-ES"
+kind = "commentary"
+name = "Notas de estudio abiertas de Aquifer" # Aquifer Open Study Notes, in Spanish
+language = "spa"
+script = "Latn"
+versification = "eng"
+format = "Aquifer"
+copyright = "Aquifer Open Study Notes © 2026 Mission Mutual (https://missionmutual.org), translated from the Tyndale Open Study Notes © 2022 Tyndale House Publishers"
+licence = "CC BY-SA 4.0"
+redistributable = true
+licence_verified = false
+source = "https://github.com/BibleAquifer/AquiferOpenStudyNotes"
+files = ["../Bibles/BibleAquifer/AquiferOpenStudyNotes/spa/json/*.json", "../Bibles/BibleAquifer/AquiferOpenStudyNotesBookIntros/spa/json/*.json",
+         "../Bibles/BibleAquifer/AquiferOpenStudyNotesProfiles/spa/json/*.json"]
+
+[[edition]]
+id = "AOBD-ES"
+kind = "dictionary"
+name = "Diccionario bíblico abierto de Aquifer" # Aquifer Open Bible Dictionary, in Spanish
+language = "spa"
+script = "Latn"
+versification = "eng"
+format = "Aquifer"
+copyright = "Aquifer Open Bible Dictionary © 2026 Mission Mutual (https://missionmutual.org), translated from the Tyndale Open Bible Dictionary © 2022 Tyndale House Publishers"
+licence = "CC BY-SA 4.0"
+redistributable = true
+licence_verified = false
+source = "https://github.com/BibleAquifer/AquiferOpenBibleDictionary"
+files = ["../Bibles/BibleAquifer/AquiferOpenBibleDictionary/spa/json/*.json"]
 
 # Commentaries and dictionaries are made of items (study notes, articles, etc.). Each item becomes an entry in a document:
 #   item_documents says which document each type of item goes into ("*" means one document for each Bible book that the items are about).

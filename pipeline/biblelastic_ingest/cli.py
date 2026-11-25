@@ -8,7 +8,7 @@ Each source file (or each document of a commentary or dictionary) is handled in 
 then word alignments are derived in a second pass.
 """
 import argparse
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor
 import contextlib
 import csv
 from datetime import date
@@ -25,7 +25,7 @@ import time
 import tomllib
 import urllib.request
 
-from . import epub, items, normalise, ubs, usfm
+from . import aquifer, epub, items, normalise, ubs, usfm
 
 PIPELINE_FOLDER = Path( __file__ ).resolve().parent.parent
 REPOSITORY_FOLDER = PIPELINE_FOLDER.parent
@@ -41,8 +41,9 @@ NOTES_RE = re.compile( r'\\(fe|fig|f|x)\b.*?\\\1\*', re.DOTALL )
 
 
 def book_code( path:Path ) -> str:
-    """ OET-RV_MRK.ESFM → MRK and 42-MRK.usfm → MRK and 09-1SA.usfm → SA1 """
-    code = re.split( '[-_]', path.stem )[-1].upper()
+    """ OET-RV_MRK.ESFM → MRK and 42-MRK.usfm → MRK and 09-1SA.usfm → SA1 and 43JHNRV09.SFM → JHN """
+    numbered = re.match( r'\d\d([1-3A-Z][A-Z]{2})', path.stem )
+    code = numbered.group( 1 ) if numbered else re.split( '[-_]', path.stem )[-1].upper()
     return USFM_TO_BBB.get( code, code )
 
 
@@ -174,7 +175,7 @@ def ingest_file( edition:dict, sourcePath:str, BBB:str, table:tuple|None, output
 
     # Output
     folder = Path( outputFolder )
-    columns = ['norm'] + edition['features']
+    columns = ['norm'] + edition.get( 'features', [] )
     write_tsv( folder / f'{BBB}.tokens.tsv', ['before','text','after'] + columns,
                 ( [before, word, after] + [ features.get( column, '' ) for column in columns ] for before,word,after,features in tokens ) )
     if layerRows is not None:
@@ -315,7 +316,7 @@ def ingest_ubs( entry:dict, output:Path, sourceRoot:Path ) -> dict:
 
 def ingest_book( edition:dict, path:str, outputFolder:str ) -> dict:
     """ Worker: a book (EPUB), with one entry for each top-level item of its contents """
-    parsed, _contents = epub.parse( path, edition.get( 'context_book' ) )
+    parsed, _contents = epub.parse( path, edition.get( 'context_book' ), edition.get( 'language', 'eng' ) )
     return write_items( parsed, 'Chapter', [Path( path ).name], hashlib.sha256( Path( path ).read_bytes() ).hexdigest(), outputFolder, edition['script'] )
 
 
@@ -336,6 +337,52 @@ def read_column( path:Path, columnName:str ) -> list:
     with open( path, encoding='utf-8', newline='' ) as tsvFile:
         columnIndex = tsvFile.readline().rstrip( '\n' ).split( '\t' ).index( columnName )
         return [ line.rstrip( '\n' ).split( '\t' )[columnIndex] for line in tsvFile ]
+
+
+def has_items( edition:dict ) -> bool:
+    """ Whether an edition is made of items (a commentary, dictionary, or book), rather than being a Bible text """
+    return 'item_documents' in edition or edition.get( 'format' ) in ('EPUB', 'Aquifer')
+
+
+def book_extent( folder:Path ):
+    """ A function giving a Bible book's last (chapter, verse) in an ingested edition (e.g., the OET-RV), or None """
+    cache = {}
+    def extent( BBB:str ) -> tuple|None:
+        if BBB not in cache:
+            path, last = folder / f'{BBB}.nodes.tsv', None
+            if path.exists():
+                for row in csv.reader( open( path, encoding='utf-8', newline='' ), delimiter='\t', quoting=csv.QUOTE_NONE ):
+                    if row[0] == 'verse' and re.match( r'\d+:\d+', row[3] ): last = max( last or (0, 0), tuple( int(re.match( r'\d+', part ).group()) for part in row[3].split( ':' ) ) )
+            cache[BBB] = last
+        return cache[BBB]
+    return extent
+
+
+def borrow_sections( fromPath:Path, toPath:Path ) -> int:
+    """
+    Give a book without section headings (e.g., most Spanish Bibles) the sections of another edition of it (e.g., the OET-RV's),
+    starting at the same verses. They have no titles of their own (the reader shows the passage). Returns how many sections it has.
+    """
+    def read( path:Path ) -> list:
+        with open( path, encoding='utf-8', newline='' ) as nodesFile: return list( csv.reader( nodesFile, delimiter='\t', quoting=csv.QUOTE_NONE ) )
+    def verse_key( name:str ) -> tuple: return tuple( int(re.match( r'\d+', part ).group()) for part in name.split( ':' ) )
+    theirs, ours = read( fromPath ), read( toPath )
+    header, ours = ours[0], [ row for row in ours[1:] if row[0] != 'section' ]
+    theirVerses = sorted( (int(row[1]), verse_key( row[3] )) for row in theirs[1:] if row[0] == 'verse' and int(row[2]) > int(row[1]) )
+    # Where each of their sections starts: its first verse
+    startVerses = []
+    for row in theirs[1:]:
+        if row[0] != 'section': continue
+        first = next( (key for start, key in theirVerses if start >= int(row[1])), None )
+        if first and first not in startVerses: startVerses.append( first )
+    ourVerses = sorted( (verse_key( row[3] ), int(row[1])) for row in ours if row[0] == 'verse' and int(row[2]) > int(row[1]) )
+    end = max( int(row[2]) for row in ours if row[0] == 'book' )
+    # Each section starts at our first verse at or after theirs (so a combined verse, e.g., 6-7, starts the section that 7 would)
+    starts = sorted( { next( (start for key, start in ourVerses if key >= wanted), end ) for wanted in startVerses } - {end} )
+    ours += [ ['section', str(start), str(starts[ix+1] if ix+1 < len(starts) else end), '', ''] for ix, start in enumerate( starts ) ]
+    ours.sort( key=lambda row: (int(row[1]), -int(row[2]), row[0]) )
+    write_tsv( toPath, header, ours )
+    return len(starts)
 
 
 def align_book( fromFolder:str, toFolder:str, BBB:str, outputPath:str ) -> dict:
@@ -388,6 +435,15 @@ def main() -> int:
             if edition.get( 'format' ) == 'EPUB': # A book
                 futures[edition['id']] = [ pool.submit( ingest_book, edition, str(path), str(folder) ) for path in paths[:1] ]
                 continue
+            if edition.get( 'format' ) == 'Aquifer': # Bible Aquifer resources (JSON): all parsed together, so that links between items can be followed
+                parsed = aquifer.parse( [ str(path) for path in paths ], book_extent( arguments.output / edition.get( 'extent_from', 'OET-RV' ) / 'documents' ) )
+                digest = hashlib.sha256( b''.join( path.read_bytes() for path in paths ) ).hexdigest()
+                futures[edition['id']] = []
+                for document, (parsedItems, sourceNames) in parsed.items():
+                    if wantedBooks and document.upper() not in wantedBooks: continue
+                    future = Future(); future.set_result( write_items( parsedItems, document, sourceNames, digest, str(folder), edition['script'] ) )
+                    futures[edition['id']].append( future )
+                continue
             if 'item_documents' in edition: # A commentary or dictionary: split the files into items, and handle each document's items together
                 groups = {}
                 for path in paths:
@@ -409,8 +465,13 @@ def main() -> int:
             manifest['layers'] = [ { key:(list( value ) if key == 'columns' else value) for key,value in edition[layerKey].items() if key != 'filter_values' }
                                     | { 'kind':'features' if layerKey == 'layer' else 'variants' } for layerKey in ('layer','variants') if layerKey in edition ]
             manifest['token_columns'] = ['before','text','after','norm'] + edition.get( 'features', [] )
-            if manifest['kind'] in registry.get( 'disclaimers', {} ): manifest['disclaimer'] = registry['disclaimers'][manifest['kind']]
-            if 'item_documents' in edition or edition.get( 'format' ) == 'EPUB': # Check that every link between items leads somewhere
+            # The disclaimer for this kind of work, in the work's own language if there's one in that language (e.g., [disclaimers.spa])
+            disclaimers = registry.get( 'disclaimers', {} )
+            inLanguage = disclaimers.get( edition.get( 'language', '' ), {} )
+            disclaimer = inLanguage.get( manifest['kind'] ) if isinstance( inLanguage, dict ) else None
+            if not disclaimer and isinstance( disclaimers.get( manifest['kind'] ), str ): disclaimer = disclaimers[manifest['kind']]
+            if disclaimer: manifest['disclaimer'] = disclaimer
+            if has_items( edition ): # Check that every link between items leads somewhere
                 # (ignoring case, because the sources aren't consistent about it, e.g., AbrahamSBosom for AbrahamsBosom)
                 locations = { location.casefold() for document in documents for location in document.pop( 'entry_locations' ) }
                 targets = [ target.casefold() for document in documents for target in document.pop( 'link_targets' ) ]
@@ -428,7 +489,7 @@ def main() -> int:
                 for name, count in document['unknown_markers'].items(): unknownMarkers[name] = unknownMarkers.get( name, 0 ) + count
             totalTokens = sum( document['tokens'] for document in documents )
             print( f"{edition['id']}: {len(documents)} documents, {totalTokens:,} tokens, {len(documents)-len(bad)}/{len(documents)} passed the text checks" )
-            if 'item_documents' in edition or edition.get( 'format' ) == 'EPUB':
+            if has_items( edition ):
                 anchorCounts = {}
                 for document in documents:
                     for kind, count in document['anchors'].items(): anchorCounts[kind] = anchorCounts.get( kind, 0 ) + count
@@ -449,6 +510,13 @@ def main() -> int:
             if unknownMarkers: print( f'    unknown paragraph markers: {unknownMarkers}' )
             for document in bad:
                 print( f"    FAILED {document['BBB']}: text_ok={document['text_ok']} row_marks_ok={document['row_marks_ok']} {document.get( 'text_difference', '' )}" )
+
+        # Second pass: sections from another edition, for an edition without section headings (its own sections, if any, are replaced)
+        for edition in editions:
+            if 'sections_from' not in edition: continue
+            fromFolder, toFolder = arguments.output / edition['sections_from'] / 'documents', arguments.output / edition['id'] / 'documents'
+            counts = [ borrow_sections( fromFolder / path.name, path ) for path in sorted( toFolder.glob( '*.nodes.tsv' ) ) if (fromFolder / path.name).exists() ]
+            print( f"{edition['id']}: {sum( counts ):,} sections in {len(counts)} books, at the same verses as {edition['sections_from']}'s" )
 
         # Second pass: derive alignments (needs both editions' token files to be complete)
         ingested = { edition['id'] for edition in editions }

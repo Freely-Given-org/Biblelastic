@@ -191,11 +191,11 @@ class _Parser:
         if self.spans and self.spans[-1][0] in ATTRIBUTE_SPANS and '|' in segment:
             segment, attributeString = segment.split( '|', 1 )
             self.spans[-1][2] += attributeString
-            if self.spans[-1][0] == 'w': # The whole content is one word, whatever characters it contains
-                if segment.strip(): self.add_token( segment.strip(), dict(ATTRIBUTE_RE.findall(attributeString)) )
+            if self.spans[-1][0] == 'w': # The whole content is one word, whatever characters it contains (except spaces)
+                self.add_words( segment, dict(ATTRIBUTE_RE.findall(attributeString)) )
                 return
         elif self.spans and self.spans[-1][0] == 'w':
-            if segment.strip(): self.add_token( segment.strip(), {} )
+            self.add_words( segment, {} )
             return
         if self.esfm: segment = self.take_marks( segment )
         position = 0
@@ -205,6 +205,12 @@ class _Parser:
             if match.group( 1 ): self.add_row_number( int(match.group( 1 )) )
             else: self.add_token( match.group( 2 ), {} )
         self.gap += segment[position:]
+
+    def add_words( self, segment:str, features:dict ) -> None:
+        """ The content of a \\w: one word, or several with the same attributes, e.g., Spanish ‘el principio’ for one Greek word in the RV1909 """
+        for ix, word in enumerate( segment.split() ):
+            if ix: self.gap += ' '
+            self.add_token( word, dict(features) )
 
     def take_marks( self, segment:str ) -> str:
         """ Remove any OET marks from the start of this text, recording what they mean. """
@@ -358,7 +364,7 @@ def reference_text( source:str, esfm:bool=False ) -> str:
     text = re.sub( r'(?m)^\\(?:id|usfm|ide|rem|h|toca?\d|sts|cp)\b.*$', '', text )
     text = re.sub( r'\\(fe|fig|f|x)\b.*?\\\1\*', '', text, flags=re.DOTALL )
     text = re.sub( r'\\(va|vp|ca)\b.*?\\\1\*', '', text, flags=re.DOTALL )
-    text = re.sub( r'\\(w|jmp|rb|xt)\s([^|\\]*)\|[^\\]*(?=\\\1\*)', r'\2', text )
+    text = re.sub( r'\\(\+?)(w|jmp|rb|xt)\s([^|\\]*)\|[^\\]*(?=\\\1\2\*)', r'\3', text ) # (also nested, e.g., \+w inside \add)
     if esfm: # Remove the OET marks: after \add, and at the start of a line (after any paragraph and verse markers)
         text = re.sub( r'(\\\+?add )(?:\?[+=<>≡&@*#%^!$≈]?|[+=<>≡&@*#%^!$≈])', r'\1', text )
         text = re.sub( r'(?m)^((?:\\[a-z]+\d?[ \n]+)?(?:\\v \S+[ \n]+)?)[≈^→⇔]+', r'\1', text )

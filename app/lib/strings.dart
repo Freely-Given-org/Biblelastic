@@ -43,6 +43,8 @@ class Strings {
   String get similarMeaning => _pick(['Words with a similar meaning:', 'Palabras de significado parecido:']);
   String get aboutThis => _pick(['About this:', 'Sobre esto:']);
   String get library => _pick(['Library', 'Biblioteca']);
+  String get bible => _pick(['Bible', 'Biblia']);
+  String get chooseBible => _pick(['Choose a Bible', 'Elija una Biblia']);
   String get books => _pick(['Books', 'Libros']);
   String get commentaries => _pick(['Commentaries', 'Comentarios']);
   String get dictionaries => _pick(['Dictionaries and handbooks', 'Diccionarios y manuales']);

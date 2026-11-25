@@ -151,9 +151,10 @@ def read_epub( path:str ) -> tuple:
 
 
 class BookParser( items._Parser ):
-    def __init__( self, context:str|None ) -> None:
+    def __init__( self, context:str|None, language:str='eng' ) -> None:
         super().__init__( {}, 'Latn' )
         self.context = context # The Bible book that bare references are in (e.g., MRK for a study of Mark), if any
+        self.language = language # The book's language, for the names of the Bible's books in its references (`eng` or `spa`)
         self.openAbout = [] # Headings that name a passage: (level, start token, passages)
         self.listing = 0 # While above 0: the level of the heading of an index, contents, bibliography, etc., where references aren't citations
 
@@ -184,7 +185,7 @@ class BookParser( items._Parser ):
             before, word, after, _features = tokens[ix]
             offsets.append( (len(text) + len(before), ix) ); text += before + word + after
         word_at = lambda position: next( (ix for offset, ix in reversed( offsets ) if offset <= position), start )
-        for first, last, passages in references.find( text, self.context ):
+        for first, last, passages in references.find( text, self.context, self.language ):
             if self.listing: break # e.g., a Scripture index: its references aren't the book citing those passages
             if level == 1: break # (A chapter's title is taken from its entry in the contents)
             if level: # A heading that names a passage: what's under it is about that passage
@@ -192,10 +193,10 @@ class BookParser( items._Parser ):
             for passage in passages: self.parsed.anchors.append( (word_at( first ), word_at( max( first, last - 1 ) ) + 1, 'cites', passage) )
 
 
-def parse( path:str, context:str|None=None ) -> tuple:
+def parse( path:str, context:str|None=None, language:str='eng' ) -> tuple:
     """ Returns (parsed items, table of contents) for a book, with one entry for each top-level item of its contents """
     blocks, contents = read_epub( path )
-    parser = BookParser( context )
+    parser = BookParser( context, language )
     tokens = parser.doc.tokens
     top = min( (depth for depth, _label, _index in contents), default=1 )
     starts = { index:label for depth, label, index in contents if depth == top }
@@ -212,7 +213,7 @@ def parse( path:str, context:str|None=None ) -> tuple:
             entryStart, entryTitle = len(tokens), starts[index]
             parser.listing = 1 if LISTING_RE.search( entryTitle ) else 0
             # A chapter whose title names a passage (e.g., ‘Mark 1:1-20’) is about that passage
-            found = references.find( entryTitle, parser.context )
+            found = references.find( entryTitle, parser.context, language )
             if found: parser.openAbout.append( (1, entryStart, found[0][2]) )
         level = 0
         if block.tag in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'): level = int(block.tag[1])

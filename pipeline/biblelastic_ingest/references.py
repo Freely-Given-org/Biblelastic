@@ -1,5 +1,6 @@
 """
-Finding Bible references in plain English text, e.g., ‘John 3:16’, ‘2 Tim. 3:1–9’, ‘Mark 2-3:6’, ‘Rom 8:28, 31-39; 9:1’, or ‘Jude 5’.
+Finding Bible references in plain English text, e.g., ‘John 3:16’, ‘2 Tim. 3:1–9’, ‘Mark 2-3:6’, ‘Rom 8:28, 31-39; 9:1’, or ‘Jude 5’,
+or Spanish text, e.g., ‘Juan 3:16’, ‘Sal 119:105’, or ‘1 Co 13:4-7’ (with language='spa')
 
 Each reference found becomes passages in the form that the compiler reads: ‘JHN 3:16’, ‘TI2 3:1-3:9’, or ‘ROM 8’ for a whole chapter.
 A book's name must be followed by a number, so ‘Mark’ the name (or ‘Job’ the word) isn't taken for a book on its own.
@@ -24,20 +25,43 @@ _NAMES = {
     'JAM':'james jas jam jms', 'PE1':'1peter 1pet 1pe 1pt ipeter', 'PE2':'2peter 2pet 2pe 2pt iipeter', 'JN1':'1john 1jn 1jo 1jhn ijohn', 'JN2':'2john 2jn 2jo 2jhn iijohn',
     'JN3':'3john 3jn 3jo 3jhn iiijohn', 'JDE':'jude jud jd', 'REV':'revelation rev rv apocalypse',
 }
+# The same in Spanish (without accents), e.g., ‘exodo’ for ‘Éxodo’
+_SPANISH_NAMES = {
+    'GEN':'genesis gn gen ge', 'EXO':'exodo ex exo', 'LEV':'levitico lv lev', 'NUM':'numeros nm num nu', 'DEU':'deuteronomio dt deut',
+    'JOS':'josue jos', 'JDG':'jueces jue jc', 'RUT':'rut rt', 'SA1':'1samuel 1sam 1sa', 'SA2':'2samuel 2sam 2sa',
+    'KI1':'1reyes 1re 1ry', 'KI2':'2reyes 2re 2ry', 'CH1':'1cronicas 1cron 1cro 1cr', 'CH2':'2cronicas 2cron 2cro 2cr',
+    'EZR':'esdras esd', 'NEH':'nehemias neh', 'EST':'ester est', 'JOB':'job', 'PSA':'salmos salmo sal', 'PRO':'proverbios prov pr pro',
+    'ECC':'eclesiastes ecl ec qoh', 'SNG':'cantares cantar cantardeloscantares cnt cant', 'ISA':'isaias is isa', 'JER':'jeremias jer jr',
+    'LAM':'lamentaciones lam lm', 'EZE':'ezequiel ez eze ezq', 'DAN':'daniel dn dan', 'HOS':'oseas os', 'JOL':'joel jl', 'AMO':'amos am',
+    'OBA':'abdias abd', 'JNA':'jonas jon', 'MIC':'miqueas mi miq', 'NAH':'nahum nah', 'HAB':'habacuc hab', 'ZEP':'sofonias sof',
+    'HAG':'hageo hag ag', 'ZEC':'zacarias zac', 'MAL':'malaquias mal',
+    'MAT':'mateo mt mat', 'MRK':'marcos mr mc mar', 'LUK':'lucas lc luc', 'JHN':'juan jn', 'ACT':'hechos hch hech', 'ROM':'romanos ro rom',
+    'CO1':'1corintios 1cor 1co', 'CO2':'2corintios 2cor 2co', 'GAL':'galatas gal ga', 'EPH':'efesios ef', 'PHP':'filipenses fil flp',
+    'COL':'colosenses col', 'TH1':'1tesalonicenses 1tes 1ts', 'TH2':'2tesalonicenses 2tes 2ts', 'TI1':'1timoteo 1tim 1ti', 'TI2':'2timoteo 2tim 2ti',
+    'TIT':'tito tit', 'PHM':'filemon filem flm', 'HEB':'hebreos heb he', 'JAM':'santiago sant stg', 'PE1':'1pedro 1pe', 'PE2':'2pedro 2pe',
+    'JN1':'1juan 1jn', 'JN2':'2juan 2jn', 'JN3':'3juan 3jn', 'JDE':'judas jud', 'REV':'apocalipsis apoc ap',
+}
 BOOKS = { name:BBB for BBB, names in _NAMES.items() for name in names.split() }
+SPANISH_BOOKS = { name:BBB for BBB, names in _SPANISH_NAMES.items() for name in names.split() }
 SINGLE_CHAPTER = {'OBA', 'PHM', 'JN2', 'JN3', 'JDE'}
 
 _NUMBERED = r'(?:[1-3]|I{1,3})\s*'
 _NAME = r'[A-Z][a-z]+(?:\s+of\s+(?:Songs|Solomon))?'
+_SPANISH_NAME = r'[A-ZÁÉÍÓÚ][a-záéíóúñü]+(?:\s+de\s+los\s+Cantares)?'
 _RANGE = r'\d{1,3}(?::\d{1,3}[a-c]?)?(?:\s*[-–]\s*\d{1,3}(?::\d{1,3})?[a-c]?)?'
 _NEXT_BOOK = r'(?!\s*[A-Z][a-z]+\.?\s+\d)' # A later number that starts another reference (e.g., the 2 in ‘1 Cor. 10:6; 2 Cor. 3:5’) isn't part of this one
 REFERENCE_RE = re.compile( rf'\b(?P<book>(?:{_NUMBERED})?{_NAME})\.?\s+(?P<ranges>{_RANGE}(?:\s*[,;]\s*{_RANGE}{_NEXT_BOOK})*)' )
+SPANISH_REFERENCE_RE = re.compile( rf'(?<!\w)(?P<book>(?:{_NUMBERED})?{_SPANISH_NAME})\.?\s+(?P<ranges>{_RANGE}(?:\s*[,;]\s*{_RANGE}{_NEXT_BOOK})*)' )
 BARE_RE = re.compile( rf'(?<![\w:.])(?P<ranges>\d{{1,3}}:\d{{1,3}}[a-c]?(?:\s*[-–]\s*\d{{1,3}}(?::\d{{1,3}})?[a-c]?)?(?:\s*[,;]\s*{_RANGE}{_NEXT_BOOK})*)(?![\w:])' )
 VERSES_RE = re.compile( r'\((?P<ranges>\d{1,2}(?:\s*[-–]\s*\d{1,2})?(?:\s*,\s*\d{1,2}(?:\s*[-–]\s*\d{1,2})?)*)\)' ) # e.g., (1-2), in a one-chapter book
 
 
-def book_code( name:str ) -> str|None:
-    return BOOKS.get( re.sub( r'[\s.]', '', name ).lower() )
+def book_code( name:str, language:str='eng' ) -> str|None:
+    key = re.sub( r'[\s.]', '', name ).lower()
+    if language == 'spa': return SPANISH_BOOKS.get( key.translate( _UNACCENTED ) )
+    return BOOKS.get( key )
+
+_UNACCENTED = str.maketrans( 'áéíóúü', 'aeiouu' )
 
 
 def _passages( BBB:str, ranges:str ) -> list:
@@ -65,14 +89,14 @@ def _passages( BBB:str, ranges:str ) -> list:
     return passages
 
 
-def find( text:str, context:str|None=None ) -> list:
+def find( text:str, context:str|None=None, language:str='eng' ) -> list:
     """
     The Bible references in some text: [(start, end, [passage, …]), …] with character offsets.
-    context is the book that bare references (e.g., ‘(1:21-28)’) are taken to be in, if any.
+    context is the book that bare references (e.g., ‘(1:21-28)’) are taken to be in, if any. language is `eng` or `spa` (for the books' names).
     """
     found, taken = [], []
-    for match in REFERENCE_RE.finditer( text ):
-        BBB = book_code( match.group( 'book' ) )
+    for match in (SPANISH_REFERENCE_RE if language == 'spa' else REFERENCE_RE).finditer( text ):
+        BBB = book_code( match.group( 'book' ), language )
         if not BBB: continue
         passages = _passages( BBB, match.group( 'ranges' ) )
         if passages: found.append( (match.start(), match.end(), passages) ); taken.append( (match.start(), match.end()) )

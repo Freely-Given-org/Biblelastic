@@ -7,6 +7,8 @@ It can:
 
 - install and remove modules, from a list (`index.json`) at a web address
 - read the OET-RV a section at a time (from one section heading to the next, whichever chapters that covers), with its poetry indents, words of Jesus, and translators' additions shown differently
+- read another installed Bible instead (Bible, in the ⋮ menu), at the same place: so far the two Spanish ones, in the OET-RV's sections. The choice is remembered;
+    until one is chosen, a phone set to Spanish starts with a Spanish Bible. While reading one, the notes in its language come first
 - step to the next or previous section, right through from one book into the next, or choose a book and chapter
 - show what the installed commentaries and dictionaries say about a verse (tap its number). A verse with a note of its own has its number underlined;
     the others still show the notes on the passage around them. If there's nothing at all (e.g., in Judith, which the Tyndale notes don't cover),
@@ -85,10 +87,12 @@ On both, the modules installed, John 1 displayed, the notes on a verse opened, a
 The section view (added later the same day) was checked in headless Chrome by screenshot, and on the phone by hand.
 Tapping a word (17 November) was checked in headless Chrome by screenshot (including the list of places), and on the phone by screenshot.
 The OET-LV with the OET-RV (19 November) was checked in headless Chrome by screenshot, on a phone-sized and a wide screen, and on the phone by screenshot.
+Choosing a Spanish Bible, and its notes (25 November), were checked in headless Chrome by screenshot only.
 
 ## Known gaps
 
-- **Only the OET-RV and OET-LV can be read**, the reader doesn't remember where you were, and there's no chapter view to choose in place of the section view.
+- **The reader doesn't remember where you were**, and there's no chapter view to choose in place of the section view.
+- **A Spanish word can't be tapped** for what it translates yet (the Aquifer's alignments aren't used), and the Library lists works in every language together.
 - **The OET-LV's word joiners** (`_`) are shown as they are, as decided for the ingest. The OET website shows them more subtly.
 - **Sections aren't listed anywhere**: a book's section headings would make a better way in than chapter numbers.
 - **Verse numbers are still small targets**, though the area that can be tapped is wider than the number. A word and a verse number are told apart only by where the finger lands.

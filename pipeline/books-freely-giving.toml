@@ -1,4 +1,4 @@
-# Books from https://books.freely.giving: every English book there that is CC0 or in the public domain, and has an EPUB.
+# Books from https://books.freely.giving: every English or Spanish book there that is CC0 or in the public domain, and has an EPUB.
 # Written by `python3 -m biblelastic_ingest.freely_giving`: run it again (rather than editing this) to pick up new books.
 # The copyright of each is the book's own notices, as found in its front matter: check them before publishing.
 
@@ -15,6 +15,23 @@ source = "https://books.freely.giving/books/charles-spurgeon/all-of-grace/"
 download = "https://files.books.freelygiv.ing/all-of-grace/all-of-grace.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/all-of-grace.epub"]
 copyright = "All of Grace, 1886, by Charles Spurgeon. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "AllOfGraceModern"
+kind = "book"
+name = "All of Grace (Modern English)"
+author = "Charles Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/charles-spurgeon/all-of-grace-modern/"
+download = "https://files.books.freelygiv.ing/all-of-grace-modern/all-of-grace-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/all-of-grace-modern.epub"]
+copyright = "All of Grace (Modern English), 1886, by Charles Spurgeon. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
@@ -54,6 +71,57 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "AutobiographyOfCharlesSpurgeonVol2"
+kind = "book"
+name = "The Autobiography of Charles H. Spurgeon, Vol. 2: 1854–1860"
+author = "Charles Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/charles-spurgeon/autobiography-of-charles-spurgeon-vol-2/"
+download = "https://files.books.freelygiv.ing/autobiography-of-charles-spurgeon-vol-2/AutobiographyOfCharlesHSpurgeonVol2.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/AutobiographyOfCharlesHSpurgeonVol2.epub"]
+copyright = "The Autobiography of Charles H. Spurgeon, Vol. 2: 1854–1860, 1898, by Charles Spurgeon. In the spirit of Freely Giving (Matthew 10:8), I dedicate this edition to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Scripture quotations in the text are from the King James Version, as Spurgeon quoted it, and references are given in modern form. Verses cited without quotation are printed in the footnotes from the Berean Standard Bible (BSB), with the divine name printed as “Yahweh,” and where the BSB’s “you” or “your” is plural, it is marked “you+” or “your+.” Both are in the public domain."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "AutobiographyOfCharlesSpurgeonVol3"
+kind = "book"
+name = "The Autobiography of Charles H. Spurgeon, Vol. 3: 1856–1878"
+author = "Charles Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/charles-spurgeon/autobiography-of-charles-spurgeon-vol-3/"
+download = "https://files.books.freelygiv.ing/autobiography-of-charles-spurgeon-vol-3/AutobiographyOfCharlesHSpurgeonVol3.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/AutobiographyOfCharlesHSpurgeonVol3.epub"]
+copyright = "The Autobiography of Charles H. Spurgeon, Vol. 3: 1856–1878, 1899, by Charles Spurgeon. In the spirit of Freely Giving (Matthew 10:8), I dedicate this edition to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Scripture quotations in the text are from the King James Version, as Spurgeon quoted it, and references are given in modern form. The King James Version is in the public domain."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "AutobiographyOfCharlesSpurgeonVol4"
+kind = "book"
+name = "The Autobiography of Charles H. Spurgeon, Vol. 4: 1878–1892"
+author = "Charles Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/charles-spurgeon/autobiography-of-charles-spurgeon-vol-4/"
+download = "https://files.books.freelygiv.ing/autobiography-of-charles-spurgeon-vol-4/AutobiographyOfCharlesHSpurgeonVol4.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/AutobiographyOfCharlesHSpurgeonVol4.epub"]
+copyright = "The Autobiography of Charles H. Spurgeon, Vol. 4: 1878–1892, 1900, by Charles Spurgeon. In the spirit of Freely Giving (Matthew 10:8), I dedicate this edition to the public domain. You may freely copy, print, translate, or use this work. I trust it will be used for the glory of our risen Savior, Jesus Christ. Scripture quotations in the text are from the King James Version, as Spurgeon quoted it, and references are given in modern form. Verses cited without quotation are printed in the footnotes from the Berean Standard Bible (BSB), with the divine name printed as “Yahweh,” and where the BSB’s “you” or “your” is plural, it is marked “you+” or “your+.” Both are in the public domain."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "ChristianEconomy"
 kind = "book"
 name = "Christian Economy"
@@ -71,6 +139,23 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "ChristianEconomyModern"
+kind = "book"
+name = "Christian Economy (Modern English)"
+author = "William Perkins"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-perkins/christian-economy-modern/"
+download = "https://files.books.freelygiv.ing/christian-economy-modern/christian-economy-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/christian-economy-modern.epub"]
+copyright = "Christian Economy (Modern English), 1609, by William Perkins. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "CrookInTheLot"
 kind = "book"
 name = "The Crook in the Lot"
@@ -83,6 +168,23 @@ source = "https://books.freely.giving/books/thomas-boston/the-crook-in-the-lot/"
 download = "https://files.books.freelygiv.ing/the-crook-in-the-lot/the-crook-in-the-lot.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/the-crook-in-the-lot.epub"]
 copyright = "The Crook in the Lot, 1737, by Thomas Boston. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "CrookInTheLotModern"
+kind = "book"
+name = "The Crook in the Lot (Modern English)"
+author = "Thomas Boston"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-boston/the-crook-in-the-lot-modern/"
+download = "https://files.books.freelygiv.ing/the-crook-in-the-lot-modern/the-crook-in-the-lot-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-crook-in-the-lot-modern.epub"]
+copyright = "The Crook in the Lot (Modern English), 1737, by Thomas Boston. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
@@ -117,6 +219,23 @@ source = "https://books.freely.giving/books/thomas-watson/a-divine-cordial/"
 download = "https://files.books.freelygiv.ing/a-divine-cordial/a-divine-cordial.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/a-divine-cordial.epub"]
 copyright = "A Divine Cordial, 1663, by Thomas Watson. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "ADivineCordialModern"
+kind = "book"
+name = "A Divine Cordial (Modern English)"
+author = "Thomas Watson"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-watson/a-divine-cordial-modern/"
+download = "https://files.books.freelygiv.ing/a-divine-cordial-modern/a-divine-cordial-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/a-divine-cordial-modern.epub"]
+copyright = "A Divine Cordial (Modern English), 1663, by Thomas Watson. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
@@ -207,6 +326,23 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "GloriousFeastOfTheGospelModern"
+kind = "book"
+name = "The Glorious Feast of the Gospel (Modern English)"
+author = "Richard Sibbes"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/richard-sibbes/the-glorious-feast-of-the-gospel-modern/"
+download = "https://files.books.freelygiv.ing/the-glorious-feast-of-the-gospel-modern/the-glorious-feast-of-the-gospel-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-glorious-feast-of-the-gospel-modern.epub"]
+copyright = "The Glorious Feast of the Gospel (Modern English), 1650, by Richard Sibbes. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "GodSpoke"
 kind = "book"
 name = "God Spoke"
@@ -258,6 +394,23 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "GraceAboundingModern"
+kind = "book"
+name = "Grace Abounding to the Chief of Sinners (Modern English)"
+author = "John Bunyan"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-bunyan/grace-abounding-modern/"
+download = "https://files.books.freelygiv.ing/grace-abounding-modern/grace-abounding-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/grace-abounding-modern.epub"]
+copyright = "Grace Abounding to the Chief of Sinners (Modern English), 1666, by John Bunyan. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "IndwellingSin"
 kind = "book"
 name = "Indwelling Sin"
@@ -270,6 +423,23 @@ source = "https://books.freely.giving/books/john-owen/indwelling-sin/"
 download = "https://files.books.freelygiv.ing/indwelling-sin/indwelling-sin.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/indwelling-sin.epub"]
 copyright = "Indwelling Sin, 1668, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "IndwellingSinModern"
+kind = "book"
+name = "Indwelling Sin (Modern English)"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-owen/indwelling-sin-modern/"
+download = "https://files.books.freelygiv.ing/indwelling-sin-modern/indwelling-sin-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/indwelling-sin-modern.epub"]
+copyright = "Indwelling Sin (Modern English), 1668, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
@@ -303,6 +473,24 @@ source = "https://books.freely.giving/books/courtney-hicks/the-1689-baptist-conf
 download = "https://files.books.freelygiv.ing/the-1689-baptist-confession-of-faith/the-1689-baptist-confession-of-faith.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/the-1689-baptist-confession-of-faith.epub"]
 copyright = "The London Baptist Confession of Faith (1689) with Catechisms, 1689. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "MeditacionesSobreElSalmo119"
+kind = "book"
+name = "Meditaciones sobre el Salmo 119"
+author = "Michael Coughlin"
+language = "spa"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/michael-coughlin/meditaciones-sobre-el-salmo-119/"
+download = "https://files.books.freelygiv.ing/meditaciones-sobre-el-salmo-119/MeditacionesSobreElSalmo119.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/MeditacionesSobreElSalmo119.epub"]
+context_book = "PSA"
+copyright = "Meditaciones sobre el Salmo 119, 2026, by Michael Coughlin. Con el espíritu de dar de gracia (Mateo 10:8), dedico esta obra al dominio público. Puedes copiar, imprimir, traducir o usar libremente esta obra. Confío en que se usará para la gloria de nuestro Salvador resucitado, Jesucristo. Salvo que se indique otra cosa, las citas de la Escritura son de la Reina-Valera de 1909, que es de dominio público. En este libro el nombre divino se imprime como “Yahvé” donde la Reina-Valera dice “Jehová”. Las citas breves de otras obras, como una línea del himno In Christ Alone, de Keith Getty y Stuart Townend (capítulo 16), se citan bajo el uso legítimo y siguen siendo propiedad de sus dueños. La dedicación al dominio público de arriba se aplica a mi propia escritura, no a esas citas. Nota sobre la traducción. Este libro se escribió originalmente en inglés, y las citas de la Escritura están tomadas de la Reina-Valera de 1909. Algunas frases del autor dependen de cómo suenan o se traducen ciertas palabras en las versiones bíblicas en inglés: juegos de palabras, títulos y comparaciones entre versiones. Donde fue posible, esas comparaciones se adaptaron o se quitaron. En otros lugares, una frase puede sonar extraña o menos natural en español, simplemente porque solo tenía sentido en la Biblia en inglés. Pedimos paciencia al lector: la idea de fondo es siempre la del autor. Te invito a memorizar el Salmo. Unas notas. En esta edición en español cito la Escritura de la Reina-Valera de 1909, que es de dominio público. Así puedes copiar, imprimir y compartir este libro con libertad, y me mantengo fiel a mi deseo de asociarme y trabajar con personas y ministerios que promueven la causa de dar de gracia."
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
@@ -343,6 +531,91 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "MortificationOfSinModern"
+kind = "book"
+name = "The Mortification of Sin (Modern English)"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-owen/the-mortification-of-sin-modern/"
+download = "https://files.books.freelygiv.ing/the-mortification-of-sin-modern/the-mortification-of-sin-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-mortification-of-sin-modern.epub"]
+copyright = "The Mortification of Sin (Modern English), 1656, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesModernVolume1"
+kind = "book"
+name = "Of Domestical Duties (Modern English), Volume I"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-modern-volume-1/"
+download = "https://files.books.freelygiv.ing/domestical-duties-modern-volume-1/domestical-duties-modern-volume-1.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-modern-volume-1.epub"]
+copyright = "Of Domestical Duties (Modern English), Volume I, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesModernVolume2"
+kind = "book"
+name = "Of Domestical Duties (Modern English), Volume II"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-modern-volume-2/"
+download = "https://files.books.freelygiv.ing/domestical-duties-modern-volume-2/domestical-duties-modern-volume-2.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-modern-volume-2.epub"]
+copyright = "Of Domestical Duties (Modern English), Volume II, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesModernVolume3"
+kind = "book"
+name = "Of Domestical Duties (Modern English), Volume III"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-modern-volume-3/"
+download = "https://files.books.freelygiv.ing/domestical-duties-modern-volume-3/domestical-duties-modern-volume-3.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-modern-volume-3.epub"]
+copyright = "Of Domestical Duties (Modern English), Volume III, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "DomesticalDutiesModernVolume4"
+kind = "book"
+name = "Of Domestical Duties (Modern English), Volume IV"
+author = "William Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/william-gouge/domestical-duties-modern-volume-4/"
+download = "https://files.books.freelygiv.ing/domestical-duties-modern-volume-4/domestical-duties-modern-volume-4.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/domestical-duties-modern-volume-4.epub"]
+copyright = "Of Domestical Duties (Modern English), Volume IV, 1622, by William Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "OfTemptation"
 kind = "book"
 name = "Of Temptation"
@@ -355,6 +628,23 @@ source = "https://books.freely.giving/books/john-owen/of-temptation/"
 download = "https://files.books.freelygiv.ing/of-temptation/of-temptation.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/of-temptation.epub"]
 copyright = "Of Temptation, 1658, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "OfTemptationModern"
+kind = "book"
+name = "Of Temptation (Modern English)"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-owen/of-temptation-modern/"
+download = "https://files.books.freelygiv.ing/of-temptation-modern/of-temptation-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/of-temptation-modern.epub"]
+copyright = "Of Temptation (Modern English), 1658, by John Owen. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
@@ -394,6 +684,23 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "PilgrimsProgressModern"
+kind = "book"
+name = "The Pilgrim's Progress (Modern English)"
+author = "John Bunyan"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/john-bunyan/the-pilgrims-progress-modern/"
+download = "https://files.books.freelygiv.ing/the-pilgrims-progress-modern/the-pilgrims-progress-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-pilgrims-progress-modern.epub"]
+copyright = "The Pilgrim's Progress (Modern English), 1678, by John Bunyan. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "PrayingTheBibleTogether"
 kind = "book"
 name = "Praying the Bible Together"
@@ -428,6 +735,23 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "PreciousRemediesAgainstSatansDevicesModern"
+kind = "book"
+name = "Precious Remedies Against Satan’s Devices (Modern English)"
+author = "Thomas Brooks"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-brooks/precious-remedies-against-satans-devices-modern/"
+download = "https://files.books.freelygiv.ing/precious-remedies-against-satans-devices-modern/precious-remedies-against-satans-devices-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/precious-remedies-against-satans-devices-modern.epub"]
+copyright = "Precious Remedies Against Satan’s Devices (Modern English), 1652, by Thomas Brooks. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "DivineName"
 kind = "book"
 name = "Pronouncing & Translating the Divine Name יהוה: History & Practice"
@@ -440,6 +764,57 @@ source = "https://books.freely.giving/books/andrew-case/the-divine-name/"
 download = "https://files.books.freelygiv.ing/the-divine-name/the-divine-name.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/the-divine-name.epub"]
 copyright = "Pronouncing & Translating the Divine Name יהוה: History & Practice, 2025, by Andrew Case. Dedicated to the public domain. All of this publication may be shared, translated, sold, or copied freely without limitation and without permission. The price of this print edition only covers the cost of materials and does not generate profit for the author. To learn more about why this book is freely given (Matt 10:8), please visit sellingJesus.org."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "NombreDivino"
+kind = "book"
+name = "Pronunciando y traduciendo el Nombre Divino יהוה: Historia y práctica"
+author = "Andrew Case, translated by Fernando Sánchez-Pérez"
+language = "spa"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/andrew-case/el-nombre-divino/"
+download = "https://files.books.freelygiv.ing/el-nombre-divino/el-nombre-divino.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/el-nombre-divino.epub"]
+copyright = "Pronunciando y traduciendo el Nombre Divino יהוה: Historia y práctica, 2026, by Andrew Case, translated by Fernando Sánchez-Pérez. Dedicado al dominio público. Toda esta publicación puede ser compartida, traducida, vendida o copiada libremente, sin limitación y sin permiso. El precio de esta edición impresa solo cubre el costo de los materiales y no genera ganancias para el autor. Para saber más sobre por qué este libro se ofrece gratuitamente, visite sellingJesus.org."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "ReligiousAffections"
+kind = "book"
+name = "Religious Affections"
+author = "Jonathan Edwards"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/jonathan-edwards/religious-affections/"
+download = "https://files.books.freelygiv.ing/religious-affections/religious-affections.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/religious-affections.epub"]
+copyright = "Religious Affections, 1746, by Jonathan Edwards. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "ReligiousAffectionsModern"
+kind = "book"
+name = "Religious Affections (Modern English)"
+author = "Jonathan Edwards"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/jonathan-edwards/religious-affections-modern/"
+download = "https://files.books.freelygiv.ing/religious-affections-modern/religious-affections-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/religious-affections-modern.epub"]
+copyright = "Religious Affections (Modern English), 1746, by Jonathan Edwards. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
@@ -462,6 +837,23 @@ redistributable = true
 licence_verified = false
 
 [[edition]]
+id = "SecretKeyOfHeavenModern"
+kind = "book"
+name = "The Secret Key of Heaven (Modern English)"
+author = "Thomas Brooks"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-brooks/the-secret-key-of-heaven-modern/"
+download = "https://files.books.freelygiv.ing/the-secret-key-of-heaven-modern/the-secret-key-of-heaven-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-secret-key-of-heaven-modern.epub"]
+copyright = "The Secret Key of Heaven (Modern English), 1665, by Thomas Brooks. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
 id = "SinnersInTheHandsOfAnAngryGod"
 kind = "book"
 name = "Sinners in the Hands of an Angry God"
@@ -474,6 +866,74 @@ source = "https://books.freely.giving/books/jonathan-edwards/sinners-in-the-hand
 download = "https://files.books.freelygiv.ing/sinners-in-the-hands-of-an-angry-god/sinners-in-the-hands-of-an-angry-god.epub"
 files = ["Biblelastic/build/downloads/books.freely.giving/sinners-in-the-hands-of-an-angry-god.epub"]
 copyright = "Sinners in the Hands of an Angry God, 1741, by Jonathan Edwards. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "SinnersInTheHandsOfAnAngryGodModern"
+kind = "book"
+name = "Sinners in the Hands of an Angry God (Modern English)"
+author = "Jonathan Edwards"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/jonathan-edwards/sinners-in-the-hands-of-an-angry-god-modern/"
+download = "https://files.books.freelygiv.ing/sinners-in-the-hands-of-an-angry-god-modern/sinners-in-the-hands-of-an-angry-god-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/sinners-in-the-hands-of-an-angry-god-modern.epub"]
+copyright = "Sinners in the Hands of an Angry God (Modern English), 1741, by Jonathan Edwards. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "SobreLaEleccionDeLosInfantes"
+kind = "book"
+name = "Sobre la elección de los infantes"
+author = "Michael Coughlin"
+language = "spa"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/michael-coughlin/sobre-la-eleccion-de-los-infantes/"
+download = "https://files.books.freelygiv.ing/sobre-la-eleccion-de-los-infantes/SobreLaEleccionDeLosInfantes.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/SobreLaEleccionDeLosInfantes.epub"]
+copyright = "Sobre la elección de los infantes, 2026, by Michael Coughlin. Con el espíritu de “dar de gracia” (Mateo 10:8), dedico esta obra al dominio público. Puedes copiarla, imprimirla, traducirla o usarla libremente. Confío en que se usará para la gloria de nuestro Salvador resucitado, Jesucristo. Salvo que se indique lo contrario, las citas de las Escrituras son de la versión Reina-Valera 1909, que es de dominio público."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "SurestWayOfThriving"
+kind = "book"
+name = "The Surest and Safest Way of Thriving"
+author = "Thomas Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-gouge/the-surest-way-of-thriving/"
+download = "https://files.books.freelygiv.ing/the-surest-way-of-thriving/the-surest-way-of-thriving.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-surest-way-of-thriving.epub"]
+copyright = "The Surest and Safest Way of Thriving, 1673, by Thomas Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0 In the following verse we read further, the liberal soul shall be made fat. The soul is often in Scripture taken to signify the man, and so it is here, and is the same, as the liberal man. To be made fat, signifies to prosper, to be full, and abound, or to grow rich in this world’s goods; and thus it shall be, if this Scripture may be credited."
+licence = "CC0 1.0"
+redistributable = true
+licence_verified = false
+
+[[edition]]
+id = "SurestWayOfThrivingModern"
+kind = "book"
+name = "The Surest and Safest Way of Thriving (Modern English)"
+author = "Thomas Gouge"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://books.freely.giving/books/thomas-gouge/the-surest-way-of-thriving-modern/"
+download = "https://files.books.freelygiv.ing/the-surest-way-of-thriving-modern/the-surest-way-of-thriving-modern.epub"
+files = ["Biblelastic/build/downloads/books.freely.giving/the-surest-way-of-thriving-modern.epub"]
+copyright = "The Surest and Safest Way of Thriving (Modern English), 1673, by Thomas Gouge. This edition is published by Common Weal Press and dedicated to the public domain under the Creative Commons CC0 1.0 Universal Public Domain Dedication. You are free to copy, distribute, modify and use it for any purpose, without asking. creativecommons.org/publicdomain/zero/1.0"
 licence = "CC0 1.0"
 redistributable = true
 licence_verified = false
