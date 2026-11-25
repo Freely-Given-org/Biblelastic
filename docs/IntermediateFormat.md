@@ -293,8 +293,10 @@ The notes and dictionary are the Aquifer's translations of the Tyndale Open Stud
     anchors, and the links to other items (`<data class="resource-ref">`) are `see` links (those to the other work, e.g., from a note to the dictionary, aren't kept yet).
     A profile's or article's list of passages (every place where its subject is named, up to hundreds) isn't taken as what it's about.
 
-Searching folds accents, as the ingest does (so ‘corazón’ finds ‘corazon’ in `norm`). The Aquifer also has Spanish words aligned to the Hebrew and Greek
-(`alignments/` in each Bible's folder), which could let a Spanish word be tapped like an OET one: not used yet.
+Searching folds accents, as the ingest does (so ‘corazón’ finds ‘corazon’ in `norm`).
+
+**Their words are linked to the Hebrew and Greek**, from the Aquifer's own alignments (each Bible's `alignments/` folder, named by the registry's `aquifer_alignments`),
+so that a Spanish word can be tapped like an OET one: see *Alignments* below.
 
 ## The UBS dictionaries and handbooks
 
@@ -347,8 +349,23 @@ The ingest checks it (every row has a term and at least one title, and no term i
 `<BBB>.links.tsv` has the columns `from` and `to`, each a word index in the same `<BBB>` document of the two editions.
 One-to-many, many-to-one, and many-to-many relationships are simply several rows that share a `from` or a `to`.
 
-The alignments so far are derived by joining OET `row` numbers to SR-GNT and UHB `oet_row` numbers.
+The OET's alignments are derived by joining OET `row` numbers to SR-GNT and UHB `oet_row` numbers.
 (Those `oet_row` numbers are themselves found by matching each original-language word against the OET word tables, in order.)
+
+The Spanish Bibles' (`ASBRT--SR-GNT`, `ASBRT--UHB`, `RV1909--SR-GNT`, and `RV1909--UHB`) come from the Bible Aquifer, by `pipeline/biblelastic_ingest/aquifer_alignment.py`.
+The Aquifer joins its own numbering of each Bible's words to the words of the SBL Greek New Testament and the Westminster Leningrad Codex, chapter by chapter,
+so both sides are first paired with our words: book by book, in order (so that differences of verse numbering don't matter), the Spanish by its letters,
+the Greek without accents, and the Hebrew by its consonants (the Codex's pieces of a word, e.g., בְּ and רֵאשִׁית, put together as the UHB has them).
+Where the texts differ by a long passage (e.g., John 7:53–8:11), the matching finds its place again by the next three words in a row that are the same.
+Where a link joins the Greek article to other Greek words (e.g., ἡ ἀληθινή → *verdadera*), the article is left out of it.
+
+| | Spanish words paired | Greek words paired | Hebrew words paired | Links | The Aquifer's links that couldn't be used |
+| --- | --- | --- | --- | --- | --- |
+| `ASBRT` | 668,014 of 668,820 | 136,377 of 137,741 | 303,615 of 305,649 | 660,220 | 3,190 of 432,979 |
+| `RV1909` | 703,517 of 703,631 | (the same) | (the same) | 676,974 | 3,646 of 531,086 |
+
+The Aquifer's alignments were made with the help of language models (their files name the models): what was checked by hand looked right, but they won't all be.
+The glosses and meanings that a tapped word shows are still the English ones (the OET's and the UBS dictionaries').
 
 ## Checks
 

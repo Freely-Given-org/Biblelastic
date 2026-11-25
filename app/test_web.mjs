@@ -138,6 +138,9 @@ try {
     await tap(200, 780); // The Aquifer Spanish text (the second): the same passage, in Spanish
     await sleep(1000);
     await shoot('10b-spanish');
+    await tap(185, 87); // ‘vid’ in John 15:1, for the Greek word that it translates (from the Aquifer's alignments)
+    await shoot('10b2-spanish-word');
+    await tap(200, 60); // Outside the sheet, to close it
     await tap(25, 280); // The number of John 15:4, for its notes: the Spanish ones should come first
     await shoot('10c-spanish-notes');
     await tap(200, 60); // Outside the sheet, to close it

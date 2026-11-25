@@ -78,3 +78,39 @@ class SpanishBibleTests( unittest.TestCase ):
             sections = [ line.split( '\t' )[:3] for line in ours.read_text().splitlines() if line.startswith( 'section' ) ]
         # The second section starts at verse 3, which is in our combined verse 2-3, so it starts at our next verse after it begins (verse 4)
         self.assertEqual( sections, [['section', '1', '30'], ['section', '30', '50']] )
+
+
+class AquiferAlignmentTests( unittest.TestCase ):
+    def test_match( self ):
+        """ Words paired in order, finding the place again after a long passage that only one side has """
+        from biblelastic_ingest import aquifer_alignment
+        a = ['en', 'el', 'principio'] + [ f'x{n}' for n in range( 40 ) ] + ['era', 'el', 'verbo', 'y']
+        b = ['en', 'el', 'principio', 'era', 'el', 'verbo', 'y']
+        self.assertEqual( aquifer_alignment.match( a, b ), [(0, 0), (1, 1), (2, 2), (43, 3), (44, 4), (45, 5), (46, 6)] )
+
+    def test_align( self ):
+        """ An Aquifer record joins Greek words to Spanish words: they become links between our tokens (without the article, beside another word) """
+        from biblelastic_ingest import aquifer_alignment
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path( folder )
+            tsv, records = root / 'source' / 'alignments' / 'tsv', root / 'source' / 'alignments' / 'json'
+            tsv.mkdir( parents=True ); records.mkdir()
+            (tsv / 'nt_ES.tsv').write_text( 'id\tsource_verse\ttext\tskip_space_after\texclude\n43015001001\t43015001\tla\t\t\n43015001002\t43015001\tvid\t\t\n'
+                                            '43015001003\t43015001\tverdadera\t\t\n43015001004\t43015001\t.\t\ty\n', encoding='utf-8' )
+            (tsv / 'SBLGNT.tsv').write_text( 'id\taltId\ttext\tstrongs\tgloss\tgloss2\tlemma\n'
+                                             'n43015001001\tἡ-1\tἡ\tG3588\tthe\t\tὁ\nn43015001002\tἄμπελος-1\tἄμπελος\tG0288\tvine\t\tἄμπελος\n'
+                                             'n43015001003\tἡ-2\tἡ\tG3588\tthe\t\tὁ\nn43015001004\tἀληθινή-1\tἀληθινή\tG0228\ttrue\t\tἀληθινός\n', encoding='utf-8' )
+            (records / '43-015.alignment.json').write_text( json.dumps( { 'groups':[ { 'documents':[ {'docid':'SBLGNT'}, {'docid':'ES'} ], 'records':[
+                { 'source':['43015001001|ἡ', '43015001002|ἄμπελος'], 'target':['43015001001|la', '43015001002|vid'] },
+                { 'source':['43015001003|ἡ', '43015001004|ἀληθινή'], 'target':['43015001003|verdadera'] } ] } ] } ), encoding='utf-8' )
+            (root / 'source' / 'alignments' / 'tsv' / 'WLCM.tsv').write_text( 'id\taltId\ttext\n', encoding='utf-8' )
+            output = root / 'output'
+            for edition, rows in (('ES', ['\tJuan\t\tjuan', '\tla\t \tla', '\tvid\t \tvid', '\tverdadera\t\tverdadera']),
+                                  ('SR-GNT', ['\tΚατὰ\t \tκατα\t', '\tἩ\t \tη\tGr', '\tἄμπελος\t \tαμπελοσ\tGr', '\tἡ\t \tη\tGr', '\tἀληθινή\t\tαληθινη\tGr'])):
+                (output / edition / 'documents').mkdir( parents=True )
+                (output / edition / 'documents' / 'JHN.tokens.tsv').write_text( 'before\ttext\tafter\tnorm' + ('\tmorph' if edition == 'SR-GNT' else '') + '\n' + '\n'.join( rows ) + '\n', encoding='utf-8' )
+            stats = aquifer_alignment.align( { 'id':'ES', 'aquifer_alignments':'source/alignments' }, root, output )
+            links = (output / 'alignments' / 'ES--SR-GNT' / 'JHN.links.tsv').read_text( encoding='utf-8' ).split( '\n' )[1:-1]
+        self.assertEqual( stats['translation_paired'], 3 )
+        # la and vid → ἄμπελος (the article left out); verdadera → ἀληθινή. (Our tokens: ‘Juan’ is 0 in ES, and the SR-GNT's title is 0.)
+        self.assertEqual( links, ['1\t2', '2\t2', '3\t4'] )

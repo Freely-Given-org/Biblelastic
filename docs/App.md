@@ -16,7 +16,7 @@ It can:
 - show the OET-LV with the OET-RV: a switch above the text chooses the Readers' Version, the Literal Version, or both (remembered on the device).
     With both, the LV of the same verses goes under each run of RV paragraphs, or beside it on a wide screen, and a verse that's marked is marked in both.
     The LV has no headings of its own, so it's read in the RV's sections (and with only the LV, the RV's headings are still shown)
-- show what a word translates (tap the word, in either version), and mark the words of both versions that translate the same Hebrew or Greek word: the Hebrew or Greek word, its transliteration, dictionary form, gloss, Strong's number, and form,
+- show what a word translates (tap the word, in either version of the OET, or in either Spanish Bible), and mark the words of both versions that translate the same Hebrew or Greek word: the Hebrew or Greek word, its transliteration, dictionary form, gloss, Strong's number, and form,
     how else the OET-RV translates that dictionary form (with counts), and every verse where it's translated.
     Where the UBS dictionaries cover it, it also shows what the word means in this place (e.g., ἀρχή in John 1:1: ‘beginning, to begin: a point of time at the beginning of a duration’),
     with its semantic domains, each of which lists the other words with a meaning in it, and any UBS handbook article about the thing it refers to (e.g., ‘Camel, dromedary’)
@@ -88,12 +88,13 @@ On both, the modules installed, John 1 displayed, the notes on a verse opened, a
 The section view (added later the same day) was checked in headless Chrome by screenshot, and on the phone by hand.
 Tapping a word (17 November) was checked in headless Chrome by screenshot (including the list of places), and on the phone by screenshot.
 The OET-LV with the OET-RV (19 November) was checked in headless Chrome by screenshot, on a phone-sized and a wide screen, and on the phone by screenshot.
-Choosing a Spanish Bible, and its notes (25 November), were checked in headless Chrome by screenshot only.
+Choosing a Spanish Bible, and its notes (25 November), were checked in headless Chrome by screenshot, and on the phone (26 November), with meaning-based search in Spanish
+and tapping a Spanish word (e.g., *Verbo* in John 1:1 → λόγος).
 
 ## Known gaps
 
 - **The reader doesn't remember where you were**, and there's no chapter view to choose in place of the section view.
-- **A Spanish word can't be tapped** for what it translates yet (the Aquifer's alignments aren't used), and the Library lists works in every language together.
+- **A Spanish word's original is explained in English** (the OET's glosses and the UBS dictionaries' meanings), and the Library lists works in every language together.
 - **The OET-LV's word joiners** (`_`) are shown as they are, as decided for the ingest. The OET website shows them more subtly.
 - **Sections aren't listed anywhere**: a book's section headings would make a better way in than chapter numbers.
 - **Verse numbers are still small targets**, though the area that can be tapped is wider than the number. A word and a verse number are told apart only by where the finger lands.

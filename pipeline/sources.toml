@@ -120,6 +120,7 @@ licence_verified = false
 source = "https://github.com/BibleAquifer/AquiferSpanishBibleReferenceText"
 files = ["../Bibles/BibleAquifer/AquiferSpanishBibleReferenceText/spa/usfm/*.SFM"]
 sections_from = "OET-RV"
+aquifer_alignments = "../Bibles/BibleAquifer/AquiferSpanishBibleReferenceText/spa/alignments" # Its words joined to the Greek and Hebrew (see aquifer_alignment.py)
 
 [[edition]]
 id = "RV1909"
@@ -136,6 +137,7 @@ source = "https://github.com/BibleAquifer/ReinaValera1909"
 files = ["../Bibles/BibleAquifer/ReinaValera1909/spa/usfm/*.SFM"]
 features = ["strong"]
 sections_from = "OET-RV"
+aquifer_alignments = "../Bibles/BibleAquifer/ReinaValera1909/spa/alignments"
 
 # Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
 [disclaimers]

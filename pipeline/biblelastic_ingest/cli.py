@@ -25,7 +25,7 @@ import time
 import tomllib
 import urllib.request
 
-from . import aquifer, epub, items, normalise, ubs, usfm
+from . import aquifer, aquifer_alignment, epub, items, normalise, ubs, usfm
 
 PIPELINE_FOLDER = Path( __file__ ).resolve().parent.parent
 REPOSITORY_FOLDER = PIPELINE_FOLDER.parent
@@ -517,6 +517,15 @@ def main() -> int:
             fromFolder, toFolder = arguments.output / edition['sections_from'] / 'documents', arguments.output / edition['id'] / 'documents'
             counts = [ borrow_sections( fromFolder / path.name, path ) for path in sorted( toFolder.glob( '*.nodes.tsv' ) ) if (fromFolder / path.name).exists() ]
             print( f"{edition['id']}: {sum( counts ):,} sections in {len(counts)} books, at the same verses as {edition['sections_from']}'s" )
+
+        # The Bible Aquifer's alignments of a translation with the originals (needs the SR-GNT's and the UHB's token files, from this run or an earlier one)
+        for edition in editions:
+            if 'aquifer_alignments' not in edition: continue
+            found = aquifer_alignment.align( edition, arguments.source_root, arguments.output )
+            report['alignments'][f"{edition['id']} (Aquifer)"] = found
+            print( f"{edition['id']}: {found['links']:,} links to the originals from {found['records']:,} Aquifer records ({found['records_unlinked']:,} unlinked);"
+                   f" paired {found['translation_paired']:,} of the Aquifer's {found['translation_words']:,} words of it, "
+                   + ', '.join( f"{found.get( ourId + '_paired', 0 ):,} of {found.get( ourId + '_words', 0 ):,} {ourId} words" for ourId in ('SR-GNT', 'UHB') ) )
 
         # Second pass: derive alignments (needs both editions' token files to be complete)
         ingested = { edition['id'] for edition in editions }
