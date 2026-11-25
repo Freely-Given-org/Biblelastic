@@ -55,6 +55,9 @@ pub struct Library {
     pub modules: Vec<Installed>,
     /// The pages that have been read from all the modules: this is nearly all of the memory that the engine uses
     pub cache: Rc<PageCache>,
+    /// For meaning-based search: the model, once it's been loaded (about 35 MB), and each work's vectors, once they've been read
+    pub model: std::cell::RefCell<Option<Rc<crate::meaning::Model>>>,
+    pub vectors: std::cell::RefCell<std::collections::HashMap<String, Rc<crate::meaning::Vectors>>>,
 }
 
 impl Library {
@@ -70,7 +73,24 @@ impl Library {
             modules.push(Installed { kind: field("module.kind")?, work: field("module.work")?, title: field("module.title")?, disclaimer: field("module.disclaimer")?, language: field("module.language")?, edition: field("module.edition")?, layer: field("module.layer")?,
                                      from: field("module.from")?, to: field("module.to")?, name, module: Rc::new(module) });
         }
-        Ok(Library { modules, cache })
+        Ok(Library { modules, cache, model: Default::default(), vectors: Default::default() })
+    }
+
+    /// The model for meaning-based search, loaded the first time that it's needed
+    pub fn model(&self) -> Result<Rc<crate::meaning::Model>> {
+        if let Some(model) = self.model.borrow().as_ref() { return Ok(model.clone()); }
+        let installed = self.modules.iter().find(|installed| installed.kind == "model").ok_or("no model for meaning-based search is installed")?;
+        let model = Rc::new(crate::meaning::Model::open(&installed.module, &installed.edition)?);
+        *self.model.borrow_mut() = Some(model.clone());
+        Ok(model)
+    }
+
+    /// An edition's passage vectors, read the first time that they're needed
+    pub fn vectors_of(&self, installed: &Installed) -> Result<Rc<crate::meaning::Vectors>> {
+        if let Some(vectors) = self.vectors.borrow().get(&installed.edition) { return Ok(vectors.clone()); }
+        let vectors = Rc::new(crate::meaning::Vectors::open(&installed.module)?);
+        self.vectors.borrow_mut().insert(installed.edition.clone(), vectors.clone());
+        Ok(vectors)
     }
 
     pub fn bytes_read(&self) -> u64 { self.modules.iter().map(|installed| installed.module.bytes_read()).sum() }

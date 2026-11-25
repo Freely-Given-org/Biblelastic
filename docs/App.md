@@ -23,7 +23,8 @@ It can:
 - read a whole article of a dictionary or handbook (from a word, or from a search result), and follow its links to others
 - browse the installed books, commentaries, and dictionaries (the Library, in the ⋮ menu), and read them entry by entry (e.g., a book chapter by chapter, with Previous and Next)
 - show each book's and commentary's disclaimer wherever its words are shown: under the notes on a verse, at the end of an article or chapter, and with its contents
-- search: a subject (the articles about it, the passages they refer to most, the other side of the question, and where the words themselves are found), words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
+- search: a subject (the articles about it, the passages they refer to most, the other side of the question, where the words themselves are found,
+    and, if the model is installed, the passages, notes, articles, and book chapters that are about it by meaning: see [Meaning.md](Meaning.md)), words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
 
 Its own words are in English and Spanish (`app/lib/strings.dart`), chosen by the device's language.
 

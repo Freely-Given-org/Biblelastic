@@ -18,7 +18,11 @@ Future<void> loadWorks(Engine engine) async {
   aligned
     ..clear()
     ..addAll([for (final module in modules) if (module['kind'] == 'alignment') module['from'] as String]);
+  meaningAvailable = modules.any((module) => module['kind'] == 'model') && modules.any((module) => module['kind'] == 'vectors');
 }
+
+/// Whether meaning-based search can be done: a model and some passages' vectors are installed
+bool meaningAvailable = false;
 
 /// The installed Bibles that can be read (translations, not the original-language texts, nor the OET's Literal Version, which goes with the Readers' Version),
 /// the OET first, then the Aquifer Spanish text, then the others by title

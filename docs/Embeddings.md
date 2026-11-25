@@ -5,7 +5,7 @@ and a small model on the device turns the user's query into a vector, so that pa
 This trial was to find out which model to use, how small the vectors can be stored, how big the download is, and how long a query takes.
 
 It was run on 16 November 2026 on a desktop computer, with one measurement on an Android phone (see *On a phone* below).
-Nothing here is part of the engine yet: the scripts are in `bench/embeddings/` and `bench/embed-query/`.
+The scripts are in `bench/embeddings/` and `bench/embed-query/`. What was built from this is described in [Meaning.md](Meaning.md).
 
 ## Summary
 

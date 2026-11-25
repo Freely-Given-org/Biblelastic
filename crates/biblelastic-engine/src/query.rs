@@ -921,6 +921,59 @@ fn example(text: &Text, slot: u32) -> Example {
 /// `c:d:H0776` → `H0776` (drops the prefixes that mark attached Hebrew particles)
 fn base_strong(strong: &str) -> String { strong.rsplit(':').next().unwrap_or(strong).to_string() }
 
+/// A passage found by meaning-based search
+pub struct MeaningFound {
+    pub edition: String,
+    /// `scripture`, `commentary`, `dictionary`, or `book`
+    pub work: String,
+    /// A passage of Scripture (e.g., `JHN 3:16-3:21`), or an entry's locator (e.g., `Chapter 4`)
+    pub locator: String,
+    /// The section's heading, or the entry's title (and the heading that the passage is under)
+    pub label: String,
+    pub text: String,
+    /// How close it is to the query, from -1 to 1 (the cosine similarity)
+    pub score: f32,
+}
+
+/// "Passages that are about this": the query's vector is compared with the vectors of every installed work's passages (see `meaning.rs`).
+/// Gives the best `limit` passages of Scripture and, separately, the best `limit` passages of everything else (only the best one from each entry).
+/// `editions`, if given, are the only works to search.
+pub fn meaning(library: &Library, query: &str, editions: &[String], limit: usize, length: usize) -> Result<(Vec<MeaningFound>, Vec<MeaningFound>)> {
+    let model = library.model()?;
+    let vector = model.embed_query(query);
+    let mut scripture: Vec<(f32, usize, usize)> = Vec::new();
+    let mut others: Vec<(f32, usize, usize)> = Vec::new();
+    for (index, installed) in library.modules.iter().enumerate() {
+        if installed.kind != "vectors" || (!editions.is_empty() && !editions.contains(&installed.edition)) { continue; }
+        let vectors = library.vectors_of(installed)?;
+        if vectors.model != model.name || vectors.dimensions != vector.len() { continue; } // Made with another model: not comparable
+        let found = if installed.work == "scripture" { &mut scripture } else { &mut others };
+        let mut scores: Vec<(f32, usize, usize)> = vectors.scores(&vector).into_iter().enumerate().map(|(passage, score)| (score, index, passage)).collect();
+        scores.sort_by(|a, b| b.0.total_cmp(&a.0));
+        scores.truncate(limit * 4); // Enough to fill the list after passages of the same entry are left out
+        found.extend(scores);
+    }
+    let finish = |mut found: Vec<(f32, usize, usize)>, one_per_entry: bool| -> Result<Vec<MeaningFound>> {
+        found.sort_by(|a, b| b.0.total_cmp(&a.0));
+        let mut results: Vec<MeaningFound> = Vec::new();
+        for (score, index, passage) in found {
+            if results.len() >= limit { break; }
+            let installed = &library.modules[index];
+            let locator = installed.module.strings("vectors.locators")?.get(passage);
+            if one_per_entry && results.iter().any(|result| result.edition == installed.edition && result.locator == locator) { continue; }
+            // The same passage in another edition of the same work (e.g., a book's modernised edition) is left out too
+            let label = installed.module.strings("vectors.labels")?.get(passage);
+            if one_per_entry && !label.is_empty() && results.iter().any(|result| result.locator == locator && result.label == label) { continue; }
+            let text = installed.module.strings("vectors.texts")?.get(passage);
+            let short: String = text.chars().take(length).collect();
+            results.push(MeaningFound { edition: installed.edition.clone(), work: installed.work.clone(), locator, label,
+                                        text: if short.len() < text.len() { format!("{short}…") } else { short }, score });
+        }
+        Ok(results)
+    };
+    Ok((finish(scripture, false)?, finish(others, true)?))
+}
+
 /// As the ingest's `norm` column has them for Latin script: lower case, without accents or modifier letters (so `Corazón` → `corazon`, and `ñ` → `n`).
 /// (Provisional for Greek and Hebrew, whose words are only lower-cased.)
 fn normalise(words: &[String]) -> Vec<String> { words.iter().map(|word| fold_latin(&word.to_lowercase())).collect() }
@@ -929,9 +982,13 @@ const ACCENTED: &str = "ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝàá
 const UNACCENTED: &str = "AAAAAACEEEEIIIINOOOOOUUUUYaaaaaaceeeeiiiinooooouuuuyyAaAaAaCcCcCcCcDdEeEeEeEeEeGgGgGgGgHhIiIiIiIiIJjKkLlLlLlNnNnNnOoOoOoRrRrRrSsSsSsSsTtTtUuUuUuUuUuUuWwYyYZzZzZz";
 
 fn fold_latin(word: &str) -> String {
-    word.chars().filter(|&character| !matches!(character, '\u{0300}'..='\u{036F}' | '\u{02B0}'..='\u{02FF}'))
-        .map(|character| ACCENTED.chars().position(|accented| accented == character).and_then(|ix| UNACCENTED.chars().nth(ix)).unwrap_or(character))
-        .collect()
+    word.chars().filter(|&character| !matches!(character, '\u{0300}'..='\u{036F}' | '\u{02B0}'..='\u{02FF}')).map(without_accent).collect()
+}
+
+/// A Latin letter without its accent, as Unicode's decomposition gives it (e.g., `é` → `e`, `Ñ` → `N`)
+pub(crate) fn without_accent(character: char) -> char {
+    if (character as u32) < 0xC0 || (character as u32) >= 0x180 { return character; }
+    ACCENTED.chars().position(|accented| accented == character).and_then(|ix| UNACCENTED.chars().nth(ix)).unwrap_or(character)
 }
 
 #[cfg(test)]

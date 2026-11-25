@@ -1,6 +1,7 @@
 //! `biblelastic`: compile modules and run the first queries from the command line.
 
 mod compile;
+mod meaning;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -22,6 +23,9 @@ Commands:
   about PASSAGE           Find what the commentaries and dictionaries say about a passage, e.g., about JHN 3:16 or about PSA 23
   entry WORD...           Look up a dictionary entry by its title, e.g., entry aaron or entry abel*
   topic WORD...           Find what the Scriptures and the commentators say about a subject, e.g., topic once saved always saved
+  meaning WORDS...        Find passages by what they're about, e.g., meaning why do good people suffer (needs a model and vectors: see model and embed)
+  model FOLDER            Make the model for meaning-based search from a Hugging Face BERT model's folder (by default, bge-small-en-v1.5)
+  embed [EDITION...]      Make the vectors of the installed works' passages (all of those in the model's language, if none are named)
   request KEY=VALUE...    Send a request as an app would, and show the JSON response, e.g., request command=find 'words=grace truth'
 
 A word can end with * to match any ending, e.g., lov*
@@ -37,6 +41,7 @@ Options:
   --cache N               How many megabytes of the modules may be kept in memory (default: 16)
   --page-bits N           For compile: store sections as pages of 2^N bytes (default: 14, i.e., 16 kB)
   --no-compress           For compile: don't compress anything
+  --repeat N              For meaning: run the query N times, and show how long each took (the first loads the model and vectors)
 ";
 
 struct Arguments {
@@ -53,12 +58,13 @@ struct Arguments {
     page_bits: u8,
     compress: bool,
     cache: usize,
+    repeat: usize,
 }
 
 fn parse(arguments: &[String]) -> Result<Arguments, String> {
     let mut parsed = Arguments { words: Vec::new(), intermediate: "build/intermediate".into(), modules: "build/modules".into(),
                                  edition: "OET-RV".into(), only: None, length: 300, within: "sentence".into(), examples: 1, limit: 20,
-                                 page_bits: compile::Options::default().page_bits, compress: true, cache: biblelastic_engine::format::DEFAULT_CACHE_BYTES >> 20 };
+                                 page_bits: compile::Options::default().page_bits, compress: true, cache: biblelastic_engine::format::DEFAULT_CACHE_BYTES >> 20, repeat: 1 };
     let mut iterator = arguments.iter();
     while let Some(argument) = iterator.next() {
         if !argument.starts_with("--") { parsed.words.push(argument.clone()); continue; }
@@ -75,6 +81,7 @@ fn parse(arguments: &[String]) -> Result<Arguments, String> {
             "--limit" => parsed.limit = number()?,
             "--page-bits" => parsed.page_bits = number()?.clamp(3, 24) as u8,
             "--cache" => parsed.cache = number()?,
+            "--repeat" => parsed.repeat = number()?.max(1),
             _ => return Err(format!("unknown option {argument}")),
         }
     }
@@ -197,6 +204,39 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
             for example in &topic.mentions { println!("  {}: {}", example.reference, example.text); }
             println!("\n{:.1} ms, reading {} from the modules", started.elapsed().as_secs_f64() * 1000.0, size(library.bytes_read()));
         }
+        "meaning" => {
+            if arguments.words.is_empty() { return Err("meaning needs a query".into()); }
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
+            let editions: Vec<String> = arguments.only.iter().cloned().collect();
+            let mut times = Vec::new();
+            let mut found = None;
+            for _ in 0..arguments.repeat {
+                let started = Instant::now();
+                found = Some(query::meaning(&library, &arguments.words.join(" "), &editions, arguments.limit, arguments.length)?);
+                times.push(format!("{:.0} ms", started.elapsed().as_secs_f64() * 1000.0));
+            }
+            let (scripture, others) = found.expect("at least once");
+            if arguments.repeat > 1 { println!("Each time: {}\n", times.join(", ")); }
+            for found in scripture.iter().chain(&others) {
+                println!("{:.3}  {} {}{}: {}\n", found.score, found.edition, found.locator, if found.label.is_empty() { String::new() } else { format!(" ‘{}’", found.label) }, found.text);
+            }
+            println!("({:.0} ms)", started.elapsed().as_secs_f64() * 1000.0);
+        }
+        "vector" => { // For checking the model against another implementation: a text's vector (as a query, or as a passage with --passage)
+            let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
+            let model = library.model()?;
+            let text = arguments.words.join(" ");
+            let started = Instant::now();
+            let vector = if arguments.only.as_deref() == Some("passage") { model.embed_passage(&text) } else { model.embed_query(&text) };
+            eprintln!("({:.1} ms)", started.elapsed().as_secs_f64() * 1000.0);
+            println!("[{}]", vector.iter().map(|value| format!("{value:.6}")).collect::<Vec<_>>().join(","));
+        }
+        "model" => {
+            let folder = arguments.words.first().ok_or("model needs the folder of a Hugging Face model")?;
+            meaning::convert_model(Path::new(folder), "bge-small-en-v1.5", "Represent this sentence for searching relevant passages: ", "", "eng", "MIT",
+                                   &arguments.modules, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?;
+        }
+        "embed" => meaning::embed(&arguments.modules, &arguments.words, None, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?,
         "request" => {
             let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
             println!("{}", biblelastic_engine::api::respond(&library, &arguments.words.join("\n")));

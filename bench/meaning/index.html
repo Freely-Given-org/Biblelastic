@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meaning-based search timing</title>
+<style>
+  body { font: 15px/1.4 system-ui, sans-serif; margin: 12px; }
+  td { padding: 2px 8px 2px 0; vertical-align: top; }
+  .ms { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<!-- Times meaning-based search with the browser engine: serve the repository's root (e.g., python3 -m http.server 8377),
+     and open /bench/meaning/ (add ?all for every work's vectors, not only the OET-RV's). On a phone: adb reverse tcp:8377 tcp:8377 -->
+<h1 style="font-size: 18px">Meaning-based search timing</h1>
+<p id="status">Starting…</p>
+<table id="results"></table>
+<script type="module">
+import { Biblelastic } from '/web/biblelastic.js';
+const status = document.getElementById('status'), table = document.getElementById('results');
+const row = (...cells) => { const tr = table.insertRow(); for (const [text, className] of cells) Object.assign(tr.insertCell(), { textContent: text, className: className ?? '' }); };
+const all = location.search.includes('all');
+try {
+    const engine = await Biblelastic.start({});
+    const { modules } = await (await fetch('/build/modules/index.json')).json();
+    const wanted = all ? modules.map(module => module.name).filter(name => /\.(model|vectors)$/.test(name)) : ['bge-small-en-v1.5.model', 'OET-RV.vectors'];
+    const installed = new Set((await engine.list()).map(module => module.name ?? module));
+    for (const name of wanted) {
+        if (installed.has(name)) continue;
+        status.textContent = `Installing ${name}…`;
+        await engine.install(name, `/build/modules/${name}.blm`);
+    }
+    status.textContent = `Searching ${all ? 'every work' : 'the OET-RV'} (${navigator.hardwareConcurrency} processors, ${navigator.deviceMemory ?? '?'} GB)`;
+    const queries = ['why do good people suffer', 'once saved, always saved', 'a prophet swallowed by a huge fish', 'What does the Bible say about worry and anxiety?', 'forgiveness',
+                     'why do good people suffer', 'once saved, always saved', 'a prophet swallowed by a huge fish'];
+    const times = [];
+    for (const words of queries) {
+        const { response, milliseconds, memoryBytes } = await engine.request({ command: 'meaning', words, editions: all ? '' : 'OET-RV', limit: 1, length: 40 });
+        times.push(milliseconds);
+        row([`${Math.round(milliseconds)} ms`, 'ms'], [`${Math.round(memoryBytes / 1048576)} MB`, 'ms'], [`${words} → ${response.ok ? response.scripture[0]?.locator : response.error}`]);
+    }
+    const warm = times.slice(1).sort((a, b) => a - b);
+    row([`${Math.round(warm[Math.floor(warm.length / 2)])} ms`, 'ms'], ['', ''], ['median, after the first (which loads the model)']);
+    engine.stop();
+} catch (error) { status.textContent = `Failed: ${error.message}`; }
+</script>
+</body>
+</html>

@@ -20,7 +20,7 @@ pub struct Options {
 impl Default for Options { fn default() -> Self { Options { page_bits: DEFAULT_PAGE_BITS, compress: true } } }
 
 impl Options {
-    fn writer(self) -> ModuleWriter {
+    pub fn writer(self) -> ModuleWriter {
         // Each page is a frame of its own, so that any page can be read without the others
         ModuleWriter::with(self.page_bits, self.compress.then(|| Box::new(|page: &[u8]| zstd::bulk::compress(page, 19).expect("zstd compression")) as _))
     }
@@ -411,10 +411,8 @@ pub fn compile(intermediate: &Path, output: &Path, options: Options) -> Result<V
     thesaurus_files.sort();
     for path in thesaurus_files.iter().filter(|path| path.extension().is_some_and(|extension| extension == "tsv")) { thesauruses.push(compile_thesaurus(path, output, options)?); }
     let written: Vec<Written> = editions.into_iter().flat_map(|edition| edition.written).chain(alignments).chain(thesauruses).collect();
-    // The catalogue that an installer downloads first, to see what there is
-    let entries: Vec<String> = written.iter().map(|module| format!("    {{\"name\": \"{}\", \"bytes\": {}}}", module.name, module.bytes)).collect();
-    let catalogue = format!("{{\n  \"format\": {},\n  \"modules\": [\n{}\n  ]\n}}\n", biblelastic_engine::format::FORMAT_VERSION, entries.join(",\n"));
-    fs::write(output.join("index.json"), catalogue).map_err(|error| format!("{}: {error}", output.display()))?;
+    // The catalogue that an installer downloads first, to see what there is (every module in the folder, including the models and vectors that are made separately)
+    crate::meaning::write_index(output).map_err(|error| error.to_string())?;
     Ok(written)
 }
 

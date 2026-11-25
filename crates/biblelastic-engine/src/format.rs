@@ -415,6 +415,16 @@ impl Module {
         Ok(String::from_utf8(data)?)
     }
 
+    /// A whole raw section, as bytes
+    pub fn bytes(&self, name: &str) -> Result<Vec<u8>> {
+        let &section = self.inner.by_name.get(name).ok_or_else(|| format!("the module has no '{name}' section"))?;
+        let entry = &self.inner.entries[section];
+        if entry.encoding != Encoding::Raw { return Err(format!("section '{name}' is {:?}, not Raw", entry.encoding).into()); }
+        let mut data = Vec::with_capacity(entry.raw_length as usize);
+        for page in 0..entry.pages.len() { data.extend_from_slice(&self.inner.page(section, page)?); }
+        Ok(data)
+    }
+
     pub fn packed(&self, name: &str) -> Result<Packed> {
         let (reader, entry) = self.reader(name, Encoding::Packed)?;
         Ok(Packed { reader, bits: entry.bits as usize, length: entry.count as usize })

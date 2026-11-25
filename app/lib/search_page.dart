@@ -1,11 +1,12 @@
-// Searching: a subject (what the Scriptures and the commentators say about it), words together in a sentence,
-// the original-language terms behind words, and dictionary entries.
+// Searching: a subject (what the Scriptures and the commentators say about it, and, if a model is installed, the passages
+// that are about it by meaning), words together in a sentence, the original-language terms behind words, and dictionary entries.
 import 'package:flutter/material.dart';
 
 import 'article_page.dart';
 import 'engine/engine.dart';
 import 'main.dart' show edition;
 import 'strings.dart';
+import 'works.dart';
 
 enum SearchKind { topic, together, terms, dictionary }
 
@@ -20,6 +21,9 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController words = TextEditingController();
   SearchKind kind = SearchKind.topic;
   Map<String, dynamic>? response;
+  /// For a subject: the passages found by meaning-based search, which come after the rest (the model takes a moment)
+  Map<String, dynamic>? meaning;
+  bool findingMeaning = false;
   String? problem;
 
   @override
@@ -39,9 +43,17 @@ class _SearchPageState extends State<SearchPage> {
     };
     try {
       final answer = await widget.engine.request(fields);
-      setState(() { response = answer; problem = null; });
+      setState(() { response = answer; meaning = null; problem = null; findingMeaning = kind == SearchKind.topic && meaningAvailable; });
     } catch (error) {
-      setState(() { response = null; problem = '$error'; });
+      setState(() { response = null; meaning = null; problem = '$error'; });
+      return;
+    }
+    if (!findingMeaning) return;
+    try {
+      final found = await widget.engine.request({'command': 'meaning', 'words': text, 'limit': '8', 'length': '300'});
+      if (mounted && words.text.trim() == text) setState(() { meaning = found; findingMeaning = false; });
+    } catch (_) {
+      if (mounted) setState(() => findingMeaning = false); // Meaning-based search is extra: the rest still stands
     }
   }
 
@@ -61,6 +73,7 @@ class _SearchPageState extends State<SearchPage> {
     final shown = examples.length + terms.length + entries.length;
     final isTopic = answer != null && answer['passages'] != null;
     List<dynamic> list(String name) => (answer?[name] as List<dynamic>?) ?? const [];
+    List<dynamic> byMeaning(String name) => (meaning?[name] as List<dynamic>?) ?? const [];
     Widget heading(String text) => Padding(padding: const EdgeInsets.only(top: 20, bottom: 4), child: Text(text, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary)));
     void openArticle(dynamic entry) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) =>
         ArticlePage(engine: widget.engine, locator: entry['locator'] as String, edition: entry['edition'] as String)));
@@ -72,12 +85,23 @@ class _SearchPageState extends State<SearchPage> {
         title: Text(strings.reference(found['reference'] as String), style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
         subtitle: Text(found['text'] as String), onTap: () => open(found['reference'] as String));
     final topic = !isTopic ? const <Widget>[] : [
-      if ([for (final name in ['entries', 'passages', 'otherEntries', 'otherPassages', 'scripture', 'mentions']) ...list(name)].isEmpty)
+      if ([for (final name in ['entries', 'passages', 'otherEntries', 'otherPassages', 'scripture', 'mentions']) ...list(name)].isEmpty && !findingMeaning && meaning == null)
         Padding(padding: const EdgeInsets.only(top: 12), child: Text(strings.noResults, style: theme.textTheme.bodySmall)),
       if (list('entries').isNotEmpty) heading(strings.articles),
       ...list('entries').map(article),
       if (list('passages').isNotEmpty) heading(strings.keyPassages),
       ...list('passages').map(passage),
+      if (findingMeaning) Padding(padding: const EdgeInsets.only(top: 20), child: Row(children: [
+        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 12),
+        Text(strings.findingByMeaning, style: theme.textTheme.bodySmall)])),
+      if (byMeaning('scripture').isNotEmpty) heading(strings.byMeaning),
+      ...byMeaning('scripture').map((found) => ListTile(contentPadding: EdgeInsets.zero,
+          title: Text('${strings.reference(found['locator'] as String)}${found['label'] == '' ? '' : '  ${found['label']}'}', style: theme.textTheme.labelLarge!.copyWith(color: theme.colorScheme.primary)),
+          subtitle: Text(found['text'] as String), onTap: () => open(found['locator'] as String))),
+      if (byMeaning('others').isNotEmpty) heading(strings.byMeaningElsewhere),
+      ...byMeaning('others').map((found) => ListTile(contentPadding: EdgeInsets.zero,
+          title: Text(found['label'] == '' ? strings.reference(found['locator'] as String) : found['label'] as String),
+          subtitle: Text('${titleOf(found['edition'] as String)}\n${found['text']}'), onTap: () => openArticle(found))),
       if (list('otherEntries').isNotEmpty || list('otherPassages').isNotEmpty) heading('${strings.otherSide}: ${list('contrast').join('; ')}'),
       ...list('otherEntries').map(article),
       ...list('otherPassages').map(passage),

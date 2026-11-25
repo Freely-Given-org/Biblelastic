@@ -109,6 +109,12 @@ try {
     await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 200, y: 500, deltaX: 0, deltaY: 520 }, sessionId);
     await sleep(1000);
     await shoot('4b-topic-further');
+    await sleep(3000); // For the passages found by meaning (the model is loaded the first time)
+    await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 200, y: 500, deltaX: 0, deltaY: 5200 }, sessionId);
+    await sleep(1000);
+    await shoot('4c-meaning');
+    await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 200, y: 500, deltaX: 0, deltaY: -5200 }, sessionId);
+    await sleep(1000);
     await tap(100, 700); // A passage in the results: it should open in its section, with the verse marked (check the screenshot before for what's there)
     await sleep(1500);
     await shoot('5-landed');

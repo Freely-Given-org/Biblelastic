@@ -44,6 +44,9 @@ class Strings {
   String get aboutThis => _pick(['About this:', 'Sobre esto:']);
   String get library => _pick(['Library', 'Biblioteca']);
   String get bible => _pick(['Bible', 'Biblia']);
+  String get byMeaning => _pick(['Passages about this (by meaning)', 'Pasajes sobre esto (por significado)']);
+  String get byMeaningElsewhere => _pick(['Notes, articles, and books about this (by meaning)', 'Notas, artículos y libros sobre esto (por significado)']);
+  String get findingByMeaning => _pick(['Looking for passages about this…', 'Buscando pasajes sobre esto…']);
   String get chooseBible => _pick(['Choose a Bible', 'Elija una Biblia']);
   String get books => _pick(['Books', 'Libros']);
   String get commentaries => _pick(['Commentaries', 'Comentarios']);

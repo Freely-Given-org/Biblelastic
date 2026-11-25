@@ -147,6 +147,16 @@ fn answer(library: &Library, request: &str) -> Result<String> {
                        titles(&topic.see), titles(&topic.contrast), entries(&topic.entries), passages(&topic.passages), entries(&topic.other_entries), passages(&topic.other_passages),
                        examples(&topic.scripture), examples(&topic.mentions)))
         }
+        "meaning" => { // Passages that are about what the query is about, found by meaning-based search (`words` is the query, as it was typed)
+            let query = text("words", "");
+            if query.is_empty() { return Err("meaning needs a query (words=…)".into()); }
+            let editions: Vec<String> = text("editions", "").split(',').map(str::trim).filter(|edition| !edition.is_empty()).map(str::to_string).collect();
+            let (scripture, others) = query::meaning(library, query, &editions, limit, number("length", 300)?)?;
+            let found = |found: &[query::MeaningFound]| found.iter().map(|found| format!(
+                "{{\"edition\":{},\"work\":{},\"locator\":{},\"label\":{},\"text\":{},\"score\":{:.4}}}", quote(&found.edition), quote(&found.work), quote(&found.locator),
+                quote(&found.label), quote(&found.text), found.score)).collect::<Vec<_>>().join(",");
+            Ok(format!("\"scripture\":[{}],\"others\":[{}]", found(&scripture), found(&others)))
+        }
         other => Err(format!("unknown command '{other}'").into()),
     }
 }
