@@ -12,7 +12,7 @@
 </head>
 <body>
 <!-- Times meaning-based search with the browser engine: serve the repository's root (e.g., python3 -m http.server 8377),
-     and open /bench/meaning/ (add ?all for every work's vectors, not only the OET-RV's). On a phone: adb reverse tcp:8377 tcp:8377 -->
+     and open /bench/meaning/ (add ?all for every work's vectors, not only the OET-RV's, or ?es for Spanish). On a phone: adb reverse tcp:8377 tcp:8377 -->
 <h1 style="font-size: 18px">Meaning-based search timing</h1>
 <p id="status">Starting…</p>
 <table id="results"></table>
@@ -20,23 +20,26 @@
 import { Biblelastic } from '/web/biblelastic.js';
 const status = document.getElementById('status'), table = document.getElementById('results');
 const row = (...cells) => { const tr = table.insertRow(); for (const [text, className] of cells) Object.assign(tr.insertCell(), { textContent: text, className: className ?? '' }); };
-const all = location.search.includes('all');
+const all = location.search.includes('all'), spanish = location.search.includes('es');
 try {
     const engine = await Biblelastic.start({});
     const { modules } = await (await fetch('/build/modules/index.json')).json();
-    const wanted = all ? modules.map(module => module.name).filter(name => /\.(model|vectors)$/.test(name)) : ['bge-small-en-v1.5.model', 'OET-RV.vectors'];
+    const wanted = all ? modules.map(module => module.name).filter(name => /\.(model|vectors)$/.test(name))
+        : spanish ? ['multilingual-e5-small.model', 'ASBRT.vectors'] : ['bge-small-en-v1.5.model', 'OET-RV.vectors'];
+    const only = all ? '' : spanish ? 'ASBRT' : 'OET-RV';
     const installed = new Set((await engine.list()).map(module => module.name ?? module));
     for (const name of wanted) {
         if (installed.has(name)) continue;
         status.textContent = `Installing ${name}…`;
         await engine.install(name, `/build/modules/${name}.blm`);
     }
-    status.textContent = `Searching ${all ? 'every work' : 'the OET-RV'} (${navigator.hardwareConcurrency} processors, ${navigator.deviceMemory ?? '?'} GB)`;
-    const queries = ['why do good people suffer', 'once saved, always saved', 'a prophet swallowed by a huge fish', 'What does the Bible say about worry and anxiety?', 'forgiveness',
+    status.textContent = `Searching ${all ? 'every work' : only} (${navigator.hardwareConcurrency} processors, ${navigator.deviceMemory ?? '?'} GB)`;
+    const queries = spanish ? ['¿Por qué sufren las personas buenas?', 'una vez salvo, siempre salvo', 'un profeta tragado por un gran pez', '¿Qué dice la Biblia sobre la preocupación y la ansiedad?', 'el perdón',
+                               '¿Por qué sufren las personas buenas?', 'una vez salvo, siempre salvo', 'un profeta tragado por un gran pez'] : ['why do good people suffer', 'once saved, always saved', 'a prophet swallowed by a huge fish', 'What does the Bible say about worry and anxiety?', 'forgiveness',
                      'why do good people suffer', 'once saved, always saved', 'a prophet swallowed by a huge fish'];
     const times = [];
     for (const words of queries) {
-        const { response, milliseconds, memoryBytes } = await engine.request({ command: 'meaning', words, editions: all ? '' : 'OET-RV', limit: 1, length: 40 });
+        const { response, milliseconds, memoryBytes } = await engine.request({ command: 'meaning', words, editions: only, limit: 1, length: 40 });
         times.push(milliseconds);
         row([`${Math.round(milliseconds)} ms`, 'ms'], [`${Math.round(memoryBytes / 1048576)} MB`, 'ms'], [`${words} → ${response.ok ? response.scripture[0]?.locator : response.error}`]);
     }

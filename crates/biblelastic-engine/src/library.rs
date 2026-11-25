@@ -56,7 +56,7 @@ pub struct Library {
     /// The pages that have been read from all the modules: this is nearly all of the memory that the engine uses
     pub cache: Rc<PageCache>,
     /// For meaning-based search: the model, once it's been loaded (about 35 MB), and each work's vectors, once they've been read
-    pub model: std::cell::RefCell<Option<Rc<crate::meaning::Model>>>,
+    pub models: std::cell::RefCell<std::collections::HashMap<String, Rc<crate::meaning::Model>>>,
     pub vectors: std::cell::RefCell<std::collections::HashMap<String, Rc<crate::meaning::Vectors>>>,
 }
 
@@ -73,15 +73,16 @@ impl Library {
             modules.push(Installed { kind: field("module.kind")?, work: field("module.work")?, title: field("module.title")?, disclaimer: field("module.disclaimer")?, language: field("module.language")?, edition: field("module.edition")?, layer: field("module.layer")?,
                                      from: field("module.from")?, to: field("module.to")?, name, module: Rc::new(module) });
         }
-        Ok(Library { modules, cache, model: Default::default(), vectors: Default::default() })
+        Ok(Library { modules, cache, models: Default::default(), vectors: Default::default() })
     }
 
-    /// The model for meaning-based search, loaded the first time that it's needed
-    pub fn model(&self) -> Result<Rc<crate::meaning::Model>> {
-        if let Some(model) = self.model.borrow().as_ref() { return Ok(model.clone()); }
-        let installed = self.modules.iter().find(|installed| installed.kind == "model").ok_or("no model for meaning-based search is installed")?;
+    /// A model for meaning-based search (by its name, e.g., `bge-small-en-v1.5`, or the first that's installed), loaded the first time that it's needed
+    pub fn model(&self, name: Option<&str>) -> Result<Rc<crate::meaning::Model>> {
+        let installed = self.modules.iter().find(|installed| installed.kind == "model" && name.is_none_or(|name| installed.edition == name))
+            .ok_or_else(|| format!("the model {} isn't installed", name.unwrap_or("for meaning-based search")))?;
+        if let Some(model) = self.models.borrow().get(&installed.edition) { return Ok(model.clone()); }
         let model = Rc::new(crate::meaning::Model::open(&installed.module, &installed.edition)?);
-        *self.model.borrow_mut() = Some(model.clone());
+        self.models.borrow_mut().insert(installed.edition.clone(), model.clone());
         Ok(model)
     }
 

@@ -1,7 +1,8 @@
 """
 Score the engine's meaning-based search on the embedding trial's questions (see docs/Embeddings.md), as nDCG@10 against their lists of right passages.
 
-    python3 bench/meaning/evaluate.py [--binary target/release/biblelastic] [--sets questions,themes,people]
+    python3 bench/meaning/evaluate.py [--binary target/release/biblelastic] [--sets questions,themes,people] [--edition OET-RV]
+    python3 bench/meaning/evaluate.py --sets questions-es --edition ASBRT      # The questions in Spanish, against a Spanish Bible
 
 Needs build/embeddings/data/queries.jsonl (from bench/embeddings/passages.py), the model module, and OET-RV.vectors (biblelastic model, biblelastic embed OET-RV).
 A passage found is right if it overlaps any of a question's right passages. (Standard library only.)
@@ -37,12 +38,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument( '--binary', default=str( REPOSITORY / 'target' / 'release' / 'biblelastic' ) )
     parser.add_argument( '--sets', default='questions,themes,people' )
+    parser.add_argument( '--edition', default='OET-RV' )
     arguments = parser.parse_args()
     queries = [ json.loads( line ) for line in open( REPOSITORY / 'build' / 'embeddings' / 'data' / 'queries.jsonl', encoding='utf-8' ) ]
     sums = {}
     for query in queries:
         if query['set'] not in arguments.sets.split( ',' ): continue
-        response = json.loads( subprocess.run( [arguments.binary, 'request', 'command=meaning', f"words={query['text']}", 'editions=OET-RV', 'limit=10', 'length=1'],
+        response = json.loads( subprocess.run( [arguments.binary, 'request', 'command=meaning', f"words={query['text']}", f'editions={arguments.edition}', 'limit=10', 'length=1'],
                                                capture_output=True, text=True, cwd=REPOSITORY, check=True ).stdout )
         found = [ result['locator'] for result in response['scripture'] ]
         gain = sum( 1 / math.log2( position + 2 ) for position, passage in enumerate( found ) if any( overlaps( passage, right ) for right in query['gold'] ) )

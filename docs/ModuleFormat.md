@@ -68,7 +68,8 @@ A commentary or a dictionary is an edition too, and so far each is a single `tex
 With the thesaurus (2 kB), the UBS meanings layers (`UHB.UBS.blm`, 2.1 MB, and `SR-GNT.UBS.blm`, 1.6 MB), and the UBS handbooks (`UBSH.text.blm`, 2.1 MB),
 sixty-two books (0.03 to 1.1 MB each, 27.7 MB in all), and the Spanish Bibles, study notes, and dictionary (`ASBRT`, `RV1909` with its Strong's numbers, `AOSN-ES`, and `AOBD-ES`: 25.5 MB),
 that makes eighty-five modules and 117 MB altogether.
-Meaning-based search adds the model (`bge-small-en-v1.5.model.blm`, 31 MB) and a vectors module for each English work (63 of them, 37 MB): see [Meaning.md](Meaning.md).
+Meaning-based search adds two models (`bge-small-en-v1.5.model.blm` for English, 31 MB, and `multilingual-e5-small.model.blm` for Spanish, 35 MB)
+and a vectors module for each English and Spanish work (70 of them, 64 MB): see [Meaning.md](Meaning.md).
 
 ## File layout
 

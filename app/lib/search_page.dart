@@ -50,7 +50,9 @@ class _SearchPageState extends State<SearchPage> {
     }
     if (!findingMeaning) return;
     try {
-      final found = await widget.engine.request({'command': 'meaning', 'words': text, 'limit': '8', 'length': '300'});
+      // The works in the language of the Bible that's being read (each language has its own model)
+      final language = works[edition]?['language'] as String? ?? '';
+      final found = await widget.engine.request({'command': 'meaning', 'words': text, 'language': language, 'limit': '8', 'length': '300'});
       if (mounted && words.text.trim() == text) setState(() { meaning = found; findingMeaning = false; });
     } catch (_) {
       if (mounted) setState(() => findingMeaning = false); // Meaning-based search is extra: the rest still stands

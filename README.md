@@ -122,6 +122,7 @@ can be converted and compiled, and three of the example searches above already w
     target/release/biblelastic topic once saved, always saved  # What the Scriptures and the commentators say about a subject
     target/release/biblelastic model ~/.cache/huggingface/hub/models--BAAI--bge-small-en-v1.5/snapshots/*/ && target/release/biblelastic embed
     target/release/biblelastic meaning why do good people suffer   # Passages about a subject, by meaning (see docs/Meaning.md)
+    target/release/biblelastic meaning --edition spa ¿Por qué sufren las personas buenas?   # … in the Spanish works
 
 (The ingest expects the source texts to be in folders alongside this one, as listed in `pipeline/sources.toml`.)
 See [docs/IntermediateFormat.md](docs/IntermediateFormat.md) and [docs/ModuleFormat.md](docs/ModuleFormat.md) for the details.

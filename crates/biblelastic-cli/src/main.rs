@@ -24,7 +24,7 @@ Commands:
   entry WORD...           Look up a dictionary entry by its title, e.g., entry aaron or entry abel*
   topic WORD...           Find what the Scriptures and the commentators say about a subject, e.g., topic once saved always saved
   meaning WORDS...        Find passages by what they're about, e.g., meaning why do good people suffer (needs a model and vectors: see model and embed)
-  model FOLDER            Make the model for meaning-based search from a Hugging Face BERT model's folder (by default, bge-small-en-v1.5)
+  model FOLDER            Make a model for meaning-based search from a Hugging Face model's folder (bge-small-en-v1.5 or multilingual-e5-small)
   embed [EDITION...]      Make the vectors of the installed works' passages (all of those in the model's language, if none are named)
   request KEY=VALUE...    Send a request as an app would, and show the JSON response, e.g., request command=find 'words=grace truth'
 
@@ -207,12 +207,14 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
         "meaning" => {
             if arguments.words.is_empty() { return Err("meaning needs a query".into()); }
             let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
-            let editions: Vec<String> = arguments.only.iter().cloned().collect();
+            // --edition names a work (or, as `spa` or `eng`, a language)
+            let (editions, language): (Vec<String>, Option<&str>) = match arguments.only.as_deref() {
+                Some(language @ ("eng" | "spa")) => (Vec::new(), Some(language)), Some(edition) => (vec![edition.to_string()], None), None => (Vec::new(), None) };
             let mut times = Vec::new();
             let mut found = None;
             for _ in 0..arguments.repeat {
                 let started = Instant::now();
-                found = Some(query::meaning(&library, &arguments.words.join(" "), &editions, arguments.limit, arguments.length)?);
+                found = Some(query::meaning(&library, &arguments.words.join(" "), &editions, language, arguments.limit, arguments.length)?);
                 times.push(format!("{:.0} ms", started.elapsed().as_secs_f64() * 1000.0));
             }
             let (scripture, others) = found.expect("at least once");
@@ -222,19 +224,18 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
             }
             println!("({:.0} ms)", started.elapsed().as_secs_f64() * 1000.0);
         }
-        "vector" => { // For checking the model against another implementation: a text's vector (as a query, or as a passage with --passage)
+        "vector" => { // For checking a model against another implementation: a text's vector (--edition names the model)
             let library = Library::open_with(&Folder(arguments.modules.clone()), arguments.cache << 20)?;
-            let model = library.model()?;
+            let model = library.model(arguments.only.as_deref())?; // --edition names the model
             let text = arguments.words.join(" ");
             let started = Instant::now();
-            let vector = if arguments.only.as_deref() == Some("passage") { model.embed_passage(&text) } else { model.embed_query(&text) };
+            let vector = model.embed(&text); // (No prefix: give it with the text, e.g., query: …)
             eprintln!("({:.1} ms)", started.elapsed().as_secs_f64() * 1000.0);
             println!("[{}]", vector.iter().map(|value| format!("{value:.6}")).collect::<Vec<_>>().join(","));
         }
         "model" => {
             let folder = arguments.words.first().ok_or("model needs the folder of a Hugging Face model")?;
-            meaning::convert_model(Path::new(folder), "bge-small-en-v1.5", "Represent this sentence for searching relevant passages: ", "", "eng", "MIT",
-                                   &arguments.modules, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?;
+            meaning::convert_model(Path::new(folder), &arguments.modules, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?;
         }
         "embed" => meaning::embed(&arguments.modules, &arguments.words, None, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?,
         "request" => {

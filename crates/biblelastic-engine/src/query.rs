@@ -937,18 +937,24 @@ pub struct MeaningFound {
 
 /// "Passages that are about this": the query's vector is compared with the vectors of every installed work's passages (see `meaning.rs`).
 /// Gives the best `limit` passages of Scripture and, separately, the best `limit` passages of everything else (only the best one from each entry).
-/// `editions`, if given, are the only works to search.
-pub fn meaning(library: &Library, query: &str, editions: &[String], limit: usize, length: usize) -> Result<(Vec<MeaningFound>, Vec<MeaningFound>)> {
-    let model = library.model()?;
-    let vector = model.embed_query(query);
+/// `editions`, if given, are the only works to search; `language`, if given (e.g., `spa`), is the only language. Each work is compared using the model
+/// that made its vectors (so the query is embedded once by each model that's needed). Scores from different models aren't strictly comparable,
+/// which is one reason to search one language at a time.
+pub fn meaning(library: &Library, query: &str, editions: &[String], language: Option<&str>, limit: usize, length: usize) -> Result<(Vec<MeaningFound>, Vec<MeaningFound>)> {
+    let mut queries: HashMap<String, Vec<f32>> = HashMap::new();
     let mut scripture: Vec<(f32, usize, usize)> = Vec::new();
     let mut others: Vec<(f32, usize, usize)> = Vec::new();
     for (index, installed) in library.modules.iter().enumerate() {
-        if installed.kind != "vectors" || (!editions.is_empty() && !editions.contains(&installed.edition)) { continue; }
+        if installed.kind != "vectors" || (!editions.is_empty() && !editions.contains(&installed.edition)) || language.is_some_and(|language| installed.language != language) { continue; }
         let vectors = library.vectors_of(installed)?;
-        if vectors.model != model.name || vectors.dimensions != vector.len() { continue; } // Made with another model: not comparable
+        if !queries.contains_key(&vectors.model) {
+            let Ok(model) = library.model(Some(&vectors.model)) else { continue }; // Its model isn't installed
+            queries.insert(vectors.model.clone(), model.embed_query(query));
+        }
+        let vector = &queries[&vectors.model];
+        if vectors.dimensions != vector.len() { continue; }
         let found = if installed.work == "scripture" { &mut scripture } else { &mut others };
-        let mut scores: Vec<(f32, usize, usize)> = vectors.scores(&vector).into_iter().enumerate().map(|(passage, score)| (score, index, passage)).collect();
+        let mut scores: Vec<(f32, usize, usize)> = vectors.scores(vector).into_iter().enumerate().map(|(passage, score)| (score, index, passage)).collect();
         scores.sort_by(|a, b| b.0.total_cmp(&a.0));
         scores.truncate(limit * 4); // Enough to fill the list after passages of the same entry are left out
         found.extend(scores);

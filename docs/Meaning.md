@@ -10,11 +10,12 @@ Nothing is generated: the results are passages, as they are.
 
 | | What it is | Made by | Size |
 | --- | --- | --- | --- |
-| `bge-small-en-v1.5.model.blm` | The model ([BAAI/bge-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5), MIT licence): a 12-layer BERT encoder, its weights stored as one byte each, with its word pieces | `biblelastic model FOLDER` | 31 MB |
+| `bge-small-en-v1.5.model.blm` | The model for English works ([BAAI/bge-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5), MIT licence): a 12-layer BERT encoder, its weights stored as one byte each, with its word pieces | `biblelastic model FOLDER` | 31 MB |
+| `multilingual-e5-small.model.blm` | The model for Spanish works ([intfloat/multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small), MIT licence): the same size of encoder, with SentencePiece's tokenizer, cut down to English and Spanish (see *Spanish* below) | `biblelastic model FOLDER` | 35 MB |
 | `EDITION.vectors.blm` | For one work: its passages (where each is, its heading or title, and its text) and their vectors, one byte for each dimension | `biblelastic embed [EDITION…]` | e.g., 4.1 MB for the OET-RV |
 
-Both are ordinary modules (kinds `model` and `vectors`), installed like the others. Meaning-based search needs the model and at least one work's vectors;
-without them, everything else works as before.
+All are ordinary modules (kinds `model` and `vectors`), installed like the others. Each work's vectors are made by the model for its language, and say which model that was,
+so a query is embedded by that model when the work is searched. Meaning-based search needs a model and at least one work's vectors; without them, everything else works as before.
 
 **Passages.** For a Bible, runs of the body paragraphs within one section, of about 80–200 words, each with its section's heading in front of it
 (the trial found that the heading helps more than any choice of model). For a commentary, dictionary, or book, runs of the paragraphs of one entry,
@@ -77,6 +78,38 @@ That's quick enough for a search that's asked for (and the app shows the other r
 Embedding all the passages at build time took 16 minutes on a 32-processor desktop (73,693 passages of 63 works, 37 MB of vectors; the OET-RV's took 89 s),
 and is only redone for passages whose text has changed.
 
+## Spanish
+
+The Spanish works (the two Bibles, the Aquifer's study notes and dictionary, and the three Spanish books: 47,826 passages, 25 MB of vectors) are embedded with
+`multilingual-e5-small`, which the trial found to be the best small model for Spanish. It averages all its tokens' states (rather than taking the first),
+and its queries and passages start with `query: ` and `passage: `. Its tokenizer is SentencePiece's unigram one, which the engine now has too
+(`Unigram` in `meaning.rs`: the most probable pieces for each word, after Unicode's compatibility forms, e.g., `…` → `...`, from a table of the 704 that Latin-script text can meet).
+
+**Cut down.** The model has 250,002 word pieces for about a hundred languages, which are most of its 113 MB. `biblelastic model` keeps only the pieces that the installed
+English and Spanish works use (and every single character of the scripts before Chinese, Japanese, and Korean, so that a query never meets an unknown letter): 41,095 pieces,
+and 35 MB. A word is cut into the same pieces whichever other pieces there are, so the works' texts give exactly the same vectors as with the whole model.
+Its vectors agree with the full model's (sentence-transformers) to a cosine similarity of 0.9998 on samples of the English and Spanish works.
+
+**How good it is**, on the trial's fifty questions in Spanish, against each Spanish Bible's passages (nDCG@10):
+
+| | The questions in Spanish |
+| --- | --- |
+| Against the Aquifer Spanish Bible Reference Text (`ASBRT`) | **0.32** |
+| Against the Reina-Valera 1909 | 0.27 |
+| (The trial: against the English OET-RV, with the same model) | 0.24 |
+| (For comparison: the questions in English, against the OET-RV, with bge) | 0.37 |
+
+The RV1909's archaic Spanish is harder. (At first it scored 0.23, because each of its chapters is one paragraph: such long paragraphs are now cut between verses.)
+
+**How long it takes** is the same as for English (the models are the same size): on the phone, 47 ms a query natively for the ASBRT (58 ms for all the Spanish works),
+and 178 ms in the phone's Chrome, after 0.6–0.8 s (1.3 s in Chrome) the first time.
+
+**In the app**, a search uses the works in the language of the Bible that's being read, so reading a Spanish Bible searches the Spanish works.
+
+**The source's titles.** Two of the Aquifer's Spanish titles are mistranslated: the introduction to Job is titled ‘Work’, and the dictionary's article on sin (*pecado*) ‘Without’.
+`pipeline/biblelastic_ingest/aquifer.py` corrects those two. The dictionary's titles and its articles' own headings disagree in 346 places, mostly as spelling variants
+(e.g., ‘Abiathar’ and ‘ABIATAR’), some with English left in a title (‘Aaron’s Rod’ for *Vara de Aarón*), so they're left as they are.
+
 ## In the app
 
 The *Topic* search shows its other results first, then ‘Looking for passages about this…’, then the passages of Scripture that are about it,
@@ -85,7 +118,8 @@ Only the best passage of each entry is shown, and a passage that's the same in a
 
 ## Not done yet
 
-- **Only English.** There's no small model that's good at Spanish yet (see the trial): the Spanish Bibles, notes, and books have no vectors.
+- **One language at a time.** A search only uses the works in the Bible's language (the two models' scores aren't comparable), so a Spanish reader doesn't get the English books.
+    `multilingual-e5-small` could search English works with a Spanish query, but less well (0.14 for the English questions against the ASBRT).
 - **Not combined with word matching.** The trial found that combining the two rankings helps with names of people and themes; here they're shown side by side.
 - **Measured on one phone only**, and not in Safari or Firefox. The phone's own memory use wasn't measured (the browser reported 55 MB with the OET-RV's vectors, 79 MB with all of them).
 - **All of an edition's vectors are kept in memory** once they've been read (4 MB for the OET-RV; 37 MB for all the English works).
@@ -94,10 +128,14 @@ Only the best passage of each entry is shown, and a passage that's the same in a
 ## Building them
 
     target/release/biblelastic model ~/.cache/huggingface/hub/models--BAAI--bge-small-en-v1.5/snapshots/*/   # → build/modules/bge-small-en-v1.5.model.blm
-    target/release/biblelastic embed                    # Every installed English work (or name some editions)
+    target/release/biblelastic model ~/.cache/huggingface/hub/models--intfloat--multilingual-e5-small/snapshots/*/   # After the works are compiled (it's cut down to them)
+    target/release/biblelastic embed                    # Every installed English and Spanish work (or name some editions)
     target/release/biblelastic meaning why do good people suffer
+    target/release/biblelastic meaning --edition spa ¿Por qué sufren las personas buenas?
     python3 bench/meaning/evaluate.py                   # The trial's questions (needs build/embeddings/data/queries.jsonl)
+    python3 bench/meaning/evaluate.py --sets questions-es --edition ASBRT
     node bench/meaning/web.mjs                          # Timing in headless Chrome
 
 For a quicker build, compile the CLI for the build machine's processor: `RUSTFLAGS="-C target-cpu=native" cargo build --release`.
-The model's folder is a Hugging Face download of the model (`config.json`, `vocab.txt`, `model.safetensors`, and `1_Pooling/config.json`).
+The model's folder is a Hugging Face download of the model (`config.json`, `model.safetensors`, `1_Pooling/config.json`, and `vocab.txt` or `tokenizer.json`).
+Only the two models above are known to `biblelastic model` (it needs each one's prefixes and language).

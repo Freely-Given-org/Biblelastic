@@ -9,7 +9,8 @@ use std::time::Instant;
 
 use biblelastic_engine::format::{Module, Result};
 use biblelastic_engine::library::{Folder, Library};
-use biblelastic_engine::meaning::{quantise, write_model, Model};
+use biblelastic_engine::meaning::{quantise, write_model, Model, Unigram};
+use biblelastic_engine::library::Text;
 use biblelastic_engine::query::{self, Piece, Wanted};
 
 use crate::compile::Options;
@@ -18,30 +19,90 @@ use crate::compile::Options;
 const MIN_WORDS: usize = 80;
 const MAX_WORDS: usize = 200;
 
-/// Convert a Hugging Face BERT sentence-embedding model (a folder with `config.json`, `vocab.txt`, and `model.safetensors`) into a module
-pub fn convert_model(folder: &Path, name: &str, query_prefix: &str, passage_prefix: &str, language: &str, licence: &str, output: &Path, options: Options) -> Result<()> {
+/// The models that `biblelastic model` knows: (a part of the folder's name, the model's name, query prefix, passage prefix, language of the works that it's for, licence)
+const KNOWN_MODELS: [(&str, &str, &str, &str, &str, &str); 2] = [
+    ("bge-small-en-v1.5", "bge-small-en-v1.5", "Represent this sentence for searching relevant passages: ", "", "eng", "MIT"),
+    ("multilingual-e5-small", "multilingual-e5-small", "query: ", "passage: ", "spa", "MIT"),
+];
+
+/// Convert a Hugging Face BERT sentence-embedding model (a folder with `config.json`, `model.safetensors`, `1_Pooling/config.json`, and either
+/// `vocab.txt` for a WordPiece tokenizer or `tokenizer.json` for a unigram one) into a module. It must be one of KNOWN_MODELS.
+/// A unigram tokenizer for many languages (e.g., multilingual e5's 250,000 pieces) is trimmed to the pieces that the installed works in English and Spanish use
+/// (and the single characters of most scripts), which is most of the model's size.
+pub fn convert_model(folder: &Path, modules: &Path, options: Options) -> Result<()> {
+    let folder_name = folder.to_string_lossy();
+    let &(_, name, query_prefix, passage_prefix, language, licence) = KNOWN_MODELS.iter().find(|known| folder_name.contains(known.0))
+        .ok_or_else(|| format!("not a model that's known (one of {})", KNOWN_MODELS.map(|known| known.0).join(", ")))?;
     let read = |file: &str| fs::read(folder.join(file)).map_err(|error| format!("{}: {error}", folder.join(file).display()));
     let config = Json::parse(&String::from_utf8(read("config.json")?)?)?;
     let number = |key: &str| config.get(key).and_then(Json::number).map(|value| value as usize).ok_or_else(|| format!("config.json has no {key}"));
     if config.get("model_type").and_then(Json::text) != Some("bert") { return Err("only BERT models are supported".into()); }
     let pooling = Json::parse(&String::from_utf8(read("1_Pooling/config.json")?)?)?;
-    if !matches!(pooling.get("pooling_mode_cls_token"), Some(Json::Bool(true))) { return Err("only models that use their first token (cls pooling) are supported".into()); }
-    let vocab: Vec<String> = String::from_utf8(read("vocab.txt")?)?.lines().map(str::to_string).collect();
-    let tensors = read_safetensors(&read("model.safetensors")?)?;
+    let pooling = if matches!(pooling.get("pooling_mode_cls_token"), Some(Json::Bool(true))) { "cls" }
+        else if matches!(pooling.get("pooling_mode_mean_tokens"), Some(Json::Bool(true))) { "mean" } else { return Err("only cls or mean pooling is supported".into()) };
+    let mut tensors = read_safetensors(&read("model.safetensors")?)?;
+    let (tokenizer, vocab, scores) = if folder.join("vocab.txt").exists() {
+        ("wordpiece", String::from_utf8(read("vocab.txt")?)?.lines().map(str::to_string).collect::<Vec<_>>(), Vec::new())
+    } else {
+        let tokenizer = Json::parse(&String::from_utf8(read("tokenizer.json")?)?)?;
+        let model = tokenizer.get("model").ok_or("tokenizer.json has no model")?;
+        if model.get("type").and_then(Json::text) != Some("Unigram") { return Err("only WordPiece (vocab.txt) and Unigram tokenizers are supported".into()); }
+        let Some(Json::Array(entries)) = model.get("vocab") else { return Err("tokenizer.json has no vocab".into()) };
+        let pieces: Vec<(String, f32)> = entries.iter().filter_map(|entry| match entry {
+            Json::Array(pair) if pair.len() == 2 => Some((pair[0].text()?.to_string(), pair[1].number()? as f32)), _ => None }).collect();
+        let kept = used_pieces(&pieces, modules)?;
+        println!("Keeping {} of the tokenizer's {} pieces", kept.len(), pieces.len());
+        // The word embeddings of the pieces that are kept, in the same order
+        let words = tensors.get_mut("embeddings.word_embeddings.weight").ok_or("the model has no word embeddings")?;
+        let width = words.0[1];
+        words.1 = kept.iter().flat_map(|&id| words.1[id * width..(id + 1) * width].to_vec()).collect();
+        words.0[0] = kept.len();
+        ("unigram", kept.iter().map(|&id| pieces[id].0.clone()).collect(), kept.iter().map(|&id| pieces[id].1).collect())
+    };
     let settings = [("layers", number("num_hidden_layers")?.to_string()), ("hidden", number("hidden_size")?.to_string()), ("heads", number("num_attention_heads")?.to_string()),
-        ("intermediate", number("intermediate_size")?.to_string()), ("max_tokens", number("max_position_embeddings")?.to_string()), ("pooling", "cls".to_string()),
-        ("query_prefix", query_prefix.to_string()), ("passage_prefix", passage_prefix.to_string())];
+        ("intermediate", number("intermediate_size")?.to_string()), ("max_tokens", number("max_position_embeddings")?.to_string()), ("pooling", pooling.to_string()),
+        ("tokenizer", tokenizer.to_string()), ("query_prefix", query_prefix.to_string()), ("passage_prefix", passage_prefix.to_string())];
     let mut writer = options.writer();
     writer.raw("module.kind", b"model");
     writer.raw("module.edition", name.as_bytes());
     writer.raw("module.title", name.as_bytes());
     writer.raw("module.language", language.as_bytes());
     writer.raw("manifest", format!("{{\"id\": \"{name}\", \"kind\": \"model\", \"licence\": \"{licence}\", \"source\": \"{}\"}}", folder.display()).as_bytes());
-    write_model(&mut writer, &settings, &vocab, &tensors)?;
-    let path = output.join(format!("{name}.model.blm"));
+    write_model(&mut writer, &settings, &vocab, &scores, &tensors)?;
+    let path = modules.join(format!("{name}.model.blm"));
     fs::write(&path, writer.finish()).map_err(|error| format!("{}: {error}", path.display()))?;
     println!("{} ({:.1} MB)", path.display(), fs::metadata(&path)?.len() as f64 / 1048576.0);
-    write_index(output)
+    write_index(modules)
+}
+
+/// The ids of a unigram tokenizer's pieces that the installed works in English and Spanish use (with the special pieces, and the single characters of most scripts),
+/// in order. Words are cut into pieces in the same way whichever other pieces there are, so the works' texts come out the same with only these.
+fn used_pieces(pieces: &[(String, f32)], modules: &Path) -> Result<Vec<usize>> {
+    let tokenizer = Unigram::new(pieces.to_vec());
+    let library = Library::open(&Folder(modules.to_path_buf()))?;
+    let mut words = std::collections::HashSet::new();
+    for installed in library.modules.iter().filter(|installed| installed.kind == "text" && matches!(installed.language.as_str(), "eng" | "spa")) {
+        let text = Text::open(&installed.module)?;
+        let mut line = String::new();
+        for slot in 0..text.text.ids.len() as u32 {
+            line.push_str(&text.before.get(slot)); line.push_str(&text.text.get(slot)); line.push_str(&text.after.get(slot));
+            if line.len() > 10_000 { words.extend(normalised_words(&line)); line.clear(); }
+        }
+        words.extend(normalised_words(&line));
+    }
+    let mut used: std::collections::BTreeSet<usize> = pieces.iter().enumerate()
+        // Every single character (and `▁` with one) of the scripts before the Chinese, Japanese, and Korean ones, so that no letter or symbol that a query might have is unknown
+        .filter(|(_, (piece, _))| (piece.starts_with('<') && piece.ends_with('>'))
+            || piece.trim_start_matches('▁').chars().count() == 1 && piece.trim_start_matches('▁').chars().all(|character| character < '\u{2E80}'))
+        .map(|(id, _)| id).collect();
+    for word in &words { used.extend(tokenizer.word(word).into_iter().map(|id| id as usize)); }
+    Ok(used.into_iter().collect())
+}
+
+/// The words of some text, as the tokenizer will see them (normalised, and split at spaces), which may lose a word that crossed the end of a chunk: that doesn't matter here
+fn normalised_words(text: &str) -> Vec<String> {
+    // (The tokenizer normalises a whole text; here it's done to a chunk, through a query of one piece: the words are what's wanted)
+    biblelastic_engine::meaning::normalise(text).split(' ').filter(|word| !word.is_empty()).map(str::to_string).collect()
 }
 
 /// The tensors of a `.safetensors` file (only 32-bit floats are kept): name → (shape, values)
@@ -73,12 +134,16 @@ struct Passage {
 /// Passages whose text hasn't changed keep the vectors that they already have.
 pub fn embed(modules: &Path, editions: &[String], model_name: Option<&str>, options: Options) -> Result<()> {
     let library = Library::open(&Folder(modules.to_path_buf()))?;
-    let model_module = library.modules.iter().find(|installed| installed.kind == "model" && model_name.is_none_or(|name| installed.edition == name))
-        .ok_or("no model is installed (make one with `biblelastic model`)")?;
-    let model = Model::open(&model_module.module, &model_module.edition)?;
+    let models: Vec<_> = library.modules.iter().filter(|installed| installed.kind == "model" && model_name.is_none_or(|name| installed.edition == name)).collect();
+    if models.is_empty() { return Err("no model is installed (make one with `biblelastic model`)".into()); }
+    // Each work is embedded by the model for its language
     let wanted: Vec<_> = library.modules.iter().filter(|installed| installed.kind == "text" && installed.edition != "OET-LV"
-        && if editions.is_empty() { installed.language == model_module.language } else { editions.contains(&installed.edition) }).collect();
+        && models.iter().any(|model| model.language == installed.language) && (editions.is_empty() || editions.contains(&installed.edition))).collect();
+    let mut opened: HashMap<String, Model> = HashMap::new();
     for installed in wanted {
+        let model_module = models.iter().find(|model| model.language == installed.language).expect("chosen above");
+        if !opened.contains_key(&model_module.edition) { opened.insert(model_module.edition.clone(), Model::open(&model_module.module, &model_module.edition)?); }
+        let model = &opened[&model_module.edition];
         let started = Instant::now();
         let passages = if installed.work == "scripture" { scripture_passages(&library, &installed.edition)? } else { entry_passages(&library, &installed.edition)? };
         if passages.is_empty() { continue; }
@@ -163,20 +228,27 @@ fn scripture_passages(library: &Library, edition: &str) -> Result<Vec<Passage>> 
             let mut paragraphs = Vec::new();
             let mut verse: Option<String> = None;
             for paragraph in section.paragraphs.iter().filter(|paragraph| paragraph.kind == "body") {
-                let (mut words, mut first, mut last) = (String::new(), None, None);
+                // The paragraph's text, verse by verse
+                let mut verses: Vec<(String, String)> = Vec::new();
                 for piece in &paragraph.pieces {
                     match piece {
                         Piece::Verse(name) => { verse = Some(name.clone()); }
                         Piece::Text(piece, _, _) => {
-                            words.push_str(piece);
-                            if first.is_none() { first = verse.clone(); }
-                            last = verse.clone();
+                            let Some(current) = &verse else { continue };
+                            match verses.last_mut() { Some((name, text)) if name == current => text.push_str(piece), _ => verses.push((current.clone(), piece.clone())) }
                         }
                         Piece::Chapter(_) => {}
                     }
                 }
-                let count = words.split_whitespace().count();
-                if let (Some(first), Some(last)) = (first, last) { if count > 0 { paragraphs.push(((words.trim().to_string(), first, last), count)); } }
+                let count = |text: &str| text.split_whitespace().count();
+                let total: usize = verses.iter().map(|(_, text)| count(text)).sum();
+                if total == 0 { continue; }
+                if total > MAX_WORDS { // A very long paragraph (e.g., a whole chapter, as the RV1909 has them) is cut between verses
+                    for (name, text) in verses { if count(&text) > 0 { paragraphs.push(((text.trim().to_string(), name.clone(), name), count(&text))); } }
+                } else {
+                    let text = verses.iter().map(|(_, text)| text.as_str()).collect::<String>();
+                    paragraphs.push(((text.trim().to_string(), verses[0].0.clone(), verses[verses.len() - 1].0.clone()), total));
+                }
             }
             for run in runs(&paragraphs) {
                 // A combined verse's name is a range (e.g., `1:6-7`): the passage starts at its first verse and ends at its last

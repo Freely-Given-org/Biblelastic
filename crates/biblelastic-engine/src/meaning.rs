@@ -6,8 +6,11 @@
 //! The same code embeds the passages when the modules are built (`biblelastic embed`), so the two sides always agree.
 //!
 //! A model module (kind `model`) has these sections (all raw):
-//! - `model.config`: `name=value` lines (`layers`, `hidden`, `heads`, `intermediate`, `query_prefix`, `passage_prefix`, `pooling`, `max_tokens`)
+//! - `model.config`: `name=value` lines (`layers`, `hidden`, `heads`, `intermediate`, `query_prefix`, `passage_prefix`, `max_tokens`,
+//!   `pooling`: `cls` (the first token's state, as bge uses) or `mean` (all the tokens' states averaged, as e5 does),
+//!   and `tokenizer`: `wordpiece` (BERT's) or `unigram` (SentencePiece's, as XLM-RoBERTa and multilingual e5 use))
 //! - `model.vocab`: the word pieces, one per line, in the order of their ids
+//! - `model.scores`: for a unigram tokenizer, each piece's score (its log probability) as a little-endian f32
 //! - for a matrix `NAME` (rows × columns): `NAME.q` (one signed byte per weight, row by row) and `NAME.s` (one little-endian f32 scale per row)
 //! - for a vector `NAME`: `NAME.f` (little-endian f32s)
 
@@ -33,10 +36,12 @@ pub fn tensor_names(layers: usize) -> Vec<String> {
 }
 
 /// Write a model module's sections, from its configuration, its word pieces, and its weights (name → (shape, values))
-pub fn write_model(writer: &mut ModuleWriter, config: &[(&str, String)], vocab: &[String], tensors: &HashMap<String, (Vec<usize>, Vec<f32>)>) -> Result<()> {
+/// (`scores` are a unigram tokenizer's, and empty for a WordPiece one.)
+pub fn write_model(writer: &mut ModuleWriter, config: &[(&str, String)], vocab: &[String], scores: &[f32], tensors: &HashMap<String, (Vec<usize>, Vec<f32>)>) -> Result<()> {
     let text: String = config.iter().map(|(name, value)| format!("{name}={value}\n")).collect();
     writer.raw("model.config", text.as_bytes());
     writer.raw("model.vocab", vocab.join("\n").as_bytes());
+    if !scores.is_empty() { writer.raw("model.scores", &scores.iter().flat_map(|score| score.to_le_bytes()).collect::<Vec<u8>>()); }
     let layers: usize = config.iter().find(|(name, _)| *name == "layers").ok_or("no layers")?.1.parse()?;
     for name in tensor_names(layers) {
         let (shape, values) = tensors.get(&name).ok_or_else(|| format!("the model has no {name}"))?;
@@ -261,6 +266,8 @@ pub struct Model {
     hidden: usize,
     heads: usize,
     tokenizer: Tokenizer,
+    /// Whether the vector is the average of all the tokens' states (otherwise it's the first token's)
+    mean: bool,
     words: Matrix,
     positions: Matrix,
     token_type: Vec<f32>,
@@ -274,7 +281,7 @@ impl Model {
             .filter_map(|line| line.split_once('=')).map(|(name, value)| (name.to_string(), value.to_string())).collect();
         let number = |name: &str| -> Result<usize> { Ok(config.get(name).ok_or_else(|| format!("the model's config has no {name}"))?.parse()?) };
         let (hidden, intermediate) = (number("hidden")?, number("intermediate")?);
-        if config.get("pooling").map(String::as_str) != Some("cls") { return Err("only models that use their first token's vector (cls pooling) are supported".into()); }
+        let mean = match config.get("pooling").map(String::as_str) { Some("cls") => false, Some("mean") => true, other => return Err(format!("unknown pooling {other:?}").into()) };
         let mut layers = Vec::new();
         for layer in 0..number("layers")? {
             let part = |part: &str| format!("encoder.layer.{layer}.{part}");
@@ -298,7 +305,10 @@ impl Model {
             passage_prefix: config.get("passage_prefix").cloned().unwrap_or_default(),
             max_tokens: number("max_tokens").unwrap_or(512),
             hidden, heads: number("heads")?,
-            tokenizer: Tokenizer::new(&module.text("model.vocab")?),
+            tokenizer: if config.get("tokenizer").map(String::as_str) == Some("unigram") {
+                Tokenizer::Unigram(Unigram::new(module.text("model.vocab")?.split('\n').zip(floats(&module.bytes("model.scores")?)).map(|(piece, score)| (piece.to_string(), score)).collect()))
+            } else { Tokenizer::WordPiece(WordPiece::new(&module.text("model.vocab")?)) },
+            mean,
             words: Matrix::open(module, "embeddings.word_embeddings.weight", hidden)?,
             positions: Matrix::open(module, "embeddings.position_embeddings.weight", hidden)?,
             token_type,
@@ -327,7 +337,11 @@ impl Model {
         }
         self.embedding_norm.apply(&mut states);
         for layer in &self.layers { states = self.layer(layer, states, tokens); }
-        let mut vector = states[..hidden].to_vec();
+        let mut vector = if self.mean {
+            let mut sum = vec![0f32; hidden];
+            for state in states.chunks(hidden) { for (total, value) in sum.iter_mut().zip(state) { *total += value; } }
+            sum
+        } else { states[..hidden].to_vec() };
         let length = vector.iter().map(|value| value * value).sum::<f32>().sqrt().max(1e-12);
         for value in &mut vector { *value /= length; }
         vector
@@ -384,20 +398,123 @@ fn erf(x: f32) -> f32 {
 
 fn floats(bytes: &[u8]) -> Vec<f32> { bytes.chunks_exact(4).map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]])).collect() }
 
+mod compatibility;
+
+/// How a model's text is cut into pieces
+pub enum Tokenizer {
+    WordPiece(WordPiece),
+    Unigram(Unigram),
+}
+
+impl Tokenizer {
+    /// The ids of some text's pieces, between the model's first and last special pieces, and no more than `limit` in all
+    pub fn encode(&self, text: &str, limit: usize) -> Vec<u32> {
+        match self { Tokenizer::WordPiece(tokenizer) => tokenizer.encode(text, limit), Tokenizer::Unigram(tokenizer) => tokenizer.encode(text, limit) }
+    }
+}
+
+/// SentencePiece's unigram tokenizer (as XLM-RoBERTa uses it): the text is normalised (Unicode's compatibility forms, and single spaces),
+/// each word gets `▁` in front, and is cut into the pieces whose scores (log probabilities) add up to the most
+pub struct Unigram {
+    pieces: HashMap<String, (u32, f32)>,
+    /// The most characters in any piece
+    longest: usize,
+    /// The score of a character that no piece has (it becomes `<unk>`): ten less than the lowest score, as SentencePiece does
+    unknown_score: f32,
+    unknown: u32,
+    first: u32,
+    last: u32,
+}
+
+impl Unigram {
+    /// From the pieces (with their scores), in the order of their ids
+    pub fn new(pieces: Vec<(String, f32)>) -> Unigram {
+        let id = |wanted: &str| pieces.iter().position(|(piece, _)| piece == wanted).unwrap_or(0) as u32;
+        let (unknown, first, last) = (id("<unk>"), id("<s>"), id("</s>"));
+        let lowest = pieces.iter().map(|(_, score)| *score).fold(0f32, f32::min);
+        let longest = pieces.iter().map(|(piece, _)| piece.chars().count()).max().unwrap_or(1);
+        let pieces = pieces.into_iter().enumerate().filter(|(_, (piece, _))| !piece.starts_with('<') || !piece.ends_with('>'))
+            .map(|(id, (piece, score))| (piece, (id as u32, score))).collect();
+        Unigram { pieces, longest, unknown_score: lowest - 10.0, unknown, first, last }
+    }
+
+    pub fn encode(&self, text: &str, limit: usize) -> Vec<u32> {
+        let mut ids = vec![self.first];
+        for word in normalise(text).split(' ').filter(|word| !word.is_empty()) { ids.extend(self.word(word)); }
+        ids.truncate(limit.max(2) - 1);
+        ids.push(self.last);
+        ids
+    }
+
+    /// One word's pieces (`▁` goes in front of it)
+    pub fn word(&self, word: &str) -> Vec<u32> {
+        let characters: Vec<char> = std::iter::once('▁').chain(word.chars()).collect();
+        let count = characters.len();
+        // best[end] = (the best score of the text up to here, where its last piece starts, that piece's id)
+        let mut best: Vec<Option<(f32, usize, u32)>> = vec![None; count + 1];
+        best[0] = Some((0.0, 0, 0));
+        let mut piece = String::new();
+        for start in 0..count {
+            let Some((score, _, _)) = best[start] else { continue };
+            piece.clear();
+            let mut found_single = false;
+            for end in start + 1..=count.min(start + self.longest) {
+                piece.push(characters[end - 1]);
+                if let Some(&(id, piece_score)) = self.pieces.get(&piece) {
+                    if end == start + 1 { found_single = true; }
+                    let total = score + piece_score;
+                    if best[end].is_none_or(|(old, _, _)| total > old) { best[end] = Some((total, start, id)); }
+                }
+            }
+            if !found_single { // A character that no piece starts with: it's unknown
+                let total = score + self.unknown_score;
+                if best[start + 1].is_none_or(|(old, _, _)| total > old) { best[start + 1] = Some((total, start, self.unknown)); }
+            }
+        }
+        let mut ids = Vec::new();
+        let mut end = count;
+        while end > 0 {
+            let (_, start, id) = best[end].expect("every position can be reached");
+            ids.push(id);
+            end = start;
+        }
+        ids.reverse();
+        ids
+    }
+}
+
+/// Text as SentencePiece's normaliser makes it: compatibility forms (e.g., `…` → `...`, `ﬁ` → `fi`), control characters left out, and single spaces
+pub fn normalise(text: &str) -> String {
+    let mut normal = String::with_capacity(text.len());
+    for character in text.chars() {
+        if character.is_whitespace() { if !normal.ends_with(' ') { normal.push(' '); } continue; }
+        if character.is_control() || character == '\u{200B}' || character == '\u{FEFF}' || character == '\u{AD}' { continue; }
+        match compatibility::COMPATIBILITY.binary_search_by(|(from, _)| from.cmp(&character)) {
+            Ok(index) => {
+                for replacement in compatibility::COMPATIBILITY[index].1.chars() {
+                    if replacement == ' ' { if !normal.ends_with(' ') { normal.push(' '); } } else { normal.push(replacement); }
+                }
+            }
+            Err(_) => normal.push(character),
+        }
+    }
+    normal.trim().to_string()
+}
+
 /// BERT's WordPiece tokenizer (for an uncased model): lower case, accents removed, punctuation split off,
 /// then each word cut into the longest pieces that the vocabulary has (later pieces start with `##`)
-pub struct Tokenizer {
+pub struct WordPiece {
     ids: HashMap<String, u32>,
     unknown: u32,
     first: u32,
     last: u32,
 }
 
-impl Tokenizer {
-    pub fn new(vocab: &str) -> Tokenizer {
+impl WordPiece {
+    pub fn new(vocab: &str) -> WordPiece {
         let ids: HashMap<String, u32> = vocab.lines().enumerate().map(|(id, piece)| (piece.to_string(), id as u32)).collect();
         let id = |piece: &str| ids.get(piece).copied().unwrap_or(0);
-        Tokenizer { unknown: id("[UNK]"), first: id("[CLS]"), last: id("[SEP]"), ids }
+        WordPiece { unknown: id("[UNK]"), first: id("[CLS]"), last: id("[SEP]"), ids }
     }
 
     /// The ids of some text's pieces, between `[CLS]` and `[SEP]`, and no more than `limit` in all
@@ -499,9 +616,19 @@ mod tests {
     #[test]
     fn words_are_split_as_bert_splits_them() {
         assert_eq!(basic_words("Héllo, World! “Don’t” stop—now"), ["hello", ",", "world", "!", "“", "don", "’", "t", "”", "stop", "—", "now"]);
-        let tokenizer = Tokenizer::new("[PAD]\n[UNK]\n[CLS]\n[SEP]\nun\n##believ\n##able\nfaith\n,");
+        let tokenizer = WordPiece::new("[PAD]\n[UNK]\n[CLS]\n[SEP]\nun\n##believ\n##able\nfaith\n,");
         assert_eq!(tokenizer.encode("Unbelievable faith, ξ", 512), [2, 4, 5, 6, 7, 8, 1, 3]);
         assert_eq!(tokenizer.encode("faith faith faith", 3), [2, 7, 3]);
+    }
+
+    #[test]
+    fn unigram_pieces_are_the_most_probable() {
+        let pieces = ["<s>", "<pad>", "</s>", "<unk>", "▁un", "zz", "▁unbe", "be", "liev", "able", "lievable", "▁", "...", "fi", "ne"];
+        let scores = [0.0, 0.0, 0.0, 0.0, -2.0, -9.0, -6.0, -3.0, -4.0, -3.0, -5.0, -1.0, -2.0, -3.0, -3.0];
+        let tokenizer = Unigram::new(pieces.iter().zip(scores).map(|(piece, score)| (piece.to_string(), score)).collect());
+        // ‘▁un’ + ‘be’ + ‘lievable’ (-10) beats ‘▁unbe’ + ‘liev’ + ‘able’ (-13); ‘…’ is ‘...’; ‘ﬁ’ is ‘fi’; and ‘ξ’ is unknown
+        assert_eq!(tokenizer.encode("unbelievable  …  ﬁne ξ", 512), [0, 4, 7, 10, 11, 12, 11, 13, 14, 11, 3, 2]);
+        assert_eq!(normalise(" Yaʸsous\u{A0}x² "), "Yaysous x2");
     }
 
     #[test]

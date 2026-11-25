@@ -21,6 +21,9 @@ from . import items, ubs, usfm
 # Which document each resource's items go into ("*": the Bible book that the item is about), and their entry type
 RESOURCES = { 'AquiferOpenStudyNotes':('*', 'StudyNote'), 'AquiferOpenStudyNotesBookIntros':('Intros', 'BookIntro'),
               'AquiferOpenStudyNotesProfiles':('Profiles', 'Profile'), 'AquiferOpenBibleDictionary':('Articles', 'Article') }
+# Titles that are mistranslated in the source (by resource and reference_id), as found so far
+TITLE_CORRECTIONS = { ('AquiferOpenStudyNotesBookIntros', '26394'):'Job',      # The Spanish introduction to Job is titled ‘Work’
+                      ('AquiferOpenBibleDictionary', '7691'):'Pecado' }          # The Spanish article on sin (its heading is ‘PECADO’) is titled ‘Without’
 BLOCKS = { 'p':'p', 'h1':'h1', 'h2':'h2', 'h3':'h3', 'li':'li' }
 STYLES = { 'em':'ital', 'i':'ital', 'strong':'bold', 'b':'bold', 'u':'underline', 'sup':'sup', 'sub':'sub' }
 
@@ -101,7 +104,9 @@ def parse( paths:list, extent ) -> dict:
         resource = next( (part for part in Path( path ).parts if part in RESOURCES), None )
         if not resource: continue
         document, entryType = RESOURCES[resource]
-        for item in json.loads( Path( path ).read_text( encoding='utf-8' ) ): loaded.append( (document, entryType, item, Path( path ).name) )
+        for item in json.loads( Path( path ).read_text( encoding='utf-8' ) ):
+            item['title'] = TITLE_CORRECTIONS.get( (resource, str(item.get( 'reference_id' ))), item.get( 'title', '' ) )
+            loaded.append( (document, entryType, item, Path( path ).name) )
     # Each item's document and entry name, so that links between items can be followed
     targets, names = {}, {}
     for ix, (document, entryType, item, _name) in enumerate( loaded ):
