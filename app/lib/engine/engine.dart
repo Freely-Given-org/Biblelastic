@@ -33,6 +33,9 @@ abstract class Engine {
   /// Download one module file. [onProgress] is told how many bytes have been stored so far.
   Future<void> install(String name, Uri url, void Function(int written)? onProgress);
 
+  /// Remove these modules (by name)
+  Future<void> remove(List<String> names);
+
   Future<void> removeAll();
 }
 

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import 'article_page.dart';
+import 'catalogue.dart';
 import 'engine/engine.dart';
 import 'main.dart' show edition;
 import 'strings.dart';
@@ -27,6 +28,12 @@ class _SearchPageState extends State<SearchPage> {
   String? problem;
 
   @override
+  void initState() {
+    super.initState();
+    Catalogue.of(widget.engine).refresh(); // For what can be downloaded (e.g., search by meaning), if it can be fetched
+  }
+
+  @override
   void dispose() {
     words.dispose();
     super.dispose();
@@ -41,22 +48,43 @@ class _SearchPageState extends State<SearchPage> {
       SearchKind.terms => {'command': 'terms', 'edition': edition, 'words': text, 'limit': '30'},
       SearchKind.dictionary => {'command': 'entry', 'words': text, 'limit': '20', 'length': '600'},
     };
+    // The works in the language of the Bible that's being read (each language has its own model)
+    final language = works[edition]?['language'] as String? ?? '';
     try {
       final answer = await widget.engine.request(fields);
-      setState(() { response = answer; meaning = null; problem = null; findingMeaning = kind == SearchKind.topic && meaningAvailable; });
+      setState(() { response = answer; meaning = null; problem = null; findingMeaning = kind == SearchKind.topic && meaningLanguages.contains(language); });
     } catch (error) {
       setState(() { response = null; meaning = null; problem = '$error'; });
       return;
     }
     if (!findingMeaning) return;
     try {
-      // The works in the language of the Bible that's being read (each language has its own model)
-      final language = works[edition]?['language'] as String? ?? '';
       final found = await widget.engine.request({'command': 'meaning', 'words': text, 'language': language, 'limit': '8', 'length': '300'});
       if (mounted && words.text.trim() == text) setState(() { meaning = found; findingMeaning = false; });
     } catch (_) {
       if (mounted) setState(() => findingMeaning = false); // Meaning-based search is extra: the rest still stands
     }
+  }
+
+  /// If search by meaning isn't installed in the language of the Bible that's being read, but can be: a button to get it
+  Widget offerMeaning(Strings strings, ThemeData theme) {
+    final language = works[edition]?['language'] as String? ?? '';
+    final catalogue = Catalogue.of(widget.engine);
+    if (meaningLanguages.contains(language)) return const SizedBox.shrink();
+    return ListenableBuilder(listenable: catalogue, builder: (context, _) {
+      final modules = catalogue.meaning(language);
+      if (modules.isEmpty) return const SizedBox.shrink();
+      return Padding(padding: const EdgeInsets.only(top: 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(strings.meaningDescription, style: theme.textTheme.bodySmall),
+        const SizedBox(height: 8),
+        if (catalogue.busy) LinearProgressIndicator(value: catalogue.fraction)
+        else OutlinedButton(onPressed: () async {
+            await catalogue.install(modules);
+            await loadWorks(widget.engine);
+            if (mounted) run();
+          }, child: Text('${strings.getMeaningSearch} (${strings.megabytes(catalogue.toDownload(modules))})')),
+      ]));
+    });
   }
 
   /// Go back to the reader, to show a reference like `JHN 3:16` in its section
@@ -104,6 +132,7 @@ class _SearchPageState extends State<SearchPage> {
       ...byMeaning('others').map((found) => ListTile(contentPadding: EdgeInsets.zero,
           title: Text(found['label'] == '' ? strings.reference(found['locator'] as String) : found['label'] as String),
           subtitle: Text('${titleOf(found['edition'] as String)}\n${found['text']}'), onTap: () => openArticle(found))),
+      if (!findingMeaning && meaning == null) offerMeaning(strings, theme),
       if (list('otherEntries').isNotEmpty || list('otherPassages').isNotEmpty) heading('${strings.otherSide}: ${list('contrast').join('; ')}'),
       ...list('otherEntries').map(article),
       ...list('otherPassages').map(passage),

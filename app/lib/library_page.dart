@@ -2,36 +2,70 @@
 import 'package:flutter/material.dart';
 
 import 'article_page.dart';
+import 'catalogue.dart';
 import 'engine/engine.dart';
 import 'strings.dart';
 import 'works.dart';
 
-class LibraryPage extends StatelessWidget {
+class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key, required this.engine});
   final Engine engine;
+  @override
+  State<LibraryPage> createState() => _LibraryPageState();
+
+  // By title, as a library shelves them: ‘The Pilgrim’s Progress’ under P
+  static String _sortKey(Map work) => _shelved(work['title'] as String);
+  static String _shelved(String title) => title.toLowerCase().replaceFirst(RegExp(r'^(the|an?) '), '');
+}
+
+class _LibraryPageState extends State<LibraryPage> {
+  late final Catalogue catalogue = Catalogue.of(widget.engine);
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
+    catalogue.refresh(); // For the works that can be downloaded, if it can be fetched
+  }
+
+  Future<void> download(Work work) async {
+    await catalogue.install(catalogue.ofWork(work));
+    await loadWorks(widget.engine);
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(listenable: catalogue, builder: (context, _) => page(context));
+
+  Widget page(BuildContext context) {
     final strings = Strings(Localizations.localeOf(context));
     final theme = Theme.of(context);
     final kinds = {'book': strings.books, 'commentary': strings.commentaries, 'dictionary': strings.dictionaries};
+    // The works that aren't installed (in the languages of the installed Bibles first), to download one by one
+    final mine = {for (final bible in readableBibles()) works[bible]?['language'] as String? ?? ''}..add(strings.languageCode);
+    final more = catalogue.works.values.where((work) => kinds.containsKey(work.kind) && !works.containsKey(work.edition)).toList()
+      ..sort((a, b) => mine.contains(a.language) != mine.contains(b.language) ? (mine.contains(a.language) ? -1 : 1)
+          : a.kind != b.kind ? a.kind.compareTo(b.kind) : LibraryPage._shelved(a.title).compareTo(LibraryPage._shelved(b.title)));
+    Widget heading(String text) => Padding(padding: const EdgeInsets.only(top: 16, bottom: 4), child: Text(text, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary)));
     return Scaffold(
-      appBar: AppBar(title: Text(strings.library)),
+      appBar: AppBar(title: Text(strings.library), bottom: catalogue.busy
+          ? PreferredSize(preferredSize: const Size.fromHeight(4), child: LinearProgressIndicator(value: catalogue.fraction)) : null),
       body: SafeArea(child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
         ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.copyright_outlined), title: Text(strings.aboutWorks),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => const AboutWorksPage()))),
-        for (final MapEntry(key: kind, value: heading) in kinds.entries) ...[
-          if (works.values.any((work) => work['work'] == kind)) Padding(padding: const EdgeInsets.only(top: 16, bottom: 4), child: Text(heading, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary))),
-          for (final work in works.values.where((work) => work['work'] == kind).toList()..sort((a, b) => _sortKey(a).compareTo(_sortKey(b))))
+        for (final MapEntry(key: kind, value: title) in kinds.entries) ...[
+          if (works.values.any((work) => work['work'] == kind)) heading(title),
+          for (final work in works.values.where((work) => work['work'] == kind).toList()..sort((a, b) => LibraryPage._sortKey(a).compareTo(LibraryPage._sortKey(b))))
             ListTile(contentPadding: EdgeInsets.zero, title: Text(work['title'] as String), subtitle: Text(work['edition'] as String),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => ContentsPage(engine: engine, edition: work['edition'] as String)))),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => ContentsPage(engine: widget.engine, edition: work['edition'] as String)))),
         ],
+        if (more.isNotEmpty) heading(strings.toDownload),
+        for (final work in more)
+          ListTile(contentPadding: EdgeInsets.zero, title: Text(work.title),
+              subtitle: Text([strings.languageName(work.language), strings.megabytes(catalogue.bytes(catalogue.ofWork(work))), if (work.licence.isNotEmpty) work.licence].join(' · ')),
+              trailing: IconButton(tooltip: strings.install, icon: const Icon(Icons.download), onPressed: catalogue.busy ? null : () => download(work))),
       ])),
     );
   }
-
-  // By title, as a library shelves them: ‘The Pilgrim’s Progress’ under P
-  static String _sortKey(Map work) => (work['title'] as String).toLowerCase().replaceFirst(RegExp(r'^(the|an?) '), '');
 }
 
 /// Every installed work (Bibles, books, commentaries, and dictionaries) and model, with its copyright, licence, and attribution

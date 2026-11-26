@@ -42,6 +42,11 @@ class WebEngine implements Engine {
   }
 
   @override
+  Future<void> remove(List<String> names) async {
+    await _engine.callMethod<JSPromise<JSAny?>>('remove'.toJS, names.jsify()).toDart;
+  }
+
+  @override
   Future<void> removeAll() async {
     await _engine.callMethod<JSPromise<JSAny?>>('remove'.toJS).toDart;
   }

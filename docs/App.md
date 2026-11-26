@@ -6,7 +6,14 @@ not to be the finished design. It runs on Android and in browsers, and is set up
 It can:
 
 - install, update, and remove modules, from a list (`index.json`) at a web address (Freely-Given.org for a release build: see [Publishing.md](Publishing.md)),
-    showing each module's licence, and when one has changed
+    showing each one's licence, and when one has changed. They're chosen as people think of them (`app/lib/catalogue.dart`):
+    - **a starter set for a language** (*Start with*: English, 65 MB; Español, 58 MB; both, 102 MB): its Bibles, commentaries, and dictionaries,
+        the Greek and Hebrew (for what each word translates), and its thesaurus, but not the books
+    - **search by meaning in a language** (the model, about 31–35 MB, with the vectors of the works in that language that are installed;
+        offered once something in that language is installed, and on the Search page when a subject is searched for without it)
+    - **each work** (its text, layers, and alignments, and its vectors if search by meaning is installed in its language), on the Modules page
+        and, for the books, commentaries, and dictionaries that aren't installed, under *To download* in the Library
+    - every module one by one (*Each module*, at the end of the Modules page), with *Install all* (256 MB) and *Remove all*
 - read the OET-RV a section at a time (from one section heading to the next, whichever chapters that covers), with its poetry indents, words of Jesus, and translators' additions shown differently
 - read another installed Bible instead (Bible, in the ⋮ menu), at the same place: so far the two Spanish ones, in the OET-RV's sections. The choice is remembered;
     until one is chosen, a phone set to Spanish starts with a Spanish Bible. While reading one, the notes in its language come first
@@ -37,7 +44,7 @@ Its own words are in English and Spanish (`app/lib/strings.dart`), chosen by the
 | `crates/biblelastic-engine` | The engine: the same code everywhere |
 | `crates/biblelastic-ffi` | The engine as a native library (`libbiblelastic.so`, about 0.8 MB) with two C functions: `biblelastic_request` and `biblelastic_free` |
 | `crates/biblelastic-wasm` + `web/*.js` | The engine as WebAssembly in a web worker (see [Browser.md](Browser.md)) |
-| `app/lib/engine/engine.dart` | What the app sees: `start`, `request`, `installed`, `install`, `removeAll` |
+| `app/lib/engine/engine.dart` | What the app sees: `start`, `request`, `installed`, `install`, `remove`, `removeAll` |
 | `app/lib/engine/engine_native.dart` | … on phones and desktops: calls the native library (Dart FFI) from an isolate of its own, so a slow request can't freeze the display, and keeps modules as files in the app's own folder |
 | `app/lib/engine/engine_web.dart` | … in browsers: calls `web/biblelastic.js`, which keeps modules in the browser's own storage |
 

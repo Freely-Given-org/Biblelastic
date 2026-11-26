@@ -60,8 +60,13 @@ A release build of the app downloads from `https://Freely-Given.org/Software/Bib
 (`http://localhost:8377/build/modules/`, through `adb reverse tcp:8377 tcp:8377` for a phone). Either can be changed when building:
 `--dart-define=MODULES=https://…/`.
 
+## What a phone downloads
+
+Not everything (256 MB): the app offers a starter set for each language (65 MB for English, 58 MB for Spanish), search by meaning separately,
+and each work on its own (see [App.md](App.md)). It works these out from the catalogue (each module's `kind`, `work`, `edition`, and `language`, and an alignment's name),
+so publishing needs nothing more for a new work to be offered in the right places.
+
 ## Not done yet
 
 - **Resuming a broken download**, and checking a download's SHA-256 (the engine does check each page of a module as it reads it).
-- **Smaller downloads**: everything is 256 MB. A phone could start with only the OET and its notes (about 40 MB), and take the rest when it's wanted.
 - **A web page about the modules** (the existing Software/Biblelastic page is from 2022).

@@ -118,6 +118,15 @@ class NativeEngine implements Engine {
   }
 
   @override
+  Future<void> remove(List<String> names) async {
+    await _call('command=forget');
+    for (final name in names) {
+      final file = File('${_folder.path}/$name.blm');
+      if (await file.exists()) await file.delete();
+    }
+  }
+
+  @override
   Future<void> removeAll() async {
     await _call('command=forget');
     await for (final file in _folder.list()) {

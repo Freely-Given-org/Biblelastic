@@ -19,7 +19,9 @@ Future<void> loadWorks(Engine engine) async {
   aligned
     ..clear()
     ..addAll([for (final module in modules) if (module['kind'] == 'alignment') module['from'] as String]);
-  meaningAvailable = modules.any((module) => module['kind'] == 'model') && modules.any((module) => module['kind'] == 'vectors');
+  meaningLanguages
+    ..clear()
+    ..addAll([for (final module in modules) if (module['kind'] == 'model' && modules.any((other) => other['kind'] == 'vectors' && other['language'] == module['language'])) module['language'] as String]);
   models
     ..clear()
     ..addAll(modules.where((module) => module['kind'] == 'model'));
@@ -47,8 +49,8 @@ class Rights extends StatelessWidget {
   }
 }
 
-/// Whether meaning-based search can be done: a model and some passages' vectors are installed
-bool meaningAvailable = false;
+/// The languages that meaning-based search can be done in: their model and some of their works' vectors are installed
+final Set<String> meaningLanguages = {};
 
 /// The installed Bibles that can be read (translations, not the original-language texts, nor the OET's Literal Version, which goes with the Readers' Version),
 /// the OET first, then the Aquifer Spanish text, then the others by title

@@ -79,6 +79,25 @@ class Strings {
   String verses(int count) => _pick(['in $count verses', 'en $count versículos']);
   String megabytes(int bytes) => '${(bytes / 1048576).toStringAsFixed(1)} MB';
 
+  /// The language that these words are in, as a code like the modules' (`eng` or `spa`)
+  String get languageCode => _pick(['eng', 'spa']);
+  /// A language's name (each in its own language, as someone looking for theirs would know it)
+  String languageName(String code) => switch (code) {
+    'eng' => 'English', 'spa' => 'Español', 'grc' => _pick(['Greek', 'Griego']), 'hbo' => _pick(['Hebrew', 'Hebreo']), 'arc' => _pick(['Aramaic', 'Arameo']), _ => code };
+  String get startWith => _pick(['Start with', 'Empiece con']);
+  String get starterDescription => _pick(['Bibles, study notes, dictionaries, and the Greek and Hebrew (for what each word translates). Books can be added one by one below.',
+      'Biblias, notas de estudio, diccionarios, y el griego y el hebreo (para ver qué traduce cada palabra). Los libros se pueden añadir uno a uno más abajo.']);
+  String get searchByMeaning => _pick(['Search by meaning', 'Búsqueda por significado']);
+  String get meaningDescription => _pick(['Finds passages about a subject, even when they use other words, in the works that are installed.',
+      'Encuentra pasajes sobre un tema, aunque usen otras palabras, en las obras instaladas.']);
+  String get getMeaningSearch => _pick(['Get search by meaning', 'Obtener la búsqueda por significado']);
+  String get install => _pick(['Install', 'Instalar']);
+  String get remove => _pick(['Remove', 'Quitar']);
+  String get downloading => _pick(['Downloading…', 'Descargando…']);
+  String get bibles => _pick(['Bibles', 'Biblias']);
+  String get eachModule => _pick(['Each module', 'Cada módulo']);
+  String get toDownload => _pick(['To download', 'Para descargar']);
+
   /// A book's name from its code (or the code itself, for one that isn't in the list)
   String book(String code) => _books[code]?[_column] ?? code;
 
