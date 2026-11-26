@@ -48,6 +48,7 @@ class Strings {
   String get meaningHere => _pick(['Meaning here', 'Significado aquí']);
   String get similarMeaning => _pick(['Words with a similar meaning:', 'Palabras de significado parecido:']);
   String get aboutThis => _pick(['About this:', 'Sobre esto:']);
+  String get about => _pick(['About', 'Acerca de']);
   String get library => _pick(['Library', 'Biblioteca']);
   String get bible => _pick(['Bible', 'Biblia']);
   String get byMeaning => _pick(['Passages about this (by meaning)', 'Pasajes sobre esto (por significado)']);
@@ -96,6 +97,8 @@ class Strings {
   String get downloading => _pick(['Downloading…', 'Descargando…']);
   String get bibles => _pick(['Bibles', 'Biblias']);
   String get eachModule => _pick(['Each module', 'Cada módulo']);
+  String get aboutApp => _pick(['Free software from Freely-Given.org, under the GNU General Public License, version 3. Its source code is at https://github.com/Freely-Given-org/Biblelastic',
+      'Software libre de Freely-Given.org, bajo la Licencia Pública General de GNU, versión 3. Su código fuente está en https://github.com/Freely-Given-org/Biblelastic']);
   String get toDownload => _pick(['To download', 'Para descargar']);
 
   /// A book's name from its code (or the code itself, for one that isn't in the list)

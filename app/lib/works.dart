@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'engine/engine.dart';
 import 'strings.dart';
 
+/// The app's version (from pubspec.yaml, which app/release.sh passes when it builds a release)
+const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'development');
+
 /// The installed works, by edition: {'title', 'work', 'disclaimer'} (from the engine's `info`). Kept up to date by [loadWorks].
 final Map<String, Map<String, dynamic>> works = {};
 

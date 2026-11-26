@@ -81,12 +81,19 @@ class AboutWorksPage extends StatelessWidget {
       appBar: AppBar(title: Text(strings.aboutWorks)),
       body: SafeArea(child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        itemCount: all.length,
-        itemBuilder: (context, index) => Padding(padding: const EdgeInsets.only(top: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(all[index]['title'] as String? ?? all[index]['edition'] as String, style: theme.textTheme.titleSmall),
-          Text(all[index]['edition'] as String, style: theme.textTheme.labelSmall!.copyWith(color: theme.colorScheme.outline)),
+        itemCount: all.length + 1,
+        itemBuilder: (context, index) => index == 0
+            // The app itself: its version, and its licence and source code
+            ? Padding(padding: const EdgeInsets.only(top: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${strings.appName} $appVersion', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 4),
+                SelectableText(strings.aboutApp, style: theme.textTheme.bodySmall),
+              ]))
+            : Padding(padding: const EdgeInsets.only(top: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(all[index - 1]['title'] as String? ?? all[index - 1]['edition'] as String, style: theme.textTheme.titleSmall),
+          Text(all[index - 1]['edition'] as String, style: theme.textTheme.labelSmall!.copyWith(color: theme.colorScheme.outline)),
           const SizedBox(height: 4),
-          Rights(module: all[index]),
+          Rights(module: all[index - 1]),
         ])),
       )),
     );

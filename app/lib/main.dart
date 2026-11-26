@@ -217,6 +217,8 @@ class _ReaderPageState extends State<ReaderPage> {
     await loadContents(passage: passage?.replaceFirst(RegExp(r'-.*'), '')); // Where the section that's showing starts
   }
 
+  // The app's version and licence, then each installed work's
+  Future<void> openAbout() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => const AboutWorksPage()));
   Future<void> openLibrary() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) => LibraryPage(engine: engine)));
 
   Future<void> openSearch() async {
@@ -273,10 +275,11 @@ class _ReaderPageState extends State<ReaderPage> {
           if (current != null) IconButton(tooltip: strings.nextSection, icon: const Icon(Icons.chevron_right),
               onPressed: next == null ? null : () => showSection(next['document'] as String, next['section'] as int)),
           if (current != null) IconButton(tooltip: strings.search, icon: const Icon(Icons.search), onPressed: openSearch),
-          if (started) PopupMenuButton<String>(tooltip: strings.more, onSelected: (choice) => switch (choice) { 'bible' => chooseBible(), 'library' => openLibrary(), _ => openModules() }, itemBuilder: (context) => [
+          if (started) PopupMenuButton<String>(tooltip: strings.more, onSelected: (choice) => switch (choice) { 'bible' => chooseBible(), 'library' => openLibrary(), 'about' => openAbout(), _ => openModules() }, itemBuilder: (context) => [
             if (current != null && readableBibles().length > 1) PopupMenuItem(value: 'bible', child: ListTile(leading: const Icon(Icons.menu_book_outlined), title: Text(strings.bible), subtitle: Text(edition))),
             if (current != null) PopupMenuItem(value: 'library', child: ListTile(leading: const Icon(Icons.local_library_outlined), title: Text(strings.library))),
             PopupMenuItem(value: 'modules', child: ListTile(leading: const Icon(Icons.download), title: Text(strings.modules))),
+            PopupMenuItem(value: 'about', child: ListTile(leading: const Icon(Icons.info_outline), title: Text(strings.about))),
           ]),
         ],
       ),

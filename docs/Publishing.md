@@ -82,3 +82,17 @@ always sent whole; its copies from then expire within two hours, or can be purge
 ## The web page
 
 `Software/Biblelastic/index.html` on Freely-Given.org describes the app, the starter sets, and each work with its licence and size (from the catalogue).
+It also shows `Biblelastic-logo.png` (`app/design/logo.png`), and links to the current release, so its version, date, and APK sizes change with each one.
+
+## Publishing a release of the app
+
+`app/release.sh` builds the release into `app/build/release/VERSION/`. To publish it (with the site's owner's OK), from `app/`:
+
+    L=/srv/www/Freely-Given.org/Software/Biblelastic
+    rsync -a --delete build/release/VERSION/web/ $L/app/
+    cp build/release/VERSION/*.apk $L/downloads/
+    chgrp -R WebAdmin $L/app $L/downloads
+
+then change the version, date, and links in `index.html`, and remove the older APKs from `downloads/`.
+The web app is at `https://Freely-Given.org/Software/Biblelastic/app/`, and gets its modules from `../modules/`.
+Apache serves `.apk` files as `application/vnd.android.package-archive`, as they should be.
