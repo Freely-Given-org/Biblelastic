@@ -74,10 +74,10 @@ and otherwise for the whole module again; after that, trying again carries on fr
 and only then does it take the place of the old copy (which stays usable until then). A module that arrives wrong is thrown away, with a message to try again.
 `app/test_web.mjs` tests both, with a server that cuts the first download short and corrupts another.
 
-**Freely-Given.org can't send the rest yet.** Apache serves `.blm` files as `text/plain`, so it compresses them (which saves only about 5%, as they're
-compact already), and Cloudflare caches the compressed copy and then sends the whole module whatever range is asked for. So a broken download starts that
-module again. Serving them as `application/octet-stream` would fix that, e.g., with `AddType application/octet-stream .blm` in Apache's configuration
-(`.htaccess` isn't read there), and then purging Cloudflare's cached copies (or publishing new versions).
+**On Freely-Given.org**, Apache serves `.blm` files as `application/octet-stream` (`/etc/apache2/conf-available/biblelastic-modules.conf`:
+`AddType application/octet-stream .blm`, since `.htaccess` isn't read there), so they aren't compressed, and Apache and Cloudflare (even from its cache)
+can send the rest of one. Before that (until 26 November 2026) they were served as compressed `text/plain`, which saved only about 5% and which Cloudflare
+always sent whole; its copies from then expire within two hours, or can be purged.
 
 ## The web page
 
