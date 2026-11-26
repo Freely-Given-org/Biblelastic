@@ -16,10 +16,10 @@ language = "eng"
 script = "Latn"
 versification = "OET-RV"
 format = "ESFM"
-copyright = "Copyright © 2010–2026 Freely-Given.org"
+copyright = "Copyright © 2010–2026 Robert Hunt (Freely-Given.org)"
 licence = "CC BY-SA 4.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 files = ["OpenEnglishTranslation--OET/translatedTexts/ReadersVersion/OET-RV_*.ESFM"]
 features = ["row"]
 
@@ -30,10 +30,10 @@ language = "eng"
 script = "Latn"
 versification = "OET-LV"
 format = "ESFM"
-copyright = "Copyright © 2010–2026 Freely-Given.org"
+copyright = "Copyright © 2010–2026 Robert Hunt (Freely-Given.org)"
 licence = "CC BY-SA 4.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 files = [
     "OpenEnglishTranslation--OET/derivedTexts/auto_edited_OT_ESFM/OET-LV_*.ESFM",
     "OpenEnglishTranslation--OET/derivedTexts/auto_edited_DC_ESFM/OET-LV_*.ESFM",
@@ -48,10 +48,10 @@ language = "grc"
 script = "Grek"
 versification = "org"
 format = "USFM"
-copyright = "Copyright © 2022–2024 by Alan Bunning"
+copyright = "Copyright © 2022–2023 by Alan Bunning"
 licence = "CC BY 4.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 files = ["Forked/CNTR-SR/SR usfm/*.usfm"]
 features = ["lemma", "strong", "morph", "koine", "translit", "lemma_translit", "oet_row"]
 transliterate = "Greek"
@@ -64,9 +64,9 @@ row_table_filter_values = ["X"]
 [edition.layer] # Extra features for each word, taken from the word table (our column = table column)
 id = "OET"
 name = "OET word-table glosses, roles, and tags"
-copyright = "Copyright © 2010–2026 Freely-Given.org, derived from the CNTR Verifiable Literal Translation glosses (Copyright © 2022 GreekCNTR.org)"
+copyright = "Copyright © 2010–2026 Robert Hunt (Freely-Given.org), derived from the CNTR Verifiable Literal Translation glosses (Copyright © 2022 GreekCNTR.org)"
 licence = "CC BY-SA 4.0"
-licence_verified = false
+licence_verified = true
 columns = { gloss = "OETGlossWords", gloss_caps = "GlossCaps", role = "Role", tags = "Tags" }
 
 [edition.variants] # Word-table rows for words that aren't in the SR text
@@ -74,7 +74,7 @@ id = "OET-variants"
 name = "Variant readings from the CNTR collation, as listed in the OET word table"
 copyright = "Copyright © 2022 GreekCNTR.org"
 licence = "CC BY 4.0"
-licence_verified = false
+licence_verified = true
 filter_values = ["", "H"]
 columns = { ref = "Ref", status = "Probability", text = "GreekWord", lemma = "GreekLemma", strong = "StrongsExt", morph = "Morphology", role = "Role", gloss = "OETGlossWords" }
 
@@ -85,10 +85,13 @@ language = "hbo"
 script = "Hebr"
 versification = "eng"
 format = "USFM"
-copyright = "Copyright © unfoldingWord"
+copyright = "Copyright © 2022 by unfoldingWord"
+# Its licence requires this of a derivative work (and that a modified copy doesn't use the unfoldingWord® trademark: see docs/Licences.md)
+attribution = "The original work by unfoldingWord is available from https://www.unfoldingword.org/uhb"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each word linked to the OET's word tables, and transliterations added."
 licence = "CC BY-SA 4.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 files = ["OpenBibleData/copiedBibles/Original/unfoldingWord.org/UHB/*.usfm"]
 features = ["lemma", "strong", "morph", "lang", "cons", "translit", "lemma_translit", "oet_row"]
 transliterate = "Hebrew"
@@ -100,9 +103,9 @@ row_table_filter_values = ["", "A", "K", "AK"]
 [edition.layer]
 id = "OET"
 name = "OET word-table glosses, roles, syntax, and tags"
-copyright = "Glosses by Freely-Given.org; Hebrew parsing Copyright © 2019 hb.openscriptures.org"
+copyright = "Glosses by Robert Hunt (Freely-Given.org); Hebrew parsing Copyright © 2019 hb.openscriptures.org"
 licence = "CC BY-SA 4.0"
-licence_verified = false
+licence_verified = true
 columns = { gloss = "WordGloss", context_gloss = "ContextualWordGloss", morpheme_glosses = "MorphemeGlosses", context_morpheme_glosses = "ContextualMorphemeGlosses", role = "Role", nesting = "Nesting", tags = "Tags", row_type = "RowType" }
 
 # Spanish Bibles, from the Bible Aquifer (https://github.com/BibleAquifer). Neither has section headings, so each takes the OET-RV's sections (at the same verses).
@@ -114,9 +117,10 @@ script = "Latn"
 versification = "eng"
 format = "USFM"
 copyright = "Aquifer Spanish Bible Reference Text © 2026 Mission Mutual (https://missionmutual.org), revised from Biblica's Open Nueva Biblia Viva"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with section breaks at the OET-RV's, and its words linked to the Greek and Hebrew from the Aquifer's alignments."
 licence = "CC BY-SA 4.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 source = "https://github.com/BibleAquifer/AquiferSpanishBibleReferenceText"
 files = ["../Bibles/BibleAquifer/AquiferSpanishBibleReferenceText/spa/usfm/*.SFM"]
 sections_from = "OET-RV"
@@ -132,7 +136,7 @@ format = "USFM"
 copyright = "Reina-Valera 1909: public domain (CC0), as published by the Bible Aquifer"
 licence = "Public domain"
 redistributable = true
-licence_verified = false
+licence_verified = true
 source = "https://github.com/BibleAquifer/ReinaValera1909"
 files = ["../Bibles/BibleAquifer/ReinaValera1909/spa/usfm/*.SFM"]
 features = ["strong"]
@@ -157,10 +161,11 @@ language = "spa"
 script = "Latn"
 versification = "eng"
 format = "Aquifer"
-copyright = "Aquifer Open Study Notes © 2026 Mission Mutual (https://missionmutual.org), translated from the Tyndale Open Study Notes © 2022 Tyndale House Publishers"
+copyright = "Aquifer Open Study Notes © 2026 Mission Mutual (https://missionmutual.org). This work is an adaptation of Tyndale Open Study Notes © 2023 Tyndale House Publishers, licensed under the CC BY-SA 4.0 license."
+changes = "The Spanish notes, book introductions, and profiles were converted to the Biblelastic module format by Freely-Given.org, and the introduction to Job's mistranslated title (‘Work’) was corrected."
 licence = "CC BY-SA 4.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 source = "https://github.com/BibleAquifer/AquiferOpenStudyNotes"
 files = ["../Bibles/BibleAquifer/AquiferOpenStudyNotes/spa/json/*.json", "../Bibles/BibleAquifer/AquiferOpenStudyNotesBookIntros/spa/json/*.json",
          "../Bibles/BibleAquifer/AquiferOpenStudyNotesProfiles/spa/json/*.json"]
@@ -173,10 +178,11 @@ language = "spa"
 script = "Latn"
 versification = "eng"
 format = "Aquifer"
-copyright = "Aquifer Open Bible Dictionary © 2026 Mission Mutual (https://missionmutual.org), translated from the Tyndale Open Bible Dictionary © 2022 Tyndale House Publishers"
+copyright = "Aquifer Open Bible Dictionary © 2026 Mission Mutual (https://missionmutual.org). This work is an adaptation of Tyndale Open Bible Dictionary © 2023 Tyndale House Publishers, licensed under the CC BY-SA 4.0 license."
+changes = "The Spanish dictionary was converted to the Biblelastic module format by Freely-Given.org, and the article on sin's mistranslated title (‘Without’) was corrected."
 licence = "CC BY-SA 4.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 source = "https://github.com/BibleAquifer/AquiferOpenBibleDictionary"
 files = ["../Bibles/BibleAquifer/AquiferOpenBibleDictionary/spa/json/*.json"]
 
@@ -197,7 +203,7 @@ licence = "CC BY-SA 4.0"
 attribution = "Adapted from Tyndale Open Study Notes. The original work by Tyndale House Publishers is available for free at http://www.tyndaleopenresources.com."
 changes = "Names and some other wording were changed by Freely-Given.org to match the Open English Translation (see ADAPTATION_NOTICE.md in https://github.com/Freely-Given-org/OET_TyndaleOpenResources), then it was converted to the Biblelastic module format."
 redistributable = true
-licence_verified = false
+licence_verified = true
 files = ["OpenBibleData/datasets/Tyndale/OET_TyndaleOpenResources/Tyndale Open Study Notes/*.xml"]
 features = []
 item_documents = { StudyNote = "*", BookIntro = "Intros", BookIntroSummary = "Summaries", Profile = "Profiles", ThemeNote = "Themes" }
@@ -215,7 +221,7 @@ licence = "CC BY-SA 4.0"
 attribution = "Adapted from Tyndale Open Bible Dictionary. The original work by Tyndale House Publishers is available for free at http://www.tyndaleopenresources.com."
 changes = "Names and some other wording were changed by Freely-Given.org to match the Open English Translation (see ADAPTATION_NOTICE.md in https://github.com/Freely-Given-org/OET_TyndaleOpenResources), then it was converted to the Biblelastic module format, without the maps' image files."
 redistributable = true
-licence_verified = false
+licence_verified = true
 files = ["OpenBibleData/datasets/Tyndale/OET_TyndaleOpenResources/TyndaleOpenBibleDictionary/*/*.xml"]
 features = []
 item_documents = { Article = "Articles", Textbox = "Textboxes", Chart = "Charts", Map = "Maps", Picture = "Pictures" }
@@ -239,7 +245,7 @@ context_book = "MRK"
 copyright = "“The Mark of a True Disciple” 2024, Shelby and Elisabeth Pritchard. To the extent possible under law, Shelby Pritchard and Elisabeth Pritchard have waived all copyright and related or neighboring rights to The Mark of a True Disciple (https://creativecommons.org/publicdomain/zero/1.0/). Scripture quotations marked CSB have been taken from the Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission. Christian Standard Bible® and CSB® are federally registered trademarks of Holman Bible Publishers. Scripture quotations marked (LEB) are from the Lexham English Bible. Copyright 2012 Logos Bible Software. Lexham is a registered trademark of Logos Bible Software. Scriptures marked KJV are taken from the KING JAMES VERSION (KJV): KING JAMES VERSION, public domain. Quotations designated (NET) are from the NET Bible® copyright ©1996, 2019 by Biblical Studies Press, L.L.C. https://netbible.com All rights reserved. Scriptures marked ESV are taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION (ESV): Scriptures taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION ® Copyright© 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. Scripture quotations taken from the (LSB®) Legacy Standard Bible®, Copyright © 2021 by The Lockman Foundation. Used by permission. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc. LSBible.org and 316publishing.com. Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, copyright 1996, 2004. Used by permission of Tyndale House Publishers, Inc., Wheaton, Illinois 60189. Scripture quotations taken from the NASB (New American Standard Bible) Copyright 2020 by The Lockman Foundation. Used by permission. All rights reserved."
 licence = "CC0 1.0 (the Bible quotations: as their notices say)"
 redistributable = true
-licence_verified = false
+licence_verified = true
 
 [[edition]]
 id = "PritchardJude"
@@ -257,7 +263,7 @@ context_book = "JDE"
 copyright = "“Jude: A Theological Commentary” 2025, Shelby Pritchard. Dedicated to the public domain (CC0: https://creativecommons.org/publicdomain/zero/1.0/), as its listing on books.freely.giving says. (Its copyright page names The Mark of a True Disciple, apparently copied from that book.) Scripture quotations marked CSB have been taken from the Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission. Christian Standard Bible® and CSB® are federally registered trademarks of Holman Bible Publishers. Scripture quotations marked (LEB) are from the Lexham English Bible. Copyright 2012 Logos Bible Software. Lexham is a registered trademark of Logos Bible Software. Scriptures marked KJV are taken from the KING JAMES VERSION (KJV): KING JAMES VERSION, public domain. Quotations designated (NET) are from the NET Bible® copyright ©1996, 2019 by Biblical Studies Press, L.L.C. https://netbible.com All rights reserved. Scriptures marked ESV are taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION (ESV): Scriptures taken from THE HOLY BIBLE, ENGLISH STANDARD VERSION ® Copyright© 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. Scripture quotations taken from the (LSB®) Legacy Standard Bible®, Copyright © 2021 by The Lockman Foundation. Used by permission. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc. LSBible.org and 316publishing.com. Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, copyright 1996, 2004. Used by permission of Tyndale House Publishers, Inc., Wheaton, Illinois 60189. The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain."
 licence = "CC0 1.0 (the Bible quotations: as their notices say)"
 redistributable = true
-licence_verified = false
+licence_verified = true
 
 [[edition]]
 id = "DoreanPrinciple"
@@ -274,7 +280,7 @@ files = ["Biblelastic/build/downloads/books.freely.giving/the-dorean-principle.e
 copyright = "The Dorean Principle: A Biblical Response to the Commercialization of Christianity, 2021, Conley Owens. Published by FirstLove Publications. To the extent possible under law, Conley Owens has waived all copyright and related or neighboring rights to The Dorean Principle: A Biblical Response to the Commercialization of Christianity (https://creativecommons.org/publicdomain/zero/1.0/). Unless otherwise indicated, all Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), copyright © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. Scripture quotations marked “NASB” taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission. www.Lockman.org"
 licence = "CC0 1.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 
 [[edition]]
 id = "DoctrineOfSimony"
@@ -291,7 +297,7 @@ files = ["Biblelastic/build/downloads/simony.info/the-doctrine-of-simony.epub"]
 copyright = "The Doctrine of Simony: A Theological Retrieval and Appraisal. Copyright © waived 2026 by Conley Owens. Published by Dorean Press. To the extent possible under law, Conley Owens has waived all copyright and related or neighboring rights to The Doctrine of Simony: A Theological Retrieval and Appraisal (https://creativecommons.org/publicdomain/zero/1.0/). Unless otherwise indicated, translations, including those of Scripture, are the author’s own. Online edition: https://simony.info"
 licence = "CC0 1.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 
 [[edition]]
 id = "AbolishTheJesusTrade"
@@ -308,7 +314,7 @@ files = ["Biblelastic/build/downloads/books.freely.giving/abolish-the-jesus-trad
 copyright = "Abolish the Jesus Trade: Spread the Joy of Freely Giving. By Andrew Case, Conley Owens, Jon Here, and other contributors. Published by Selling Jesus (sellingjesus.org), first edition (2025). This book is freely given to the glory of God and dedicated to the public domain. It may be copied, translated, adapted, in whole or in part, without needing to ask permission. (The book doesn’t say which Bible version its quotations are from.)"
 licence = "CC0 1.0"
 redistributable = true
-licence_verified = false
+licence_verified = true
 
 # The United Bible Societies' open-licensed dictionaries and handbooks, as adapted for the OET (see ubs.py).
 #   The dictionaries give the meaning of each word in each place: they become a layer of the editions named here.
@@ -321,22 +327,22 @@ copyright = "UBS Dictionary of Biblical Hebrew © United Bible Societies, 2026 (
 licence = "CC BY-SA 4.0"
 attribution = "Adapted for the OET by Freely-Given.org: https://github.com/Freely-Given-org/OET_ubs-open-license"
 changes = "Names were changed by Freely-Given.org to the forms used in the OET (see ADAPTATION_NOTICE.md there), then each word's meaning was joined to the words of the UHB and the SR-GNT."
-licence_verified = false
+licence_verified = true
 hebrew = { edition = "UHB", file = "dictionaries/hebrew/JSON/UBSHebrewDic-v0.9.4-en.JSON" }
 greek = { edition = "SR-GNT", file = "dictionaries/greek/JSON/UBSGreekNTDic-v1.1-en.JSON" }
 
 [ubs.handbooks]
 id = "UBSH"
-name = "UBS handbooks: Animals, Plants and Trees, and Objects in the Bible, adapted for the OET"
+name = "UBS handbooks: Animals, Plants and Trees, and Human-made Things in the Bible, adapted for the OET"
 language = "eng"
 script = "Latn"
 versification = "eng"
-copyright = "Animals in the Bible © United Bible Societies, 2025 (adapted from All Creatures Great and Small: Living Things in the Bible by Edward R. Hope, © 2005 United Bible Societies). Plants and Trees in the Bible and Objects in the Bible © United Bible Societies. The pictures (not included yet) have their own copyright."
+copyright = "Animals in the Bible © United Bible Societies, 2025. Adapted from: All Creatures Great and Small: Living Things in the Bible, by Edward R. Hope © 2005 United Bible Societies. Plants and Trees in the Bible © United Bible Societies, 2025. Adapted from: Each According to its Kind: Plants and Trees in the Bible, by Robert Koops © 2012 United Bible Societies. Human-made Things in the Bible © United Bible Societies, 2025. Adapted from: The Works of Their Hands: Man-made Things in the Bible, by Ray Pritz © 2009 United Bible Societies. The pictures (not included yet) have their own copyright."
 licence = "CC BY-SA 4.0"
 attribution = "Adapted for the OET by Freely-Given.org: https://github.com/Freely-Given-org/OET_ubs-open-license"
 changes = "Names were changed by Freely-Given.org to the forms used in the OET, then it was converted to the Biblelastic module format, without the pictures."
 redistributable = true
-licence_verified = false
+licence_verified = true
 files = { Fauna = "flora-fauna-realia/XML/FAUNA_1.1_en.xml", Flora = "flora-fauna-realia/XML/FLORA_1.1_en.xml", Realia = "flora-fauna-realia/XML/REALIA_1.1_en.xml" }
 
 # Thesauruses connect the words that people search with to the titles of entries in the dictionaries and commentaries.
@@ -346,6 +352,23 @@ language = "eng"
 file = "thesaurus/eng.tsv" # Relative to the pipeline folder: this one is written for Biblelastic
 copyright = "Freely-Given.org"
 licence = "CC0 1.0"
+licence_verified = true
+
+# The models for meaning-based search (made into modules by `biblelastic model`, which knows how to convert each one):
+#   their rights, as for an edition. The copyright line is the one in the LICENSE of the model's code (the model cards don't give one).
+[[model]]
+id = "bge-small-en-v1.5"
+source = "https://huggingface.co/BAAI/bge-small-en-v1.5"
+copyright = "Copyright (c) 2022 staoxiao (https://github.com/FlagOpen/FlagEmbedding)"
+licence = "MIT"
+licence_verified = true
+
+[[model]]
+id = "multilingual-e5-small"
+source = "https://huggingface.co/intfloat/multilingual-e5-small"
+copyright = "Copyright (c) Microsoft Corporation (https://github.com/microsoft/unilm)"
+licence = "MIT"
+licence_verified = true
 
 [tools]
 # Optional: https://github.com/Freely-Given-org/BibleTransliterations (CC0), used for the translit columns

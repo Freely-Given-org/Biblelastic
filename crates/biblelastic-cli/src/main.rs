@@ -1,7 +1,9 @@
 //! `biblelastic`: compile modules and run the first queries from the command line.
 
 mod compile;
+mod json;
 mod meaning;
+mod publish;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -26,6 +28,7 @@ Commands:
   meaning WORDS...        Find passages by what they're about, e.g., meaning why do good people suffer (needs a model and vectors: see model and embed)
   model FOLDER            Make a model for meaning-based search from a Hugging Face model's folder (bge-small-en-v1.5 or multilingual-e5-small)
   embed [EDITION...]      Make the vectors of the installed works' passages (all of those in the model's language, if none are named)
+  publish FOLDER          Copy the modules that may be passed on, with their catalogue (index.json), to a web server's folder
   request KEY=VALUE...    Send a request as an app would, and show the JSON response, e.g., request command=find 'words=grace truth'
 
 A word can end with * to match any ending, e.g., lov*
@@ -235,7 +238,11 @@ fn run(command: &str, arguments: Arguments) -> Result<(), Box<dyn std::error::Er
         }
         "model" => {
             let folder = arguments.words.first().ok_or("model needs the folder of a Hugging Face model")?;
-            meaning::convert_model(Path::new(folder), &arguments.modules, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?;
+            meaning::convert_model(Path::new(folder), &arguments.intermediate, &arguments.modules, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?;
+        }
+        "publish" => { // Copy the modules that may be passed on to a web server's folder, with their catalogue
+            let to = arguments.words.first().ok_or("publish needs the folder to publish to, e.g., /srv/www/Freely-Given.org/Software/Biblelastic/modules")?;
+            publish::publish(&arguments.modules, Path::new(to))?;
         }
         "embed" => meaning::embed(&arguments.modules, &arguments.words, None, compile::Options { page_bits: arguments.page_bits, compress: arguments.compress })?,
         "request" => {

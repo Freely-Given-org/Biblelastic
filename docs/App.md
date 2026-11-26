@@ -5,7 +5,8 @@ not to be the finished design. It runs on Android and in browsers, and is set up
 
 It can:
 
-- install and remove modules, from a list (`index.json`) at a web address
+- install, update, and remove modules, from a list (`index.json`) at a web address (Freely-Given.org for a release build: see [Publishing.md](Publishing.md)),
+    showing each module's licence, and when one has changed
 - read the OET-RV a section at a time (from one section heading to the next, whichever chapters that covers), with its poetry indents, words of Jesus, and translators' additions shown differently
 - read another installed Bible instead (Bible, in the ⋮ menu), at the same place: so far the two Spanish ones, in the OET-RV's sections. The choice is remembered;
     until one is chosen, a phone set to Spanish starts with a Spanish Bible. While reading one, the notes in its language come first
@@ -22,6 +23,7 @@ It can:
     with its semantic domains, each of which lists the other words with a meaning in it, and any UBS handbook article about the thing it refers to (e.g., ‘Camel, dromedary’)
 - read a whole article of a dictionary or handbook (from a word, or from a search result), and follow its links to others
 - browse the installed books, commentaries, and dictionaries (the Library, in the ⋮ menu), and read them entry by entry (e.g., a book chapter by chapter, with Previous and Next)
+- show each work's copyright, licence, and attribution under its contents, and all of them together (*Licences and sources*, in the Library)
 - show each book's and commentary's disclaimer wherever its words are shown: under the notes on a verse, at the end of an article or chapter, and with its contents
 - search: a subject (the articles about it, the passages they refer to most, the other side of the question, where the words themselves are found,
     and, if the model is installed, the passages, notes, articles, and book chapters that are about it by meaning: see [Meaning.md](Meaning.md)), words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
@@ -102,7 +104,7 @@ and tapping a Spanish word (e.g., *Verbo* in John 1:1 → λόγος).
 - **The marked words can be hidden** behind the word's sheet until it's closed, on a small screen.
 - **The disclaimer's link isn't followed** when it's tapped (it's only shown underlined), and a book's references aren't links to the passages yet.
 - **Search results and notes are plain text** (an article opened in full is too: its italics, tables, and pictures aren't shown). A passage that's opened from a search has only its first verse marked.
-- **Modules are only fetched from a development address**, with no resuming of a broken download, no checking of what was downloaded, and no licence or attribution shown.
+- **Modules aren't published yet**, and a broken download isn't resumed (see [Publishing.md](Publishing.md)).
 - **Only debug builds were made**: no release build, signing, app icon, or store listing. A debug build is 155 MB; a release build will be far smaller.
 - **Linux desktop is set up but untried**, and there's nothing for iOS, macOS, or Windows yet.
 - **The web build fetches its fonts from Google** when it starts, so it doesn't yet work offline, and there's no service worker for the engine and modules.

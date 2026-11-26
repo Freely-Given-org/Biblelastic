@@ -122,7 +122,10 @@ try {
     await shoot('7a-menu');
     await tap(300, 104); // Library (the second item, after Bible)
     await shoot('7-library');
-    await tap(120, 116); // The first book
+    await tap(120, 80); // Licences and sources
+    await shoot('7b-licences');
+    await tap(28, 27); // Back to the Library
+    await tap(120, 178); // The first book
     await shoot('8-contents');
     await tap(120, 290); // Its fourth entry
     await sleep(1000);

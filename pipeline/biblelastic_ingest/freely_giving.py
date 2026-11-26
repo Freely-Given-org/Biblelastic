@@ -122,6 +122,10 @@ def toml_string( text:str ) -> str: return json.dumps( text, ensure_ascii=False 
 def main() -> int:
     registry = tomllib.loads( (PIPELINE_FOLDER / 'sources.toml').read_text( encoding='utf-8' ) )
     already = { edition.get( 'source' ) for edition in registry.get( 'edition', [] ) }
+    # Books whose licences a person has already checked (licence_verified = true in the file that this writes) stay checked
+    checked = set()
+    if OUTPUT.exists():
+        checked = { edition.get( 'source' ) for edition in tomllib.loads( OUTPUT.read_text( encoding='utf-8' ) ).get( 'edition', [] ) if edition.get( 'licence_verified' ) is True }
     books = survey()
     wanted = [ book for book in books if book['lang'] in LANGUAGES and book.get( 'licence' ) in LICENCES and book.get( 'epub' ) and SITE + book['href'] not in already ]
     skipped = [ book for book in books if book not in wanted and SITE + book['href'] not in already ]
@@ -151,7 +155,7 @@ def main() -> int:
         entries += [ '[[edition]]', f'id = "{ident}"', f'kind = "{kind}"', f"name = {toml_string( book['title'] )}", ] + ([ f"author = {toml_string( book['byline'] )}" ] if book['byline'] else []) + [
                      f'language = "{language}"', 'script = "Latn"', 'versification = "eng"', 'format = "EPUB"', f'source = "{SITE}{book["href"]}"', f'download = "{book["epub"]}"',
                      f'files = ["Biblelastic/build/downloads/{folder}/{path.name}"]' ] + ([ f'context_book = "{context}"' ] if context else []) + [
-                     f'copyright = {toml_string( copyright )}', f'licence = "{LICENCES[book["licence"]]}"', 'redistributable = true', 'licence_verified = false', '' ]
+                     f'copyright = {toml_string( copyright )}', f'licence = "{LICENCES[book["licence"]]}"', 'redistributable = true', f"licence_verified = {'true' if SITE + book['href'] in checked else 'false'}", '' ]
         print( f'{ident:40} {kind:10} {len(found):5} characters of notices' )
     OUTPUT.write_text( '\n'.join( entries ), encoding='utf-8' )
     print( f'{len(wanted)} books written to {OUTPUT.relative_to( REPOSITORY_FOLDER )}. Not included:' )

@@ -139,3 +139,5 @@ Only the best passage of each entry is shown, and a passage that's the same in a
 For a quicker build, compile the CLI for the build machine's processor: `RUSTFLAGS="-C target-cpu=native" cargo build --release`.
 The model's folder is a Hugging Face download of the model (`config.json`, `model.safetensors`, `1_Pooling/config.json`, and `vocab.txt` or `tokenizer.json`).
 Only the two models above are known to `biblelastic model` (it needs each one's prefixes and language).
+Their rights (copyright, licence, and `licence_verified`) are under `[[model]]` in `pipeline/sources.toml`, which the ingest writes to `build/intermediate/models/`,
+so the ingest must have run first.

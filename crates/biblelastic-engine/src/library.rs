@@ -44,6 +44,10 @@ pub struct Installed {
     pub disclaimer: String,
     /// The work's language, as an ISO 639-3 code, e.g., `eng`, `spa`, or `grc` (empty for an alignment, or a module from before this was recorded)
     pub language: String,
+    /// What may be done with it: its licence (e.g., `CC BY-SA 4.0`), copyright, and what must be said about where it came from (and any changes made to it)
+    pub licence: String,
+    pub copyright: String,
+    pub attribution: String,
     /// For alignments: the two editions that are linked
     pub from: String,
     pub to: String,
@@ -70,7 +74,7 @@ impl Library {
         for name in source.names()? {
             let module = source.open(&name, &cache)?;
             let field = |section: &str| if module.has(section) { module.text(section) } else { Ok(String::new()) };
-            modules.push(Installed { kind: field("module.kind")?, work: field("module.work")?, title: field("module.title")?, disclaimer: field("module.disclaimer")?, language: field("module.language")?, edition: field("module.edition")?, layer: field("module.layer")?,
+            modules.push(Installed { kind: field("module.kind")?, work: field("module.work")?, title: field("module.title")?, disclaimer: field("module.disclaimer")?, language: field("module.language")?, licence: field("module.licence")?, copyright: field("module.copyright")?, attribution: field("module.attribution")?, edition: field("module.edition")?, layer: field("module.layer")?,
                                      from: field("module.from")?, to: field("module.to")?, name, module: Rc::new(module) });
         }
         Ok(Library { modules, cache, models: Default::default(), vectors: Default::default() })

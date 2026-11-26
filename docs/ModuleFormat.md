@@ -122,10 +122,13 @@ In every module:
 
 | Section | Encoding | Content |
 | --- | --- | --- |
-| `module.kind` | Raw | `text`, `features`, or `alignment` |
+| `module.kind` | Raw | `text`, `features`, `alignment`, `thesaurus`, `model`, or `vectors` |
 | `module.work` | Raw | For text and features modules: what the edition is (`scripture`, `commentary`, `dictionary`, or `book`) |
 | `module.title` | Raw | What the work is called, e.g., `The Mark of a True Disciple` |
 | `module.disclaimer` | Raw | Anything that must be shown with what the work says (HTML: only `<em>` and `<a>`), if there is anything |
+| `module.language` | Raw | The work's language (ISO 639-3), e.g., `eng` or `spa` |
+| `module.licence`, `module.copyright`, `module.attribution` | Raw | What may be done with it, and what must be said about where it came from (see [Publishing.md](Publishing.md)) |
+| `module.redistributable`, `module.licence_verified` | Raw | `true` or `false`: whether it may be passed on (publishing leaves it out if not), and whether its licence has been checked |
 | `module.edition`, `module.layer` | Raw | For text and features modules |
 | `module.from`, `module.to` | Raw | For alignment modules |
 | `manifest` | Raw | The edition's intermediate-format manifest (JSON), including its copyright and licence details |

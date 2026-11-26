@@ -35,8 +35,8 @@ fn answer(library: &Library, request: &str) -> Result<String> {
     match text("command", "") {
         "info" => {
             let modules: Vec<String> = library.modules.iter().map(|installed| format!(
-                "{{\"name\":{},\"kind\":{},\"work\":{},\"edition\":{},\"layer\":{},\"title\":{},\"language\":{},\"disclaimer\":{},\"from\":{},\"to\":{},\"sections\":{}}}", quote(&installed.name), quote(&installed.kind),
-                quote(&installed.work), quote(&installed.edition), quote(&installed.layer), quote(&installed.title), quote(&installed.language), quote(&installed.disclaimer), quote(&installed.from), quote(&installed.to),
+                "{{\"name\":{},\"kind\":{},\"work\":{},\"edition\":{},\"layer\":{},\"title\":{},\"language\":{},\"licence\":{},\"copyright\":{},\"attribution\":{},\"disclaimer\":{},\"from\":{},\"to\":{},\"sections\":{}}}", quote(&installed.name), quote(&installed.kind),
+                quote(&installed.work), quote(&installed.edition), quote(&installed.layer), quote(&installed.title), quote(&installed.language), quote(&installed.licence), quote(&installed.copyright), quote(&installed.attribution), quote(&installed.disclaimer), quote(&installed.from), quote(&installed.to),
                 installed.module.entries().len())).collect();
             Ok(format!("\"modules\":[{}]", modules.join(",")))
         }

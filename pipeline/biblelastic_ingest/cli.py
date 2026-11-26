@@ -554,8 +554,17 @@ def main() -> int:
             print( f"ERROR: thesaurus {thesaurus['file']} has bad or repeated rows: {problems[:5]}" ); failures += 1; continue
         (arguments.output / 'thesaurus').mkdir( parents=True, exist_ok=True )
         write_tsv( arguments.output / 'thesaurus' / f"{thesaurus['language']}.tsv", rows[0], rows[1:] )
+        # Its rights, for the module (as an edition's manifest has them)
+        (arguments.output / 'thesaurus' / f"{thesaurus['language']}.json").write_text( json.dumps( { key:thesaurus[key] for key in ('copyright', 'licence') if key in thesaurus }
+            | { 'redistributable':thesaurus.get( 'redistributable', True ), 'licence_verified':thesaurus.get( 'licence_verified', False ) }, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
         report['thesauruses'][thesaurus['language']] = { 'terms':len(rows)-1, 'licence':thesaurus.get( 'licence', '' ) }
         print( f"Thesaurus ({thesaurus['language']}): {len(rows)-1} terms" )
+
+    # The models' rights, for `biblelastic model` (which converts the models themselves)
+    for model in registry.get( 'model', [] ) if not wantedEditions else []:
+        (arguments.output / 'models').mkdir( parents=True, exist_ok=True )
+        (arguments.output / 'models' / f"{model['id']}.json").write_text( json.dumps( { key:model[key] for key in ('copyright', 'licence') if key in model }
+            | { 'redistributable':model.get( 'redistributable', True ), 'licence_verified':model.get( 'licence_verified', False ) }, ensure_ascii=False, indent=1 ) + '\n', encoding='utf-8' )
 
     # The UBS dictionaries and handbooks (after the editions that they're joined to)
     report['ubs'] = {}

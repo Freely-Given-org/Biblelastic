@@ -21,6 +21,12 @@ class Strings {
   String get noBible => _pick(['No Bible is installed yet.', 'Aún no hay ninguna Biblia instalada.']);
   String get getModules => _pick(['Get modules', 'Obtener módulos']);
   String get installAll => _pick(['Install all', 'Instalar todos']);
+  String get updateAll => _pick(['Install and update all', 'Instalar y actualizar todos']);
+  String get updateAvailable => _pick(['Update available', 'Hay una actualización']);
+  String get update => _pick(['Update', 'Actualizar']);
+  String get aboutWorks => _pick(['Licences and sources', 'Licencias y fuentes']);
+  String get licence => _pick(['Licence', 'Licencia']);
+  String get notStated => _pick(['not stated', 'no se indica']);
   String get removeAll => _pick(['Remove all', 'Quitar todos']);
   String get installed => _pick(['Installed', 'Instalado']);
   String get notInstalled => _pick(['Not installed', 'No instalado']);

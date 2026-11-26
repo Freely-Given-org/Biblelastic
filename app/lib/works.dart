@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import 'engine/engine.dart';
+import 'strings.dart';
 
 /// The installed works, by edition: {'title', 'work', 'disclaimer'} (from the engine's `info`). Kept up to date by [loadWorks].
 final Map<String, Map<String, dynamic>> works = {};
@@ -19,6 +20,31 @@ Future<void> loadWorks(Engine engine) async {
     ..clear()
     ..addAll([for (final module in modules) if (module['kind'] == 'alignment') module['from'] as String]);
   meaningAvailable = modules.any((module) => module['kind'] == 'model') && modules.any((module) => module['kind'] == 'vectors');
+  models
+    ..clear()
+    ..addAll(modules.where((module) => module['kind'] == 'model'));
+}
+
+/// The installed models for meaning-based search (from the engine's `info`), which have rights of their own
+final List<Map<String, dynamic>> models = [];
+
+/// What may be done with a work (or a model), and where it came from: its copyright, licence, and attribution, as its module gives them
+class Rights extends StatelessWidget {
+  const Rights({super.key, required this.module});
+  /// A module's entry in the engine's `info`
+  final Map<String, dynamic> module;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = Strings(Localizations.localeOf(context));
+    final style = Theme.of(context).textTheme.bodySmall;
+    String field(String name) => module[name] as String? ?? '';
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (field('copyright').isNotEmpty) SelectableText(field('copyright'), style: style),
+      SelectableText('${strings.licence}: ${field('licence').isEmpty ? strings.notStated : field('licence')}', style: style),
+      if (field('attribution').isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: SelectableText(field('attribution'), style: style)),
+    ]);
+  }
 }
 
 /// Whether meaning-based search can be done: a model and some passages' vectors are installed

@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 use biblelastic_engine::format::{ModuleWriter, DEFAULT_PAGE_BITS};
 use biblelastic_engine::reference::{pack, Passage};
 
+use crate::json::Json;
+
 type Result<T> = std::result::Result<T, String>;
 
 #[derive(Clone, Copy)]
@@ -119,6 +121,40 @@ struct Edition {
     document_starts: HashMap<String, u32>,
     written: Vec<Written>,
     slots: usize,
+    rights: Rights,
+}
+
+/// What may be done with a work, from its manifest: written into each of its modules (`module.licence`, `module.copyright`, `module.attribution`,
+/// `module.redistributable`, and `module.licence_verified`), so that an app can show them, and publishing can leave out what mayn't be passed on
+#[derive(Clone, Default)]
+pub struct Rights {
+    pub licence: String,
+    pub copyright: String,
+    /// What must be said about where it came from, and any changes that were made to it
+    pub attribution: String,
+    pub redistributable: bool,
+    /// Whether someone has checked the licence against the source (not just copied it from there)
+    pub verified: bool,
+}
+
+impl Rights {
+    /// From a manifest (or a layer's part of one), with `defaults` for anything it doesn't say
+    pub fn from_json(json: &Json, defaults: &Rights) -> Rights {
+        let text = |key: &str| json.get(key).and_then(Json::text).map(str::to_string);
+        let flag = |key: &str| match json.get(key) { Some(Json::Bool(value)) => Some(*value), _ => None };
+        let attribution = [text("attribution"), text("changes")].into_iter().flatten().collect::<Vec<_>>().join(" ");
+        Rights { licence: text("licence").unwrap_or_else(|| defaults.licence.clone()), copyright: text("copyright").unwrap_or_else(|| defaults.copyright.clone()),
+                 attribution: if attribution.is_empty() { defaults.attribution.clone() } else { attribution },
+                 redistributable: flag("redistributable").unwrap_or(defaults.redistributable), verified: flag("licence_verified").unwrap_or(defaults.verified) }
+    }
+
+    pub fn write(&self, writer: &mut ModuleWriter) {
+        for (name, value) in [("licence", &self.licence), ("copyright", &self.copyright), ("attribution", &self.attribution)] {
+            if !value.is_empty() { writer.raw(&format!("module.{name}"), value.as_bytes()); }
+        }
+        writer.raw("module.redistributable", if self.redistributable { b"true" } else { b"false" });
+        writer.raw("module.licence_verified", if self.verified { b"true" } else { b"false" });
+    }
 }
 
 /// The entries of a commentary or dictionary (its study notes, articles, etc.), the Scripture passages they're anchored to,
@@ -294,7 +330,17 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     // What the work is called, and anything that must be shown with it (HTML, e.g., that the views are its authors')
     let (title, disclaimer) = (manifest_value(&manifest, "name").unwrap_or_else(|| id.clone()), manifest_value(&manifest, "disclaimer").unwrap_or_default());
     let language = manifest_value(&manifest, "language").unwrap_or_default(); // e.g., `eng` or `spa`
-    let new_module = |layer: &str, kind: &str| {
+    let manifest_json = Json::parse(&String::from_utf8_lossy(&manifest)).map_err(|error| format!("{id}: manifest.json: {error}"))?;
+    let rights = Rights::from_json(&manifest_json, &Rights::default());
+    // A layer can have rights of its own (e.g., the UBS meanings of the words of the UHB)
+    let layer_rights = |layer: &str| -> Rights {
+        match manifest_json.get("layers") {
+            Some(Json::Array(layers)) => layers.iter().find(|entry| entry.get("id").and_then(Json::text) == Some(layer))
+                .map_or_else(|| rights.clone(), |entry| Rights::from_json(entry, &rights)),
+            _ => rights.clone(),
+        }
+    };
+    let new_module = |layer: &str, kind: &str, rights: &Rights| {
         let mut writer = options.writer();
         writer.raw("module.kind", kind.as_bytes());
         writer.raw("module.work", work.as_bytes());
@@ -303,6 +349,7 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
         writer.raw("module.title", title.as_bytes());
         if !language.is_empty() { writer.raw("module.language", language.as_bytes()); }
         if !disclaimer.is_empty() { writer.raw("module.disclaimer", disclaimer.as_bytes()); }
+        rights.write(&mut writer);
         writer.raw("manifest", &manifest);
         writer.strings("documents.names", &documents);
         writer.packed("documents.starts", &starts);
@@ -310,8 +357,8 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     };
     let mut written = Vec::new();
 
-    let mut text = new_module("text", "text");
-    let mut morph = new_module("morph", "features");
+    let mut text = new_module("text", "text", &rights);
+    let mut morph = new_module("morph", "features", &rights);
     let mut has_morph = false;
     for (name, column) in token_header.iter().zip(token_columns) {
         match token_column_plan(name) {
@@ -333,14 +380,14 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     for ((layer_folder, header), columns) in layer_folders.iter().zip(layer_headers).zip(layer_columns) {
         if header.is_empty() { continue; }
         let layer = file_name(layer_folder);
-        let mut writer = new_module(&layer, "features");
+        let mut writer = new_module(&layer, "features", &layer_rights(&layer));
         for (name, column) in header.iter().zip(columns) {
             if column.ids.len() != slots { return Err(format!("{id} layer {layer}: {} rows for {slots} tokens", column.ids.len())); }
             column.write(&mut writer, &format!("col.{name}"), layer_column_plan(name));
         }
         written.push(save(output, &format!("{id}.{layer}"), writer)?);
     }
-    Ok(Edition { document_starts: documents.into_iter().zip(starts).collect(), id, written, slots })
+    Ok(Edition { document_starts: documents.into_iter().zip(starts).collect(), id, written, slots, rights })
 }
 
 fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path, options: Options) -> Result<Option<Written>> {
@@ -362,6 +409,7 @@ fn compile_alignment(folder: &Path, editions: &[Edition], output: &Path, options
     }
     let mut writer = options.writer();
     writer.raw("module.kind", b"alignment");
+    from.rights.write(&mut writer); // (An alignment is the work of whoever made the translation's links, which so far is the same as the translation's)
     writer.raw("module.from", from_id.as_bytes());
     writer.raw("module.to", to_id.as_bytes());
     writer.packed("module.slots", &[from.slots as u32, to.slots as u32]);
@@ -384,6 +432,8 @@ fn compile_thesaurus(path: &Path, output: &Path, options: Options) -> Result<Wri
     rows.dedup_by(|a, b| a.0 == b.0);
     let mut writer = options.writer();
     writer.raw("module.kind", b"thesaurus");
+    let rights_path = path.with_extension("json");
+    if let Ok(text) = fs::read_to_string(&rights_path) { Rights::from_json(&Json::parse(&text).map_err(|error| error.to_string())?, &Rights::default()).write(&mut writer); }
     writer.raw("module.layer", language.as_bytes());
     writer.strings("term.dict", &rows.iter().map(|(key, _)| key).collect::<Vec<_>>());
     for (column, name) in ["name", "see", "contrast", "note"].iter().enumerate() {
@@ -412,7 +462,7 @@ pub fn compile(intermediate: &Path, output: &Path, options: Options) -> Result<V
     for path in thesaurus_files.iter().filter(|path| path.extension().is_some_and(|extension| extension == "tsv")) { thesauruses.push(compile_thesaurus(path, output, options)?); }
     let written: Vec<Written> = editions.into_iter().flat_map(|edition| edition.written).chain(alignments).chain(thesauruses).collect();
     // The catalogue that an installer downloads first, to see what there is (every module in the folder, including the models and vectors that are made separately)
-    crate::meaning::write_index(output).map_err(|error| error.to_string())?;
+    crate::publish::write_index(output).map_err(|error| error.to_string())?;
     Ok(written)
 }
 

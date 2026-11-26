@@ -14,25 +14,43 @@ use biblelastic_engine::library::Text;
 use biblelastic_engine::query::{self, Piece, Wanted};
 
 use crate::compile::Options;
+use crate::json::Json;
 
 /// Passages are runs of paragraphs (within one section of Scripture, or one entry of a commentary, dictionary, or book) of about this many words
 const MIN_WORDS: usize = 80;
 const MAX_WORDS: usize = 200;
 
-/// The models that `biblelastic model` knows: (a part of the folder's name, the model's name, query prefix, passage prefix, language of the works that it's for, licence)
-const KNOWN_MODELS: [(&str, &str, &str, &str, &str, &str); 2] = [
-    ("bge-small-en-v1.5", "bge-small-en-v1.5", "Represent this sentence for searching relevant passages: ", "", "eng", "MIT"),
-    ("multilingual-e5-small", "multilingual-e5-small", "query: ", "passage: ", "spa", "MIT"),
+/// The models that `biblelastic model` knows: (a part of the folder's name, the model's name, query prefix, passage prefix, language of the works that it's for).
+/// Their rights are in the registry (`[[model]]` in `pipeline/sources.toml`), which the ingest writes to `models/NAME.json` in the intermediate folder.
+const KNOWN_MODELS: [(&str, &str, &str, &str, &str); 2] = [
+    ("bge-small-en-v1.5", "bge-small-en-v1.5", "Represent this sentence for searching relevant passages: ", "", "eng"),
+    ("multilingual-e5-small", "multilingual-e5-small", "query: ", "passage: ", "spa"),
 ];
+
+/// The MIT licence, which must go with every copy
+const MIT: &str = "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), \
+to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, \
+and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\n\
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\n\
+THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, \
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, \
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.";
 
 /// Convert a Hugging Face BERT sentence-embedding model (a folder with `config.json`, `model.safetensors`, `1_Pooling/config.json`, and either
 /// `vocab.txt` for a WordPiece tokenizer or `tokenizer.json` for a unigram one) into a module. It must be one of KNOWN_MODELS.
 /// A unigram tokenizer for many languages (e.g., multilingual e5's 250,000 pieces) is trimmed to the pieces that the installed works in English and Spanish use
 /// (and the single characters of most scripts), which is most of the model's size.
-pub fn convert_model(folder: &Path, modules: &Path, options: Options) -> Result<()> {
+pub fn convert_model(folder: &Path, intermediate: &Path, modules: &Path, options: Options) -> Result<()> {
     let folder_name = folder.to_string_lossy();
-    let &(_, name, query_prefix, passage_prefix, language, licence) = KNOWN_MODELS.iter().find(|known| folder_name.contains(known.0))
+    let &(_, name, query_prefix, passage_prefix, language) = KNOWN_MODELS.iter().find(|known| folder_name.contains(known.0))
         .ok_or_else(|| format!("not a model that's known (one of {})", KNOWN_MODELS.map(|known| known.0).join(", ")))?;
+    // Its rights, from the registry by way of the ingest
+    let rights_path = intermediate.join("models").join(format!("{name}.json"));
+    let rights = Json::parse(&fs::read_to_string(&rights_path)
+        .map_err(|error| format!("{}: {error} (the ingest writes it from [[model]] in the registry)", rights_path.display()))?)?;
+    let rights = crate::compile::Rights::from_json(&rights, &crate::compile::Rights { redistributable: true, ..Default::default() });
+    if rights.licence != "MIT" { return Err(format!("{name}'s licence is {:?}: only MIT models are supported (whose text goes with each copy)", rights.licence).into()); }
+    let (licence, holder) = (rights.licence.clone(), rights.copyright.clone());
     let read = |file: &str| fs::read(folder.join(file)).map_err(|error| format!("{}: {error}", folder.join(file).display()));
     let config = Json::parse(&String::from_utf8(read("config.json")?)?)?;
     let number = |key: &str| config.get(key).and_then(Json::number).map(|value| value as usize).ok_or_else(|| format!("config.json has no {key}"));
@@ -68,11 +86,17 @@ pub fn convert_model(folder: &Path, modules: &Path, options: Options) -> Result<
     writer.raw("module.title", name.as_bytes());
     writer.raw("module.language", language.as_bytes());
     writer.raw("manifest", format!("{{\"id\": \"{name}\", \"kind\": \"model\", \"licence\": \"{licence}\", \"source\": \"{}\"}}", folder.display()).as_bytes());
+    let source = folder.components().map(|part| part.as_os_str().to_string_lossy()).find_map(|part| part.strip_prefix("models--").map(|name| name.replace("--", "/"))).unwrap_or_else(|| name.to_string());
+    writer.raw("module.licence_text", format!("MIT License\n\n{holder}\n\n{MIT}\n").as_bytes());
+    crate::compile::Rights { licence: licence.to_string(), copyright: format!("{source} (https://huggingface.co/{source}): MIT License, {holder}. The licence's full text is in the module."),
+        attribution: format!("The model {source}, with its weights stored as bytes{}, converted to the Biblelastic module format",
+                             if tokenizer == "unigram" { " and its vocabulary cut down to English and Spanish" } else { "" }),
+        redistributable: rights.redistributable, verified: rights.verified }.write(&mut writer);
     write_model(&mut writer, &settings, &vocab, &scores, &tensors)?;
     let path = modules.join(format!("{name}.model.blm"));
     fs::write(&path, writer.finish()).map_err(|error| format!("{}: {error}", path.display()))?;
     println!("{} ({:.1} MB)", path.display(), fs::metadata(&path)?.len() as f64 / 1048576.0);
-    write_index(modules)
+    crate::publish::write_index(modules)
 }
 
 /// The ids of a unigram tokenizer's pieces that the installed works in English and Spanish use (with the special pieces, and the single characters of most scripts),
@@ -186,6 +210,10 @@ pub fn embed(modules: &Path, editions: &[String], model_name: Option<&str>, opti
         writer.raw("module.layer", b"vectors");
         writer.raw("module.title", installed.title.as_bytes());
         writer.raw("module.language", installed.language.as_bytes());
+        // The vectors are made from the work, so they have its rights (and the model's: see its module)
+        for section in ["module.licence", "module.copyright", "module.attribution", "module.redistributable", "module.licence_verified"] {
+            if installed.module.has(section) { writer.raw(section, installed.module.text(section)?.as_bytes()); }
+        }
         writer.raw("vectors.config", format!("model={}\ndimensions={}\nscale={scale}\n", model.name, vectors[0].len()).as_bytes());
         writer.raw("vectors.data", &data);
         writer.raw("vectors.hashes", &hashes.iter().flat_map(|hash| hash.to_le_bytes()).collect::<Vec<u8>>());
@@ -196,7 +224,7 @@ pub fn embed(modules: &Path, editions: &[String], model_name: Option<&str>, opti
         println!("{:<38} {:>6} passages ({} embedded, {reused} unchanged) in {:>6.1} s, {:>5.1} MB", format!("{}.vectors", installed.edition), passages.len(),
                  passages.len() - reused, started.elapsed().as_secs_f64(), fs::metadata(&path)?.len() as f64 / 1048576.0);
     }
-    write_index(modules)
+    crate::publish::write_index(modules)
 }
 
 /// FNV-1a, which is enough to tell whether a passage's text has changed
@@ -287,96 +315,3 @@ fn entry_passages(library: &Library, edition: &str) -> Result<Vec<Passage>> {
     Ok(passages)
 }
 
-/// The catalogue that an installer downloads first, to see what there is: every module in the folder
-pub fn write_index(output: &Path) -> Result<()> {
-    let mut modules: Vec<(String, u64)> = fs::read_dir(output)?.flatten()
-        .filter_map(|entry| Some((entry.file_name().to_string_lossy().strip_suffix(".blm")?.to_string(), entry.metadata().ok()?.len()))).collect();
-    modules.sort();
-    let entries: Vec<String> = modules.iter().map(|(name, bytes)| format!("    {{\"name\": \"{name}\", \"bytes\": {bytes}}}")).collect();
-    let catalogue = format!("{{\n  \"format\": {},\n  \"modules\": [\n{}\n  ]\n}}\n", biblelastic_engine::format::FORMAT_VERSION, entries.join(",\n"));
-    fs::write(output.join("index.json"), catalogue).map_err(|error| format!("{}: {error}", output.display()).into())
-}
-
-/// Just enough JSON for a model's configuration and a safetensors header
-enum Json {
-    Null,
-    Bool(bool),
-    Number(f64),
-    Text(String),
-    Array(Vec<Json>),
-    Object(Vec<(String, Json)>),
-}
-
-impl Json {
-    fn parse(text: &str) -> Result<Json> {
-        let characters: Vec<char> = text.chars().collect();
-        let mut position = 0;
-        let value = Json::value(&characters, &mut position)?;
-        Ok(value)
-    }
-
-    fn get(&self, key: &str) -> Option<&Json> { match self { Json::Object(fields) => fields.iter().find(|(name, _)| name == key).map(|(_, value)| value), _ => None } }
-    fn number(&self) -> Option<f64> { match self { Json::Number(value) => Some(*value), _ => None } }
-    fn text(&self) -> Option<&str> { match self { Json::Text(value) => Some(value), _ => None } }
-
-    fn value(characters: &[char], position: &mut usize) -> Result<Json> {
-        let skip = |position: &mut usize| while *position < characters.len() && characters[*position].is_whitespace() { *position += 1; };
-        skip(position);
-        let character = *characters.get(*position).ok_or("unexpected end of JSON")?;
-        match character {
-            '{' | '[' => {
-                *position += 1;
-                let (mut fields, mut items) = (Vec::new(), Vec::new());
-                loop {
-                    skip(position);
-                    if characters.get(*position) == Some(&if character == '{' { '}' } else { ']' }) { *position += 1; break; }
-                    if character == '{' {
-                        let Json::Text(key) = Json::value(characters, position)? else { return Err("a JSON key must be a string".into()) };
-                        skip(position);
-                        if characters.get(*position) != Some(&':') { return Err("expected : in JSON".into()); }
-                        *position += 1;
-                        fields.push((key, Json::value(characters, position)?));
-                    } else { items.push(Json::value(characters, position)?); }
-                    skip(position);
-                    if characters.get(*position) == Some(&',') { *position += 1; }
-                }
-                Ok(if character == '{' { Json::Object(fields) } else { Json::Array(items) })
-            }
-            '"' => {
-                *position += 1;
-                let mut text = String::new();
-                while let Some(&next) = characters.get(*position) {
-                    *position += 1;
-                    match next {
-                        '"' => return Ok(Json::Text(text)),
-                        '\\' => {
-                            let escaped = *characters.get(*position).ok_or("unexpected end of JSON")?;
-                            *position += 1;
-                            match escaped {
-                                'n' => text.push('\n'), 't' => text.push('\t'), 'r' => text.push('\r'), 'b' => text.push('\u{8}'), 'f' => text.push('\u{c}'),
-                                'u' => {
-                                    let hex: String = characters.get(*position..*position + 4).ok_or("bad \\u in JSON")?.iter().collect();
-                                    *position += 4;
-                                    text.push(char::from_u32(u32::from_str_radix(&hex, 16)?).unwrap_or('\u{FFFD}'));
-                                }
-                                other => text.push(other),
-                            }
-                        }
-                        other => text.push(other),
-                    }
-                }
-                Err("unterminated string in JSON".into())
-            }
-            't' | 'f' | 'n' => {
-                let word: String = characters[*position..].iter().take_while(|character| character.is_ascii_alphabetic()).collect();
-                *position += word.len();
-                match word.as_str() { "true" => Ok(Json::Bool(true)), "false" => Ok(Json::Bool(false)), "null" => Ok(Json::Null), _ => Err(format!("unexpected '{word}' in JSON").into()) }
-            }
-            _ => {
-                let number: String = characters[*position..].iter().take_while(|character| character.is_ascii_digit() || "+-.eE".contains(**character)).collect();
-                *position += number.len();
-                Ok(Json::Number(number.parse().map_err(|_| format!("unexpected '{character}' in JSON"))?))
-            }
-        }
-    }
-}
