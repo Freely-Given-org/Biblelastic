@@ -3,7 +3,7 @@
 // Run first: app/build-engine.sh web, then (in app/) flutter build web --base-href /app/build/web/, and `biblelastic compile`.
 
 import { spawn } from 'node:child_process';
-import { createReadStream, existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { extname, join, normalize } from 'node:path';
@@ -12,8 +12,31 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const shots = process.argv[2] ?? tmpdir();
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.wasm': 'application/wasm', '.png': 'image/png', '.otf': 'font/otf', '.ttf': 'font/ttf' };
+// /flaky/NAME.blm is a module from build/modules, served with ranges, as a poor connection would: the first request for each is cut short after 1 MB,
+// and, with ?corrupt, has a wrong byte (so that carrying on, and the SHA-256 check, are tested)
+const flakyRequests = [];
+const flakyServed = new Set();
+function flaky(request, response, url) {
+    const file = join(root, 'build/modules', normalize(url.pathname.slice('/flaky/'.length)));
+    if (!existsSync(file)) return response.writeHead(404).end();
+    const size = statSync(file).size;
+    const range = request.headers.range ?? '';
+    const start = range.startsWith('bytes=') ? Number(range.slice(6, -1)) : 0;
+    const first = !flakyServed.has(url.pathname);
+    flakyServed.add(url.pathname);
+    flakyRequests.push(`${url.pathname.slice(7)} ${range || 'whole'}`);
+    response.writeHead(start ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Content-Length': size - start, 'Accept-Ranges': 'bytes',
+                                            ...(start ? { 'Content-Range': `bytes ${start}-${size - 1}/${size}` } : {}) });
+    const data = readFileSync(file).subarray(start);
+    if (first && url.searchParams.has('corrupt')) { data[0] ^= 1; return response.end(data); }
+    if (first && data.length > 1000000) { response.write(data.subarray(0, 1000000)); return setTimeout(() => response.socket.destroy(), 100); }
+    response.end(data);
+}
+
 const server = createServer((request, response) => {
-    let path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    const url = new URL(request.url, 'http://localhost');
+    if (url.pathname.startsWith('/flaky/')) return flaky(request, response, url);
+    let path = decodeURIComponent(url.pathname);
     if (path.endsWith('/')) path += 'index.html';
     const file = join(root, normalize(path));
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) return response.writeHead(404).end();
@@ -70,6 +93,26 @@ try {
     };
     await sleep(6000);
     await shoot('1-nothing-installed');
+
+    // A poor connection: a download that's cut short is carried on from where it stopped, and one that arrives wrong isn't installed
+    const poor = await evaluate(`(async () => {
+        const { Biblelastic } = await import('${origin}/app/build/web/engine/biblelastic.js');
+        const engine = await Biblelastic.start();
+        const index = await (await fetch('${origin}/build/modules/index.json')).json();
+        const sha256 = name => index.modules.find(module => module.name === name).sha256;
+        await engine.install('OET-RV.text', '${origin}/flaky/OET-RV.text.blm', null, sha256('OET-RV.text'));
+        let corrupt = 'installed';
+        try { await engine.install('UHB.text', '${origin}/flaky/UHB.text.blm?corrupt', null, sha256('UHB.text')); } catch (error) { corrupt = error.message; }
+        const installed = (await engine.list()).map(module => module.name);
+        await engine.remove();
+        engine.stop();
+        return { corrupt, installed };
+    })()`);
+    console.log(`Poor connection: ${flakyRequests.join('; ')}; the corrupted one: ${poor.corrupt}; installed: ${poor.installed.join(', ')}`);
+    if (flakyRequests[1] !== 'OET-RV.text.blm bytes=1000000-' || !poor.corrupt.includes("didn't download correctly") || poor.installed.join() !== 'OET-RV.text') {
+        console.log('FAILED: the poor connection wasn\'t handled as it should be');
+        failed = true;
+    }
 
     // Install modules into this browser's storage with the engine's own JavaScript (as the app's Modules page does), then start the app again
     const installed = await evaluate(`(async () => {

@@ -106,7 +106,7 @@ class Catalogue extends ChangeNotifier {
       for (final module in list) {
         // Asked for by its SHA-256 too, so that a changed module has a new address, which no cache (e.g., Cloudflare's) can have an old copy of
         final version = module.sha256.isEmpty ? '' : '?v=${module.sha256.substring(0, 16)}';
-        await engine.install(module.name, location.resolve('${module.name}.blm$version'), (written) { progress[module.name] = written; notifyListeners(); });
+        await engine.install(module.name, location.resolve('${module.name}.blm$version'), (written) { progress[module.name] = written; notifyListeners(); }, sha256: module.sha256);
         progress.remove(module.name);
         if (module.sha256.isNotEmpty) await _remember({...hashes, module.name: module.sha256});
         installed[module.name] = module.bytes;

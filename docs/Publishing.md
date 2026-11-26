@@ -66,7 +66,19 @@ Not everything (256 MB): the app offers a starter set for each language (65 MB f
 and each work on its own (see [App.md](App.md)). It works these out from the catalogue (each module's `kind`, `work`, `edition`, and `language`, and an alignment's name),
 so publishing needs nothing more for a new work to be offered in the right places.
 
-## Not done yet
+## Downloads that break, or arrive wrong
 
-- **Resuming a broken download**, and checking a download's SHA-256 (the engine does check each page of a module as it reads it).
-- **A web page about the modules** (the existing Software/Biblelastic page is from 2022).
+Each module is downloaded into a partial file (`NAME.SHA16.part`, named for the version, so that two versions are never mixed). If the connection is lost,
+the app tries again by itself (six times, waiting 1, 2, 4, 8, and 16 seconds), asking for the rest (`Range: bytes=N-`) where the server can send it,
+and otherwise for the whole module again; after that, trying again carries on from where it stopped. Once it's all there, its SHA-256 is checked against the catalogue's,
+and only then does it take the place of the old copy (which stays usable until then). A module that arrives wrong is thrown away, with a message to try again.
+`app/test_web.mjs` tests both, with a server that cuts the first download short and corrupts another.
+
+**Freely-Given.org can't send the rest yet.** Apache serves `.blm` files as `text/plain`, so it compresses them (which saves only about 5%, as they're
+compact already), and Cloudflare caches the compressed copy and then sends the whole module whatever range is asked for. So a broken download starts that
+module again. Serving them as `application/octet-stream` would fix that, e.g., with `AddType application/octet-stream .blm` in Apache's configuration
+(`.htaccess` isn't read there), and then purging Cloudflare's cached copies (or publishing new versions).
+
+## The web page
+
+`Software/Biblelastic/index.html` on Freely-Given.org describes the app, the starter sets, and each work with its licence and size (from the catalogue).

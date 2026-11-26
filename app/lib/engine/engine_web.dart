@@ -36,9 +36,9 @@ class WebEngine implements Engine {
   }
 
   @override
-  Future<void> install(String name, Uri url, void Function(int written)? onProgress) async {
+  Future<void> install(String name, Uri url, void Function(int written)? onProgress, {String sha256 = ''}) async {
     final progress = ((JSObject progress) => onProgress?.call(progress.getProperty<JSNumber>('written'.toJS).toDartInt)).toJS;
-    await _engine.callMethod<JSPromise<JSAny?>>('install'.toJS, name.toJS, url.toString().toJS, progress).toDart;
+    await _engine.callMethod<JSPromise<JSAny?>>('install'.toJS, name.toJS, url.toString().toJS, progress, sha256.toJS).toDart;
   }
 
   @override

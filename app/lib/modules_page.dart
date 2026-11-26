@@ -78,7 +78,7 @@ class _ModulesPageState extends State<ModulesPage> {
       appBar: AppBar(title: Text(strings.modules), bottom: catalogue.busy
           ? PreferredSize(preferredSize: const Size.fromHeight(4), child: LinearProgressIndicator(value: catalogue.fraction)) : null),
       body: SafeArea(child: RefreshIndicator(onRefresh: () => catalogue.refresh(fetch: true), child: ListView(padding: const EdgeInsets.all(16), children: [
-        if (catalogue.problem != null) Text(catalogue.modules.isEmpty ? '${strings.noCatalogue} (${catalogue.problem})' : catalogue.problem!, style: TextStyle(color: theme.colorScheme.error)),
+        if (catalogue.problem != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(catalogue.modules.isEmpty ? '${strings.noCatalogue} (${catalogue.problem})' : catalogue.problem!, style: TextStyle(color: theme.colorScheme.error))),
         if (catalogue.modules.isEmpty && catalogue.problem == null) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
         if (languages.isNotEmpty) Text(strings.startWith, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary)),
         for (final language in languages)

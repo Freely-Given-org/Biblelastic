@@ -14,6 +14,8 @@ It can:
     - **each work** (its text, layers, and alignments, and its vectors if search by meaning is installed in its language), on the Modules page
         and, for the books, commentaries, and dictionaries that aren't installed, under *To download* in the Library
     - every module one by one (*Each module*, at the end of the Modules page), with *Install all* (256 MB) and *Remove all*
+    A broken download is tried again by itself, carrying on from where it stopped where the server allows it, and a module is only installed once its SHA-256
+    matches the catalogue's (see [Publishing.md](Publishing.md))
 - read the OET-RV a section at a time (from one section heading to the next, whichever chapters that covers), with its poetry indents, words of Jesus, and translators' additions shown differently
 - read another installed Bible instead (Bible, in the ⋮ menu), at the same place: so far the two Spanish ones, in the OET-RV's sections. The choice is remembered;
     until one is chosen, a phone set to Spanish starts with a Spanish Bible. While reading one, the notes in its language come first

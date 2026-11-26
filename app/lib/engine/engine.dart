@@ -31,7 +31,9 @@ abstract class Engine {
   Future<List<ModuleInfo>> installed();
 
   /// Download one module file. [onProgress] is told how many bytes have been stored so far.
-  Future<void> install(String name, Uri url, void Function(int written)? onProgress);
+  /// It's downloaded into a partial file first, which a later try carries on from if the connection is lost (and it's tried a few times by itself);
+  /// if [sha256] is given (the catalogue's), the module is only installed if its SHA-256 is the same.
+  Future<void> install(String name, Uri url, void Function(int written)? onProgress, {String sha256 = ''});
 
   /// Remove these modules (by name)
   Future<void> remove(List<String> names);
@@ -44,3 +46,10 @@ Map<String, dynamic> checked(Map<String, dynamic> response) {
   if (response['ok'] != true) throw EngineException('${response['error'] ?? 'The engine gave no answer'}');
   return response;
 }
+
+/// How many times a download is tried (carrying on from where it stopped) before giving up, and how long to wait before each try after the first
+const downloadTries = 6;
+Duration retryDelay(int attempt) => Duration(seconds: 1 << (attempt - 1)); // 1, 2, 4, 8, 16 s
+
+/// Whether an HTTP status means that trying again won't help (e.g., 404), as against a server that's busy or a request that timed out
+bool hopeless(int status) => status >= 400 && status < 500 && status != 408 && status != 429;

@@ -7,6 +7,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:ffi/ffi.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -95,26 +96,69 @@ class NativeEngine implements Engine {
   }
 
   @override
-  Future<void> install(String name, Uri url, void Function(int written)? onProgress) async {
-    final client = http.Client();
-    final partial = File('${_folder.path}/$name.part'); // Only given its real name once it's complete
-    try {
-      final response = await client.send(http.Request('GET', url));
-      if (response.statusCode != 200) throw EngineException("$name couldn't be downloaded (HTTP ${response.statusCode})");
-      final sink = partial.openWrite();
-      var written = 0;
-      await for (final chunk in response.stream) {
-        sink.add(chunk);
-        written += chunk.length;
-        onProgress?.call(written);
+  Future<void> install(String name, Uri url, void Function(int written)? onProgress, {String sha256 = ''}) async {
+    // The partial file is named for the version being downloaded, so that a try that carries on never mixes two versions
+    final version = sha256.isEmpty ? 'unknown' : sha256.substring(0, 16);
+    final partial = File('${_folder.path}/$name.$version.part');
+    await for (final file in _folder.list()) { // Partial downloads of other versions
+      final fileName = file.uri.pathSegments.last;
+      if (file is File && fileName.startsWith('$name.') && fileName.endsWith('.part') && file.path != partial.path) await file.delete();
+    }
+    for (var attempt = 1;; attempt++) {
+      try {
+        await _download(name, url, partial, onProgress);
+        break;
+      } on _Hopeless {
+        if (await partial.exists()) await partial.delete();
+        rethrow;
+      } catch (error) {
+        if (attempt >= downloadTries) throw EngineException("$name couldn't be downloaded ($error). Try again to carry on from where it stopped.");
+        await Future<void>.delayed(retryDelay(attempt));
       }
-      await sink.close();
-      await partial.rename('${_folder.path}/$name.blm');
+    }
+    if (sha256.isNotEmpty) {
+      final digest = await crypto.sha256.bind(partial.openRead()).first;
+      if ('$digest' != sha256) {
+        await partial.delete();
+        throw EngineException("$name didn't download correctly (its SHA-256 isn't the catalogue's), so it wasn't installed. Try again.");
+      }
+    }
+    await _call('command=forget'); // So that the engine looks at the folder again (and lets go of the old copy)
+    await partial.rename('${_folder.path}/$name.blm');
+  }
+
+  /// One try at downloading into the partial file: carrying on from its end if the server can send the rest
+  Future<void> _download(String name, Uri url, File partial, void Function(int written)? onProgress) async {
+    final client = http.Client();
+    try {
+      final have = await partial.exists() ? await partial.length() : 0;
+      final request = http.Request('GET', url);
+      if (have > 0) request.headers['Range'] = 'bytes=$have-';
+      final response = await client.send(request).timeout(const Duration(seconds: 30));
+      if (response.statusCode == 416 && have > 0) return; // It has it all already
+      if (response.statusCode != 200 && response.statusCode != 206) {
+        final message = "$name couldn't be downloaded (HTTP ${response.statusCode})";
+        throw hopeless(response.statusCode) ? _Hopeless(message) : EngineException(message);
+      }
+      final carryOn = response.statusCode == 206; // Otherwise the server sent it all again
+      final sink = partial.openWrite(mode: carryOn ? FileMode.append : FileMode.write);
+      var written = carryOn ? have : 0;
+      onProgress?.call(written);
+      try {
+        // (A connection that stops sending is given up on after a while, and tried again)
+        await for (final chunk in response.stream.timeout(const Duration(seconds: 30))) {
+          sink.add(chunk);
+          written += chunk.length;
+          onProgress?.call(written);
+        }
+      } finally {
+        await sink.close();
+      }
+      final expected = response.contentLength;
+      if (expected != null && written != (carryOn ? have : 0) + expected) throw EngineException('$name: the connection closed early');
     } finally {
       client.close();
-      if (await partial.exists()) await partial.delete();
     }
-    await _call('command=forget'); // So that the engine looks at the folder again
   }
 
   @override
@@ -133,4 +177,9 @@ class NativeEngine implements Engine {
       if (file is File) await file.delete();
     }
   }
+}
+
+/// A download that trying again won't help (e.g., the file isn't there)
+class _Hopeless extends EngineException {
+  const _Hopeless(super.message);
 }
