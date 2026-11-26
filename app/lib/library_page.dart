@@ -13,8 +13,8 @@ class LibraryPage extends StatefulWidget {
   @override
   State<LibraryPage> createState() => _LibraryPageState();
 
-  // By title, as a library shelves them: ‘The Pilgrim’s Progress’ under P
-  static String _sortKey(Map work) => _shelved(work['title'] as String);
+  // By title, as a library shelves them: ‘The Pilgrim’s Progress’ under P (but the OET before anything else)
+  static String _sortKey(Map work) => '${leadingRank(work['edition'] as String? ?? '')}${_shelved(work['title'] as String)}';
   static String _shelved(String title) => title.toLowerCase().replaceFirst(RegExp(r'^(the|an?) '), '');
 }
 

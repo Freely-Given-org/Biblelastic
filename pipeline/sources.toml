@@ -143,6 +143,250 @@ features = ["strong"]
 sections_from = "OET-RV"
 aquifer_alignments = "../Bibles/BibleAquifer/ReinaValera1909/spa/alignments"
 
+# More English Bibles (from OpenBibleData's copies; see its createPages/settings.py). None is in the English starter set: each can be downloaded on its own.
+# Those without section headings take the OET-RV's (at the same verses), as the Spanish ones do.
+[[edition]]
+id = "BSB"
+name = "Berean Standard Bible"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "ESFM" # Written from the BSB's tables by BibleOrgSys (biblelastic_ingest/bibleorgsys.py), with each word's row in the OET's word tables where it has one
+copyright = "The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God’s Word has been dedicated to the public domain."
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://berean.bible/terms.htm"
+files = ["Biblelastic/build/converted/BSB/BSB_*.ESFM"]
+convert = { reader = "CSVBible", from = "OpenBibleData/copiedBibles/English/Berean.Bible/BSB/bsb_tables.tsv", remove = ["[", "]", "{", "}"] } # (The brackets mark words that the printed BSB doesn't mark)
+features = ["row"]
+
+[[edition]]
+id = "KJB-1769"
+name = "King James Bible (1769), with the Apocrypha"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The King James Version, or Authorized Version, using the standardized text of 1769: public domain, as published by eBible.org (except in the United Kingdom, where letters patent restrict printing it)"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=eng-kjv"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/KJB/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "KJB-1611"
+name = "King James Bible (1611)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The King James Bible as first printed in 1611 (the ‘he’ printing): public domain (except in the United Kingdom, where letters patent restrict printing it). Transcribed into USFM by Open Bible Data (Freely-Given.org), whose work on it is in the public domain."
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://github.com/Freely-Given-org/OpenBibleData/tree/main/Bibles/EnglishTranslations/KJB-1611"
+files = ["OpenBibleData/Bibles/EnglishTranslations/KJB-1611/*.USFM"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "ASV"
+name = "American Standard Version (1901)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The American Standard Version of the Holy Bible, first published in 1901: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=eng-asv"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/ASV/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "WEBBE"
+name = "World English Bible, British Edition, with the Deuterocanon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The World English Bible British Edition is not copyrighted: it is in the public domain, as published by eBible.org. (“World English Bible” is a trademark.)"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=eng-webbe"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/WEBBE/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "RV"
+name = "Revised Version (1895), with the Apocrypha"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The Revised Version of the Holy Bible (1895), with the Apocrypha: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=eng-rv"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/RV/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "YLT"
+name = "Young’s Literal Translation (1898)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "Young’s Literal Translation of the Holy Bible, by Robert Young: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=engylt"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/YLT/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "Drby"
+name = "Darby Translation (1890)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The Holy Scriptures, a New Translation from the Original Languages, by J. N. Darby: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=engDBY"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/DBY/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "Wbstr"
+name = "Webster Bible (1833)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The Holy Bible, in the Common Version, with Amendments of the Language by Noah Webster: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=engwebster"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/WBS/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "DRA"
+name = "Douay-Rheims Bible (1899 American edition)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The Holy Bible in English, Douay-Rheims American Edition of 1899, translated from the Latin Vulgate: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=engDRA"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/DRA/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "JPS"
+name = "JPS Tanakh (1917)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The Old Testament in English, published by the Jewish Publication Society in 1917: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=engjps"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/JPS/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "Wymth"
+name = "Weymouth New Testament (1903)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The New Testament in Modern Speech, by Richard Francis Weymouth (1903): public domain. Put into USFM by Open Bible Data (Freely-Given.org)."
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://github.com/Freely-Given-org/OpenBibleData/tree/main/Bibles/EnglishTranslations/Weymouth_NT-1903"
+files = ["OpenBibleData/Bibles/EnglishTranslations/Weymouth_NT-1903/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "Gnva"
+name = "Geneva Bible (1599)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The Geneva Bible of 1599, in its original spelling: public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=enggnv"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/GNV/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "TNT"
+name = "Tyndale New Testament (1534)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM"
+copyright = "The New Testament translated by William Tyndale (1534): public domain, as published by eBible.org"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://ebible.org/find/details.php?id=engtnt"
+files = ["OpenBibleData/copiedBibles/English/eBible.org/TNT/*.usfm"]
+sections_from = "OET-RV"
+
+[[edition]]
+id = "Wycl"
+name = "Wycliffe Bible (c. 1395)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "USFM" # Written from Zefania XML by BibleOrgSys (biblelastic_ingest/bibleorgsys.py)
+copyright = "The Holy Bible, in the earliest English version made from the Latin Vulgate by John Wycliffe and his followers (c. 1395), in Middle English: public domain, as published by the Free Bible Group in Zefania XML"
+licence = "Public domain"
+redistributable = true
+licence_verified = true
+starter = false
+source = "https://sourceforge.net/projects/zefania-sharp/"
+files = ["Biblelastic/build/converted/Wycl/Wycl_*.usfm"]
+convert = { reader = "ZefaniaXMLBible", from = "OpenBibleData/copiedBibles/English/Zefania/WYC/SF_2009-01-20_ENG_BIBLE_WYCLIFFE_(JOHN WYCLIFFE BIBLE).xml", remove = ["`"] } # (A backtick starts some of its phrases: no one knows why)
+sections_from = "OET-RV"
+
 # Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
 [disclaimers]
 commentary = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."
@@ -381,4 +625,8 @@ to = ["SR-GNT", "UHB"]
 
 [[alignment]]
 from = "OET-RV"
+to = ["SR-GNT", "UHB"]
+
+[[alignment]] # (From the rows of the OET's word tables that BibleOrgSys found for the BSB's words)
+from = "BSB"
 to = ["SR-GNT", "UHB"]

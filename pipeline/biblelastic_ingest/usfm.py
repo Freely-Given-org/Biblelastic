@@ -283,6 +283,10 @@ class _Parser:
                 continue
             if name == 'v':
                 self.end_verse()
+                if self.chapter is not None and self.paraMarker is not None and paragraph_kind( self.paraMarker ) == 'intro':
+                    # A verse after a chapter's summary (e.g., the KJB-1611's \iex) without a paragraph marker of its own: the text starts here
+                    doc.warn( 'verse in an introduction' )
+                    self.start_paragraph( 'p' )
                 numberMatch = whitespaceRunRE.match( source, position )
                 self.verse, position = numberMatch.group( 1 ), numberMatch.end()
                 self.atVerseStart = True

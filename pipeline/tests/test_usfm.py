@@ -139,3 +139,25 @@ class NormaliseTests( unittest.TestCase ):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ChapterSummaryTests( unittest.TestCase ):
+    """ A chapter that starts with a summary (\\iex, as in the KJB-1611) and then its verses, without a paragraph marker """
+    def test_verses_after_a_summary( self ):
+        doc = usfm.parse( '\\id JHN\n\\c 1\n\\iex 1 The Diuinitie of Christ.\n\\v 1 In the beginning was the Word.\n\\v 2 The same was in the beginning.\n', 'Latn', False )
+        verses = [ node for node in doc.nodes if node[0] == 'verse' ]
+        self.assertEqual( [ verse[3] for verse in verses ], ['1:1', '1:2'] )
+        self.assertTrue( all( verse[2] > verse[1] for verse in verses ), verses ) # Each has its words
+        self.assertEqual( ' '.join( token[1] for token in doc.tokens[verses[0][1]:verses[0][2]] ), 'In the beginning was the Word' )
+
+
+class BookCodeTests( unittest.TestCase ):
+    """ The book in a file: from its \\id line, whatever the file is called """
+    def test_from_the_id_line( self ):
+        import tempfile
+        from biblelastic_ingest import cli
+        with tempfile.TemporaryDirectory() as folder:
+            for name, line, expected in (('02-GENeng-asv.usfm', '\\id GEN', 'GEN'), ('09_1SA_KJB-1611.USFM', '\\id 1SA', 'SA1'), ('A0FRTWeymouth.usfm', '\\id FRT', 'FRT')):
+                path = Path( folder ) / name
+                path.write_text( f'﻿{line} Some title\n\\c 1\n', encoding='utf-8' )
+                self.assertEqual( cli.book_code( path ), expected, name )

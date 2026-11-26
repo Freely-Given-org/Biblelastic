@@ -25,6 +25,26 @@ Every work's was marked as checked on 26 November 2026, except the thesaurus's a
 | The Spanish Bibles' alignments | As each Bible | In each Bible's Aquifer repository (whose README gives its licence) | | |
 | Thesaurus (English) | CC0 1.0 | Written for Biblelastic (`pipeline/thesaurus/eng.tsv`) | ‘Freely-Given.org’ | Confirmed by you (26 November 2026) |
 
+## More English Bibles (added 26 November 2026)
+
+All are in the public domain, as their sources say, and aren't in the English starter set. Each was checked at its source on 26 November 2026.
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| BSB | Public domain | https://berean.bible/terms.htm (the local copy is `OpenBibleData/copiedBibles/English/Berean.Bible/BSB/bsb_tables.tsv`) | ‘This text of God’s Word has been dedicated to the public domain’ (as quoted in the Jude commentary’s notices; to be checked on the site) |
+| KJB-1769 | Public domain | `OpenBibleData/copiedBibles/English/eBible.org/KJB/copr.htm` | Public domain, except that letters patent restrict printing it in the United Kingdom (see the question below) |
+| KJB-1611 | Public domain | `OpenBibleData/Bibles/EnglishTranslations/KJB-1611/README.md` | The 1611 text is out of copyright (except, it says, in England); Open Bible Data’s USFM is in the public domain |
+| ASV, RV, YLT, Drby, Wbstr, DRA, JPS, Gnva, TNT | Public domain | Each one’s `copr.htm` in `OpenBibleData/copiedBibles/English/eBible.org/` | ‘Public Domain’ |
+| WEBBE | Public domain | `…/eBible.org/WEBBE/copr.htm` | Public domain; ‘World English Bible’ is a trademark, which mayn't be used for a changed text (it isn't changed) |
+| Wymth | Public domain | `OpenBibleData/Bibles/EnglishTranslations/Weymouth_NT-1903/README.md` | Out of copyright (1903) |
+| Wycl | Public domain | `OpenBibleData/copiedBibles/English/eBible.org/Wycliffe/copr.htm` (for the Pentateuch and Gospels); the whole Bible is from the Zefania XML, whose `<rights>` is empty | Public domain (c. 1395) |
+
+Left out: the Bible in Basic English, which eBible.org says is in the public domain only in the United States (it was printed in 1965 without a copyright notice);
+and those whose licences need reading first (the LSV, FBV, T4T, and TCNT, all on eBible.org) or that mayn't be passed on (the NET Bible).
+
+Question: the King James Bible (1611 and 1769) is under letters patent in the United Kingdom, which restrict printing it there.
+Electronic copies are widely given away (eBible.org, Crosswire), and the registry says so in its copyright notice. Is that enough?
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

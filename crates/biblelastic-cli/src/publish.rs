@@ -29,7 +29,7 @@ fn list(folder: &Path) -> Result<Vec<Listed>> {
         let module = Module::open_file(&path)?;
         let field = |section: &str| if module.has(section) { module.text(section).unwrap_or_default() } else { String::new() };
         let fields = [("kind", "module.kind"), ("work", "module.work"), ("edition", "module.edition"), ("layer", "module.layer"), ("title", "module.title"),
-                      ("language", "module.language"), ("licence", "module.licence"), ("copyright", "module.copyright"), ("attribution", "module.attribution")]
+                      ("language", "module.language"), ("licence", "module.licence"), ("copyright", "module.copyright"), ("attribution", "module.attribution"), ("starter", "module.starter")]
             .into_iter().map(|(key, section)| (key, field(section))).filter(|(_, value)| !value.is_empty()).collect();
         // (A module from before rights were recorded is taken to be redistributable, as everything so far is; publishing says which those are)
         listed.push(Listed { name, bytes: data.len() as u64, sha256: sha256_hex(&data), fields, redistributable: field("module.redistributable") != "false",

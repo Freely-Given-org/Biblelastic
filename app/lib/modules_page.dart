@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'catalogue.dart';
 import 'engine/engine.dart';
 import 'strings.dart';
+import 'works.dart' show leadingRank;
 
 class ModulesPage extends StatefulWidget {
   const ModulesPage({super.key, required this.engine});
@@ -33,7 +34,8 @@ class _ModulesPageState extends State<ModulesPage> {
     final mine = strings.languageCode;
     final languages = catalogue.languages..sort((a, b) => (a == mine ? 0 : 1) - (b == mine ? 0 : 1));
     final works = catalogue.works.values.toList()
-      ..sort((a, b) => a.language == b.language ? a.title.compareTo(b.title) : a.language == mine ? -1 : b.language == mine ? 1 : a.language.compareTo(b.language));
+      ..sort((a, b) => leadingRank(a.edition) != leadingRank(b.edition) ? leadingRank(a.edition) - leadingRank(b.edition) // The OET first, whatever the language
+          : a.language == b.language ? a.title.compareTo(b.title) : a.language == mine ? -1 : b.language == mine ? 1 : a.language.compareTo(b.language));
     Widget heading(String text) => Padding(padding: const EdgeInsets.only(top: 24, bottom: 4), child: Text(text, style: theme.textTheme.titleSmall!.copyWith(color: theme.colorScheme.primary)));
 
     /// A set of modules that's installed together: its button says how much it would download

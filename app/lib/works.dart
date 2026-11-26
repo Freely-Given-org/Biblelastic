@@ -55,10 +55,15 @@ class Rights extends StatelessWidget {
 /// The languages that meaning-based search can be done in: their model and some of their works' vectors are installed
 final Set<String> meaningLanguages = {};
 
+/// The editions that come before all others wherever Bibles are listed: the OET's Readers' Version, then its Literal Version
+const leadingEditions = ['OET-RV', 'OET-LV'];
+/// Where an edition comes among [leadingEditions] (or after them all), for sorting
+int leadingRank(String edition) => leadingEditions.contains(edition) ? leadingEditions.indexOf(edition) : leadingEditions.length;
+
 /// The installed Bibles that can be read (translations, not the original-language texts, nor the OET's Literal Version, which goes with the Readers' Version),
 /// the OET first, then the Aquifer Spanish text, then the others by title
 List<String> readableBibles() {
-  const first = ['OET-RV', 'ASBRT'];
+  const first = ['OET-RV', 'ASBRT']; // (The OET-LV goes with the OET-RV)
   final bibles = [for (final MapEntry(key: edition, value: work) in works.entries)
       if (work['work'] == 'scripture' && edition != 'OET-LV' && !const {'grc', 'hbo', 'arc'}.contains(work['language'])) edition];
   int rank(String edition) => first.contains(edition) ? first.indexOf(edition) : first.length;

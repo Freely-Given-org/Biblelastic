@@ -13,6 +13,7 @@ import contextlib
 import csv
 from datetime import date
 import hashlib
+import itertools
 import io
 import json
 import logging
@@ -41,7 +42,14 @@ NOTES_RE = re.compile( r'\\(fe|fig|f|x)\b.*?\\\1\*', re.DOTALL )
 
 
 def book_code( path:Path ) -> str:
-    """ OET-RV_MRK.ESFM → MRK and 42-MRK.usfm → MRK and 09-1SA.usfm → SA1 and 43JHNRV09.SFM → JHN """
+    """ The book in a USFM or ESFM file, from its \\id line (e.g., \\id 1SA → SA1);
+        or from its name: OET-RV_MRK.ESFM → MRK and 42-MRK.usfm → MRK and 09-1SA.usfm → SA1 and 43JHNRV09.SFM → JHN """
+    if path.suffix.upper() in ('.USFM', '.SFM', '.ESFM') and path.is_file():
+        with open( path, encoding='utf-8-sig' ) as file:
+            for line in itertools.islice( file, 5 ):
+                if found := re.match( r'\\id ([1-4A-Z][A-Z0-9]{2})\b', line.strip(), re.IGNORECASE ):
+                    code = found.group( 1 ).upper()
+                    return USFM_TO_BBB.get( code, code )
     numbered = re.match( r'\d\d([1-3A-Z][A-Z]{2})', path.stem )
     code = numbered.group( 1 ) if numbered else re.split( '[-_]', path.stem )[-1].upper()
     return USFM_TO_BBB.get( code, code )

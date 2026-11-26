@@ -8,12 +8,14 @@ It can:
 - install, update, and remove modules, from a list (`index.json`) at a web address (Freely-Given.org for a release build: see [Publishing.md](Publishing.md)),
     showing each one's licence, and when one has changed. They're chosen as people think of them (`app/lib/catalogue.dart`):
     - **a starter set for a language** (*Start with*: English, 65 MB; Español, 58 MB; both, 102 MB): its Bibles, commentaries, and dictionaries,
-        the Greek and Hebrew (for what each word translates), and its thesaurus, but not the books
+        the Greek and Hebrew (for what each word translates), and its thesaurus, but not the books, nor any work that the catalogue says isn't in it
+        (`"starter": "false"`, e.g., the English Bibles other than the OET's)
     - **search by meaning in a language** (the model, about 31–35 MB, with the vectors of the works in that language that are installed;
         offered once something in that language is installed, and on the Search page when a subject is searched for without it)
     - **each work** (its text, layers, and alignments, and its vectors if search by meaning is installed in its language), on the Modules page
         and, for the books, commentaries, and dictionaries that aren't installed, under *To download* in the Library
-    - every module one by one (*Each module*, at the end of the Modules page), with *Install all* (256 MB) and *Remove all*
+    - (wherever Bibles are listed, the OET-RV comes first, then the OET-LV: `leadingEditions` in `app/lib/works.dart`)
+    - every module one by one (*Each module*, at the end of the Modules page), with *Install all* (321 MB) and *Remove all*
     A broken download is tried again by itself, carrying on from where it stopped where the server allows it, and a module is only installed once its SHA-256
     matches the catalogue's (see [Publishing.md](Publishing.md))
 - read the OET-RV a section at a time (from one section heading to the next, whichever chapters that covers), with its poetry indents, words of Jesus, and translators' additions shown differently

@@ -22,10 +22,12 @@ class Listed {
       : name = entry['name'] as String, bytes = entry['bytes'] as int, sha256 = entry['sha256'] as String? ?? '',
         licence = entry['licence'] as String? ?? '', copyright = entry['copyright'] as String? ?? '',
         kind = entry['kind'] as String? ?? '', work = entry['work'] as String? ?? '', title = entry['title'] as String? ?? '',
-        language = entry['language'] as String? ?? '',
+        language = entry['language'] as String? ?? '', starter = entry['starter'] != 'false',
         // An alignment (e.g., `OET-RV--UHB`) goes with the translation whose words it links
         edition = entry['edition'] as String? ?? ((entry['name'] as String).contains('--') ? (entry['name'] as String).split('--').first : '');
   final String name, sha256, licence, copyright, kind, work, title, language, edition;
+  /// Whether its language's starter set has it (all but a few of a language's Bibles aren't, e.g.)
+  final bool starter;
   final int bytes;
 }
 
@@ -41,6 +43,7 @@ class Work {
   String get kind => text.work;
   String get language => text.language;
   String get licence => text.licence;
+  bool get starter => text.starter;
 }
 
 /// Everything that can be downloaded, and what's installed: one for the app, shared by the pages that offer downloads
@@ -160,11 +163,12 @@ class Catalogue extends ChangeNotifier {
   /// The languages that there are Bibles in (not the original languages), each of which has a starter set
   List<String> get languages => {for (final work in works.values) if (work.kind == 'scripture' && !originalLanguages.contains(work.language)) work.language}.toList();
 
-  /// A language's starter set: its Bibles, commentaries, and dictionaries (not the books, which can be added one by one), the original texts
+  /// A language's starter set: its Bibles, commentaries, and dictionaries (except those that the catalogue says aren't in it, e.g., most of its Bibles;
+  /// and not the books, which can be added one by one), the original texts
   /// (for what each word translates), and its thesaurus (for searching by subject). Search by meaning is separate, as its model is big.
   List<Listed> starter(String language) => [
     for (final work in works.values)
-      if (work.kind != 'book' && (work.language == language || work.kind == 'scripture' && originalLanguages.contains(work.language))) ...work.modules,
+      if (work.kind != 'book' && work.starter && (work.language == language || work.kind == 'scripture' && originalLanguages.contains(work.language))) ...work.modules,
     ...modules.where((module) => module.kind == 'thesaurus' && module.language == language),
   ];
 

@@ -108,9 +108,11 @@ There's the start of the build pipeline and engine, and a minimal app (for Andro
 Four Bible editions (OET-RV, OET-LV, SR-GNT, and UHB), one commentary (Tyndale Open Study Notes), one dictionary (Tyndale Open Bible Dictionary),
 the UBS Hebrew and Greek dictionaries (as the meaning of each original-language word), the UBS handbooks on animals, plants, and objects,
 sixty-two free books from books.freely.giving (every English or Spanish one there that's CC0 or in the public domain and has an EPUB: from Puritan classics to a study of Mark and a commentary on Jude),
-and in Spanish two Bibles (the Aquifer Spanish Bible Reference Text and the Reina-Valera 1909) with the Aquifer's Spanish study notes and Bible dictionary
+in Spanish two Bibles (the Aquifer Spanish Bible Reference Text and the Reina-Valera 1909) with the Aquifer's Spanish study notes and Bible dictionary,
+and fifteen more English Bibles (from Wycliffe's and Tyndale's to the King James Bible, 1611 and 1769, and the Berean Standard Bible, whose words are linked to the Greek and Hebrew)
 can be converted and compiled, and three of the example searches above already work (the third only as a first sketch):
 
+    cd pipeline && ../../OpenBibleData/.venv/bin/python -m biblelastic_ingest.bibleorgsys && cd ..   # The BSB and Wycliffe Bible → USFM or ESFM, with BibleOrgSys (when they change)
     cd pipeline && python3 -m biblelastic_ingest && cd ..      # Source texts → build/intermediate/
     cargo build --release
     target/release/biblelastic compile                         # build/intermediate/ → build/modules/

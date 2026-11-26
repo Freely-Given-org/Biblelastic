@@ -334,6 +334,8 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     let language = manifest_value(&manifest, "language").unwrap_or_default(); // e.g., `eng` or `spa`
     let manifest_json = Json::parse(&String::from_utf8_lossy(&manifest)).map_err(|error| format!("{id}: manifest.json: {error}"))?;
     let rights = Rights::from_json(&manifest_json, &Rights::default());
+    // Whether a language's starter set has it (unless the registry says `starter = false`, e.g., for all but a few of the Bibles in a language)
+    let starter = !matches!(manifest_json.get("starter"), Some(Json::Bool(false)));
     // A layer can have rights of its own (e.g., the UBS meanings of the words of the UHB)
     let layer_rights = |layer: &str| -> Rights {
         match manifest_json.get("layers") {
@@ -351,6 +353,7 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
         writer.raw("module.title", title.as_bytes());
         if !language.is_empty() { writer.raw("module.language", language.as_bytes()); }
         if !disclaimer.is_empty() { writer.raw("module.disclaimer", disclaimer.as_bytes()); }
+        if !starter { writer.raw("module.starter", b"false"); }
         rights.write(&mut writer);
         writer.raw("manifest", &manifest);
         writer.strings("documents.names", &documents);
@@ -437,6 +440,7 @@ fn compile_thesaurus(path: &Path, output: &Path, options: Options) -> Result<Wri
     let rights_path = path.with_extension("json");
     if let Ok(text) = fs::read_to_string(&rights_path) { Rights::from_json(&Json::parse(&text).map_err(|error| error.to_string())?, &Rights::default()).write(&mut writer); }
     writer.raw("module.layer", language.as_bytes());
+    writer.raw("module.language", language.as_bytes()); // (So that a language's starter set has its thesaurus)
     writer.strings("term.dict", &rows.iter().map(|(key, _)| key).collect::<Vec<_>>());
     for (column, name) in ["name", "see", "contrast", "note"].iter().enumerate() {
         writer.strings(&format!("term.{name}"), &rows.iter().map(|(_, row)| row[column].as_str()).collect::<Vec<_>>());

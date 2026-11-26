@@ -62,9 +62,11 @@ A release build of the app downloads from `https://Freely-Given.org/Software/Bib
 
 ## What a phone downloads
 
-Not everything (256 MB): the app offers a starter set for each language (65 MB for English, 58 MB for Spanish), search by meaning separately,
-and each work on its own (see [App.md](App.md)). It works these out from the catalogue (each module's `kind`, `work`, `edition`, and `language`, and an alignment's name),
+Not everything (321 MB): the app offers a starter set for each language (65 MB for English, 58 MB for Spanish), search by meaning separately,
+and each work on its own (see [App.md](App.md)). It works these out from the catalogue (each module's `kind`, `work`, `edition`, `language`, and `starter`, and an alignment's name),
 so publishing needs nothing more for a new work to be offered in the right places.
+A work is in its language's starter set unless the registry says `starter = false`, as it does for all the English Bibles but the OET's
+(the catalogue then says `"starter": "false"` for its modules).
 
 ## Downloads that break, or arrive wrong
 
@@ -79,10 +81,16 @@ and only then does it take the place of the old copy (which stays usable until t
 can send the rest of one. Before that (until 26 November 2026) they were served as compressed `text/plain`, which saved only about 5% and which Cloudflare
 always sent whole; its copies from then expire within two hours, or can be purged.
 
-## The web page
+## The web pages
 
-`Software/Biblelastic/index.html` on Freely-Given.org describes the app, the starter sets, and each work with its licence and size (from the catalogue).
-It also shows `Biblelastic-logo.png` (`app/design/logo.png`), and links to the current release, so its version, date, and APK sizes change with each one.
+`Software/Biblelastic/index.html` on Freely-Given.org describes the app, and links to four pages that are written from the catalogue and the registry,
+so that they list everything there is: `Bibles.html`, `Helps.html` (study notes, commentaries, dictionaries, and the search tools), `Books.html`, and `Modules.html`
+(the starter sets and their sizes). After publishing the modules, write them again, and (with the site's owner's OK) copy them there:
+
+    cd pipeline && python3 -m biblelastic_ingest.web_pages && cd ..     # → build/site/
+    cp build/site/{Bibles,Helps,Books,Modules}.html /srv/www/Freely-Given.org/Software/Biblelastic/
+
+`index.html` is kept by hand, and isn't written by this. It shows `Biblelastic-logo.png` (`app/design/logo.png`), and links to the current release, so its version, date, and APK sizes change with each one.
 
 ## Publishing a release of the app
 
