@@ -56,7 +56,7 @@ and for the catalogue by an address that's different every time (`index.json?t=â
 
 ## Where the app looks
 
-A release build of the app downloads from `https://freely-given.org/Software/Biblelastic/modules/`, and a debug build from this computer
+A release build of the app downloads from `https://Freely-Given.org/Software/Biblelastic/modules/`, and a debug build from this computer
 (`http://localhost:8377/build/modules/`, through `adb reverse tcp:8377 tcp:8377` for a phone). Either can be changed when building:
 `--dart-define=MODULES=https://â€¦/`.
 

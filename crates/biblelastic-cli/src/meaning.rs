@@ -89,7 +89,7 @@ pub fn convert_model(folder: &Path, intermediate: &Path, modules: &Path, options
     let source = folder.components().map(|part| part.as_os_str().to_string_lossy()).find_map(|part| part.strip_prefix("models--").map(|name| name.replace("--", "/"))).unwrap_or_else(|| name.to_string());
     writer.raw("module.licence_text", format!("MIT License\n\n{holder}\n\n{MIT}\n").as_bytes());
     crate::compile::Rights { licence: licence.to_string(), copyright: format!("{source} (https://huggingface.co/{source}): MIT License, {holder}. The licence's full text is in the module."),
-        attribution: format!("The model {source}, with its weights stored as bytes{}, converted to the Biblelastic module format",
+        attribution: format!("The model {source}, with its weights stored as bytes{}, converted to the Biblelastic module format.",
                              if tokenizer == "unigram" { " and its vocabulary cut down to English and Spanish" } else { "" }),
         redistributable: rights.redistributable, verified: rights.verified }.write(&mut writer);
     write_model(&mut writer, &settings, &vocab, &scores, &tensors)?;

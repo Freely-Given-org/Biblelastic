@@ -142,7 +142,9 @@ impl Rights {
     pub fn from_json(json: &Json, defaults: &Rights) -> Rights {
         let text = |key: &str| json.get(key).and_then(Json::text).map(str::to_string);
         let flag = |key: &str| match json.get(key) { Some(Json::Bool(value)) => Some(*value), _ => None };
-        let attribution = [text("attribution"), text("changes")].into_iter().flatten().collect::<Vec<_>>().join(" ");
+        // Each as a sentence, so that one doesn't run into the next (e.g., an attribution that ends with its URL)
+        let attribution = [text("attribution"), text("changes")].into_iter().flatten().map(|part| part.trim().to_string()).filter(|part| !part.is_empty())
+            .map(|part| if part.ends_with(['.', '!', '?']) { part } else { format!("{part}.") }).collect::<Vec<_>>().join(" ");
         Rights { licence: text("licence").unwrap_or_else(|| defaults.licence.clone()), copyright: text("copyright").unwrap_or_else(|| defaults.copyright.clone()),
                  attribution: if attribution.is_empty() { defaults.attribution.clone() } else { attribution },
                  redistributable: flag("redistributable").unwrap_or(defaults.redistributable), verified: flag("licence_verified").unwrap_or(defaults.verified) }

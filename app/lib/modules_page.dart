@@ -12,7 +12,7 @@ import 'strings.dart';
 /// Where modules are downloaded from: Freely-Given.org for a release build, and this computer (through `adb reverse tcp:8377 tcp:8377`) for a debug one.
 /// In a browser this is relative to the page's own server. Set it when building, e.g., --dart-define=MODULES=https://example.org/modules/
 const modulesLocation = String.fromEnvironment('MODULES',
-    defaultValue: kReleaseMode ? 'https://freely-given.org/Software/Biblelastic/modules/' : 'http://localhost:8377/build/modules/');
+    defaultValue: kReleaseMode ? 'https://Freely-Given.org/Software/Biblelastic/modules/' : 'http://localhost:8377/build/modules/');
 
 /// A module as the catalogue (`index.json`) lists it: its size, its SHA-256 (which changes when it does), and what may be done with it
 class Listed {
@@ -115,7 +115,8 @@ class _ModulesPageState extends State<ModulesPage> {
           OutlinedButton(onPressed: busy || installed.isEmpty ? null : removeAll, child: Text(strings.removeAll)),
         ]),
         const SizedBox(height: 8),
-        Text('${strings.modulesFrom} $location', style: theme.textTheme.bodySmall),
+        // As it's written (Freely-Given.org), not as parsed (which lowercases the host), unless it's relative to the page
+        Text('${strings.modulesFrom} ${Uri.parse(modulesLocation).hasScheme ? modulesLocation : location}', style: theme.textTheme.bodySmall),
         if (problem != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(catalogue.isEmpty ? '${strings.noCatalogue} ($problem)' : problem!, style: TextStyle(color: theme.colorScheme.error))),
         const SizedBox(height: 8),
         for (final name in names) () {
