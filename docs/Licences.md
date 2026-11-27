@@ -89,6 +89,35 @@ Each was first published (or translated) before 1931, by an author (and translat
 Left out: A. W. Tozer's *The Pursuit of God* (1948: Tozer died in 1963, so it's in copyright in the United Kingdom until 2034), and Archibald Alexander's *A Day at a Time* (1916),
 because when its author died isn't known. Augustine's *Confessions*, *Introduction to the Devout Life*, and Hopkins's poems are only on Standard Ebooks' list of wanted books so far.
 
+## More reference works from CrossWire, and a third batch of books (added 27 November 2026)
+
+None is in the English starter set. Each was checked at its source on 27 November 2026. Each was first published (or translated) before 1931,
+by an author (and translator) who died before 1956, except where it says otherwise below. The CrossWire modules are in `build/downloads/crosswire/`
+(from https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/), and the books in `build/downloads/standardebooks/`.
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| `MHCC` Matthew Henry's Concise Commentary (Matthew Henry, died 1714) | Public domain | `mods.d/mhcc.conf` in `MHCC.zip` | `DistributionLicense=Public Domain`; ‘Public Domain--Copy Freely’; the text matches Moody Press's printing, which shows no copyright; `TextSource=https://ccel.org/ccel/h/henry/mhcc/cache/mhcc.txt` |
+| `JFB` Commentary Critical and Explanatory on the Whole Bible (Robert Jamieson, died 1880; A. R. Fausset, died 1910; David Brown, died 1897; 1871) | Public domain | `mods.d/jfb.conf` in `JFB.zip` | `DistributionLicense=Public Domain`; `TextSource=https://ccel.org/ccel/j/jamieson/jfb/cache/jfb.txt` |
+| `Torrey` The New Topical Text Book (R. A. Torrey, died 1928; 1897) | Public domain | `mods.d/torrey.conf` in `Torrey.zip` | `DistributionLicense=Public Domain`; from a reprint that has no copyright notice, ‘of the original edition which is out of copyright’ |
+| `Smith` Smith's Bible Dictionary (William Smith, died 1893; 1884 edition) | Public domain | `mods.d/smith.conf` in `Smith.zip` | `DistributionLicense=Public Domain`; ‘(1884) Public domain.’ |
+| `Hitchcock` Hitchcock's Bible Names (Roswell D. Hitchcock, died 1887; from *Hitchcock's New and Complete Analysis of the Holy Bible*, 1869) | Public domain | `mods.d/hitchcock.conf` in `Hitchcock.zip` | `DistributionLicense=Public Domain`; ‘It is out of copyright’; `TextSource=CCEL` |
+| `DonnePoetry` *Poetry* (John Donne, died 1631) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/john-donne/poetry) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `MacDonaldPoetry` *Poetry* (George MacDonald, died 1905) | As above | https://standardebooks.org/ebooks/george-macdonald/poetry | As above |
+| `KingdomOfGod` *The Kingdom of God Is Within You* (Leo Tolstoy, died 1910; translated by Leo Wiener, died 1939, in 1905) | As above | https://standardebooks.org/ebooks/leo-tolstoy/the-kingdom-of-god-is-within-you/leo-wiener | As above |
+| `TolstoyConfession` *A Confession* (Leo Tolstoy; translated by Aylmer Maude, died 1938, in 1921) | As above | https://standardebooks.org/ebooks/leo-tolstoy/a-confession/aylmer-maude | As above |
+| `InnocenceOfFatherBrown`, `WisdomOfFatherBrown`, `IncredulityOfFatherBrown`, `SecretOfFatherBrown` (G. K. Chesterton, died 1936; 1911, 1914, 1926, and 1927) | As above | https://standardebooks.org/ebooks/g-k-chesterton/the-innocence-of-father-brown (and `the-wisdom-of-father-brown`, `the-incredulity-of-father-brown`, `the-secret-of-father-brown`) | As above |
+| `ConsolationOfPhilosophy` *The Consolation of Philosophy* (Boethius; translated by H. R. James, died 1931, in 1897) | As above | https://standardebooks.org/ebooks/boethius/the-consolation-of-philosophy/h-r-james | As above (James's dates are from https://viaf.org/viaf/45545240) |
+| `BrothersKaramazov` *The Brothers Karamazov* (Fyodor Dostoevsky, died 1881; translated by Constance Garnett, died 1946, in 1912) | As above | https://standardebooks.org/ebooks/fyodor-dostoevsky/the-brothers-karamazov/constance-garnett | As above |
+| `QuoVadis` *Quo Vadis* (Henryk Sienkiewicz, died 1916; translated by Jeremiah Curtin, died 1906, in 1896) | As above | https://standardebooks.org/ebooks/henryk-sienkiewicz/quo-vadis/jeremiah-curtin | As above |
+| `UncleTomsCabin` *Uncle Tom's Cabin* (Harriet Beecher Stowe, died 1896; 1852) | As above | https://standardebooks.org/ebooks/harriet-beecher-stowe/uncle-toms-cabin | As above |
+
+Two things that were weighed when they were checked: Matthew Henry's *Concise Commentary* is an abridgement whose abridger isn't named (in CrossWire's module, CCEL's text, or Moody Press's printing),
+so it rests on CrossWire's and CCEL's word that it's in the public domain; and Smith's dictionary is the 1884 American edition, whose editors the module doesn't name.
+
+Left out again: Augustine's *Confessions* and *On Christian Doctrine*, *Introduction to the Devout Life*, Hopkins's and Milton's shorter poems, *Samson Agonistes*, and Pascal's *Pensées*
+have pages on Standard Ebooks, but they're only on its list of wanted books. *The Scandal of Father Brown* (1935) isn't in the US public domain until 2031.
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

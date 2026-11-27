@@ -218,22 +218,36 @@ So far there are two, both from [Tyndale Open Resources](https://tyndaleopenreso
 | `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.12 million | 17,478 `about` and 55,554 `cites` |
 | `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.53 million | 47,393 `cites` |
 
-Three more are public-domain works from CrossWire's [SWORD](https://crosswire.org/sword) library, read from each module's zip file by `pipeline/biblelastic_ingest/sword.py`
-(the registry's `format = "SWORD"`): a dictionary module (zLD) becomes one document, with an entry for each key, and a commentary module (zCom) a document for each book,
-with an entry for each verse that has a note (named like `1:1`, and `about` that verse). Their references are to the KJV's chapters and verses, which are taken from
+Eight more are public-domain works from CrossWire's [SWORD](https://crosswire.org/sword) library, read from each module's zip file by `pipeline/biblelastic_ingest/sword.py`
+(the registry's `format = "SWORD"`): a dictionary module (zLD or RawLD) becomes one document, with an entry for each key, and a commentary module (zCom or zCom4)
+a document for each book, with an entry for each note (named like `1:1`, or `3:1-8` for a note on several verses, which SWORD links to each of them, and `about` those verses).
+A note's type is the registry's `sword.notes` (`CrossReferences` by default). Their references are to the KJV's chapters and verses, which are taken from
 BibleOrgSys's versification table, and are checked against it.
+
+The two OSIS commentaries (Matthew Henry's and Jamieson, Fausset, and Brown's) keep what comes before a verse's note between ‘pre-verse’ milestones.
+At a book's first note, that's the book's introduction, which becomes an entry of its own (`Intro`, a `BookIntro` about the whole book), with the book's own slot
+(e.g., ‘Commentary by David Brown’) and, for a book of one chapter, its chapter's slot. At a chapter's first note, Matthew Henry's has the chapter's title and outline
+(up to the first note's ‘Verses 1-8’), which becomes an entry named like `3` (an `Outline` about the whole chapter); a chapter with only one note, and no ‘Verses’,
+has it about the whole chapter (e.g., Psalm 23's). Titles alone (e.g., Jamieson, Fausset, and Brown's ‘CHAPTER 3’ and its sections' titles) stay with the note, as `h2` headings,
+unless the chapter's opening has more, which becomes an `Introduction` about the chapter.
 
 | Edition | Kind | Documents | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- | --- |
-| `Easton` Easton's Bible Dictionary (1897) | `dictionary` | `Articles` | 3,963 | 0.47 million | 24,078 `cites` |
+| `Easton` Easton's Bible Dictionary (1897) | `dictionary` | `Articles` | 3,963 | 0.47 million | 24,067 `cites` |
 | `Nave` Nave's Topical Bible | `dictionary` | `Topics`: each line of a topic is a paragraph (`li`), and the topics' names are in lower case (`Love`, not `LOVE`) | 5,322 | 0.32 million | 77,922 `cites` |
-| `TSK` Treasury of Scripture Knowledge | `commentary` | One for each of the 66 books: each verse's note (each word of the verse on a line with its references), and each chapter's outline (named like `1`, and `about` the whole chapter) | 32,309 | 1.35 million | 32,309 `about` and 388,051 `cites` |
+| `TSK` Treasury of Scripture Knowledge | `commentary` | One for each of the 66 books: each verse's note (each word of the verse on a line with its references), and each chapter's outline (named like `1`, and `about` the whole chapter) | 32,307 | 1.35 million | 32,307 `about` and 388,044 `cites` |
+| `MHCC` Matthew Henry's Concise Commentary | `commentary` | One for each of the 66 books: each book's introduction (`Intro`), each chapter's outline (named like `1`), and each note (named like `3:1-8`) | 5,161 | 0.72 million | 5,161 `about` and 1,206 `cites` |
+| `JFB` Jamieson, Fausset, and Brown's Commentary (1871) | `commentary` | One for each of the 66 books: each book's introduction, a few chapters' introductions, and each verse's note | 17,452 | 1.82 million | 17,452 `about` and 56,183 `cites` |
+| `Torrey` Torrey's New Topical Textbook (1897) | `dictionary` | `Topics`: like Nave's, without the ‘- ’ and ‘. ’ that start its lines | 628 | 0.20 million | 38,858 `cites` |
+| `Smith` Smith's Bible Dictionary (1884) | `dictionary` | `Articles` | 4,639 | 0.49 million | 16,831 `cites` |
+| `Hitchcock` Hitchcock's Bible Names | `dictionary` | `Names`: what each name means | 2,616 | 0.01 million | none |
 
 Their references are read from the text that's shown, not from the modules' own `osisRef` attributes, because Easton's module gives every reference that's only numbers
 (e.g., the ‘11’ and ‘21:6’ in ‘Rev. 1:8, 11; 21:6’) to Genesis. Such a reference is in the book of the reference before it: after a comma it's verses (unless it has a chapter),
 and after a semicolon it's chapters (e.g., Nave's ‘1Ch 6:3; 24’). In the TSK, each line of references starts again from the verse that the note is about,
 so its ‘8,13’ in the note on Genesis 1:5 is Genesis 1:8 and 1:13. A link to an entry that doesn't exist goes to the nearest one that does: its singular or plural,
-or else the first whose name starts with it (e.g., Nave's ‘See ANGEL’ goes to ‘Angel (a Spirit)’). About a hundred references, and 89 links (mostly to a topic's sub-topics), are still left out.
+or else the first whose name starts with it (e.g., Nave's ‘See ANGEL’ goes to ‘Angel (a Spirit)’). Smith's links are its `<term>`s (‘See <term>MONTH</term>’), and its references' `passage` attributes (‘1ch 12:27’) are used where they can be read.
+About 300 references (mostly errors in the sources, such as ‘Phm 2:10’), and 90 links (mostly to a topic's sub-topics), are still left out.
 The TSK has no vectors for meaning-based search (its registry entry says `meaning = false`), because it's mostly references.
 
 A sixth, `UBSH`, is the United Bible Societies' handbooks *Animals in the Bible*, *Plants and Trees in the Bible*, and *Objects in the Bible* (a `dictionary`,
@@ -274,7 +288,7 @@ Sixty-two are from [books.freely.giving](https://books.freely.giving), and all C
 The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
 so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
 
-Nineteen more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
+Thirty-one more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
@@ -297,6 +311,18 @@ Nineteen more are public-domain classics from [Standard Ebooks](https://standard
 | `DivineComedy` *The Divine Comedy* (Dante Alighieri (translated by Henry Wadsworth Longfellow), 1867) | `book` | 12 | 315,000 | 176 `cites` |
 | `ParadiseLost` *Paradise Lost* (John Milton, 1667) | `book` | 15 | 83,000 | none |
 | `BenHur` *Ben-Hur: A Tale of the Christ* (Lew Wallace, 1880) | `book` | 87 | 201,000 | none |
+| `DonnePoetry` *Poetry* (John Donne, first collected in 1633) | `book` | 202 | 76,000 | none |
+| `MacDonaldPoetry` *Poetry* (George MacDonald, 1855–1893, with *The Diary of an Old Soul* as one entry) | `book` | 416 | 161,000 | 2 `cites` |
+| `KingdomOfGod` *The Kingdom of God Is Within You* (Leo Tolstoy (translated by Leo Wiener), 1894) | `book` | 23 | 126,000 | 32 `cites` |
+| `TolstoyConfession` *A Confession* (Leo Tolstoy (translated by Aylmer Maude), 1882) | `book` | 21 | 27,000 | none |
+| `InnocenceOfFatherBrown` *The Innocence of Father Brown* (G. K. Chesterton, 1911) | `book` | 16 | 80,000 | none |
+| `WisdomOfFatherBrown` *The Wisdom of Father Brown* (G. K. Chesterton, 1914) | `book` | 16 | 73,000 | none |
+| `IncredulityOfFatherBrown` *The Incredulity of Father Brown* (G. K. Chesterton, 1926) | `book` | 13 | 72,000 | none |
+| `SecretOfFatherBrown` *The Secret of Father Brown* (G. K. Chesterton, 1927) | `book` | 14 | 64,000 | none |
+| `ConsolationOfPhilosophy` *The Consolation of Philosophy* (Boethius (translated by H. R. James), 1897) | `book` | 13 | 43,000 | none |
+| `BrothersKaramazov` *The Brothers Karamazov* (Fyodor Dostoevsky (translated by Constance Garnett), 1880) | `book` | 101 | 351,000 | 1 `cites` |
+| `QuoVadis` *Quo Vadis: A Narrative of the Time of Nero* (Henryk Sienkiewicz (translated by Jeremiah Curtin), 1895) | `book` | 80 | 210,000 | none |
+| `UncleTomsCabin` *Uncle Tom’s Cabin* (Harriet Beecher Stowe, 1852) | `book` | 49 | 183,000 | 4 `cites` |
 
 The other fifty-seven are every English or Spanish book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
 (which `sources.toml` includes), written by

@@ -78,10 +78,33 @@ class DictionaryTests( unittest.TestCase ):
         self.assertEqual( parsed.text_differences, [] )
         self.assertEqual( [ paragraph[0] for paragraph in parsed.doc.paragraphs if paragraph[3] > paragraph[2] ], ['h1', 'li', 'li', 'h1', 'li'] )
 
+    def test_raw_dictionary( self ):
+        """ A RawLD module (Torrey's, Smith's): each entry is its key, a line break, and its text; Torrey's lines start with ‘- ’ (and ‘. ’ under another) """
+        records = [ ('INCENSE', '- Brought from Sheba<br /><scripRef>Jer 6:20</scripRef><br /><br />- OFFERED<br />. In censers<br /><scripRef>Le 10:1</scripRef>\n'),
+                    ('AB', 'See <term>MONTH</term>. (<scripRef passage="1ch 12:27">1\xa0Chronicles 12:27</scripRef>)\n'), ('MONTH', 'A month.\n') ]
+        index, data = b'', b''
+        for key, text in records:
+            record = key.encode( 'latin-1' ) + b'\r\n' + text.encode( 'latin-1' )
+            index += struct.pack( '<IH', len(data), len(record) ); data += record
+        memory = io.BytesIO()
+        with zipfile.ZipFile( memory, 'w' ) as archive:
+            archive.writestr( 'test.idx', index ); archive.writestr( 'test.dat', data )
+        entries = sword.read_raw_dictionary( zipfile.ZipFile( memory ), 'test', 'latin-1' )
+        self.assertEqual( [ key for key, _text in entries ], ['INCENSE', 'AB', 'MONTH'] )
+        chapters = CHAPTERS | { 'JER':[20]*52, 'LEV':[20]*27 }
+        topics, _names = sword.parse_dictionary( { 'id':'Torrey', 'sword':{ 'document':'Topics', 'topics':True } }, entries[:1], chapters, 'Torrey.zip' )
+        tokens = topics.doc.tokens
+        lines = [ ''.join( before+text+after for before,text,after,_features in tokens[start:end] ).strip() for name, _kind, start, end, _text in topics.doc.paragraphs if end > start ]
+        self.assertEqual( lines, ['Incense', 'Brought from Sheba Jer 6:20', 'OFFERED', 'In censers Le 10:1'] )
+        self.assertEqual( topics.text_differences, [] )
+        articles, _names = sword.parse_dictionary( { 'id':'Smith', 'sword':{ 'document':'Articles' } }, entries[1:], chapters, 'Smith.zip' )
+        self.assertEqual( [ link[3] for link in articles.links ], ['Articles Month'] )
+        self.assertEqual( [ anchor[3] for anchor in articles.anchors ], ['CH1 12:27'] ) # (From its passage attribute, ‘1ch 12:27’)
+
 
 class CommentaryTests( unittest.TestCase ):
     def test_parse( self ):
-        entries = [ ('GEN', 1, 1, '<br /><scripRef passage="Ge 1:1">1</scripRef> God creates heaven and earth;<br /><scripRef passage="Ge 1:3">3</scripRef> the light.<br />\n<br />\n<br />'
+        entries = [ ('GEN', 1, 1, 1, '<br /><scripRef passage="Ge 1:1">1</scripRef> God creates heaven and earth;<br /><scripRef passage="Ge 1:3">3</scripRef> the light.<br />\n<br />\n<br />'
                                   'beginning.<br /><scripRef>Joh 1:1-3; Heb 1:10</scripRef><br /><scripRef>Re 1:8</scripRef><br />God.<br /><scripRef>2:4; 13; Ex 20:11</scripRef>\n') ]
         documents = sword.parse_commentary( { 'id':'TSK', 'sword':{} }, entries, CHAPTERS | { 'JHN':[51], 'HEB':[14] }, 'TSK.zip' )
         parsed = documents['GEN'][0]
@@ -93,6 +116,42 @@ class CommentaryTests( unittest.TestCase ):
         texts = [ ''.join( before+text+after for before,text,after,_features in tokens[start:end] ).strip() for _name, _kind, start, end, _text in parsed.doc.paragraphs if end > start ]
         self.assertEqual( texts, ['1 God creates heaven and earth; 3 the light.', 'beginning. Joh 1:1-3; Heb 1:10; Re 1:8', 'God. 2:4; 13; Ex 20:11'] )
         self.assertEqual( parsed.text_differences, [] )
+
+    def test_linked_verses( self ):
+        """ A zCom4 module (12-byte slots), with a note linked to two verses: one entry, about both """
+        chapters = { BBB:[2] for BBB in sword.BOOKS } # (Every book with one chapter of two verses)
+        note = b'A note on verses 1 and 2.'
+        memory = io.BytesIO()
+        with zipfile.ZipFile( memory, 'w' ) as archive:
+            for testament, count in (('ot', 39), ('nt', 27)):
+                slots = [ (0, 0, 0) ] * (2 + count * 4) # (Two headers, then each book's heading, its chapter's, and its two verses)
+                if testament == 'ot': slots[4] = slots[5] = (0, 0, len(note)) # Genesis 1:1 and 1:2
+                compressed = zlib.compress( note )
+                archive.writestr( f'c/{testament}.bzv', b''.join( struct.pack( '<III', *slot ) for slot in slots ) )
+                archive.writestr( f'c/{testament}.bzs', struct.pack( '<III', 0, len(compressed), len(note) ) )
+                archive.writestr( f'c/{testament}.bzz', compressed )
+        self.assertEqual( sword.read_commentary( zipfile.ZipFile( memory ), 'c/', 'utf-8', chapters, 12 ), [ ('GEN', 1, 1, 2, note.decode()) ] )
+
+    def test_osis( self ):
+        """ Matthew Henry's: the book's introduction and each chapter's outline (before its first ‘Verses’) are entries of their own;
+            a chapter with one note, and no ‘Verses’, has it about the whole chapter. Jamieson, Fausset, and Brown's titles stay with the note. """
+        pre = lambda n, text: f'<div type="x-milestone" subType="x-preverse" sID="pv{n}"/>{text}<div type="x-milestone" subType="x-preverse" eID="pv{n}"/>'
+        entries = [ ('GEN', 0, 0, 0, '<title type="main">Genesis</title>'),
+                    ('GEN', 1, 1, 2, pre( 1, '<title type="x-ms">Genesis</title> Genesis means origin. <title type="x-s2">Chapter 1</title> <table><row><cell>Creation.</cell><cell>(1-2)</cell></row></table>' )
+                                     + '<hi type="bold">Verses 1-2</hi> God made all things (<reference osisRef="John.1.3">Joh 1:3</reference>).' ),
+                    ('GEN', 2, 1, 1, pre( 2, '<title type="x-s2">Chapter 2</title>' ) + 'The sabbath.') ]
+        documents = sword.parse_commentary( { 'id':'MHCC', 'sword':{ 'notes':'Commentary' } }, entries, { 'GEN':[2, 3], 'JHN':[51] }, 'MHCC.zip', osis=True )
+        genesis = documents['GEN'][0]
+        self.assertEqual( [ (entry[2], entry[3]) for entry in genesis.entries ], [ ('Intro', 'BookIntro'), ('1', 'Outline'), ('1:1-2', 'Commentary'), ('2:1-3', 'Commentary') ] )
+        self.assertEqual( [ anchor[3] for anchor in genesis.anchors if anchor[2] == 'about' ], ['GEN 1-2', 'GEN 1:1-1:2', 'GEN 1:1-1:2', 'GEN 2:1-2:3'] )
+        tokens = genesis.doc.tokens
+        texts = [ (name, ''.join( before+text+after for before,text,after,_features in tokens[start:end] ).strip()) for name, _kind, start, end, _text in genesis.doc.paragraphs if end > start ]
+        self.assertEqual( texts[:4], [ ('h2', 'Genesis'), ('p', 'Genesis means origin.'), ('h2', 'Chapter 1'), ('li', 'Creation. (1-2)') ] ) # (The book's title only once)
+        self.assertEqual( genesis.text_differences, [] )
+        entries = [ ('JHN', 1, 1, 1, pre( 3, '<title type="x-s3">Joh 1:1-5. The Word.</title>' ) + '1. In the beginning--before all time.') ]
+        john = sword.parse_commentary( { 'id':'JFB', 'sword':{ 'notes':'Commentary' } }, entries, { 'JHN':[51] }, 'JFB.zip', osis=True )['JHN'][0]
+        self.assertEqual( [ (entry[2], entry[3]) for entry in john.entries ], [ ('1:1', 'Commentary') ] ) # (A section's title stays with its note)
+        self.assertEqual( [ paragraph[0] for paragraph in john.doc.paragraphs if paragraph[3] > paragraph[2] ], ['h2', 'p'] )
 
 
 class TitlePageTests( unittest.TestCase ):

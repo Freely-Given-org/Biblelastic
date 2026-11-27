@@ -1,10 +1,12 @@
 """
 Reference works from CrossWire's SWORD library (https://crosswire.org/sword), read straight from a module's zip file:
-dictionaries and topical indexes (zLD, e.g., Easton's Bible Dictionary and Nave's Topical Bible), and commentaries (zCom, e.g., the Treasury of Scripture Knowledge).
+dictionaries and topical indexes (zLD and RawLD, e.g., Easton's Bible Dictionary and Nave's Topical Bible), and commentaries (zCom and zCom4,
+e.g., the Treasury of Scripture Knowledge and Matthew Henry's Concise Commentary).
 
-A zLD dictionary's keys and entries become one document (e.g., `Articles`), with an entry for each key.
-A zCom commentary becomes a document for each Bible book, with an entry for each verse that has something (named like `1:1`, and about that verse),
-and, for the Treasury of Scripture Knowledge, an entry for each chapter's outline (named like `1`, and about the whole chapter), which SWORD keeps at its first verse.
+A dictionary's keys and entries become one document (e.g., `Articles`), with an entry for each key.
+A commentary becomes a document for each Bible book, with an entry for each note (named like `1:1`, or `3:1-8` for a note on several verses, and about those verses),
+an entry for each chapter's outline (named like `1`, and about the whole chapter), which SWORD keeps at the chapter's first verse,
+and one for the book's introduction (`Intro`), which SWORD keeps at its first verse.
 
 References in the text become `cites` anchors. They're read from the text that's shown, not from the module's own osisRef attributes,
 because some modules' converters gave every reference that's only numbers (e.g., the ‘11’ and ‘21:6’ in ‘Rev. 1:8, 11; 21:6’) to Genesis.
@@ -33,11 +35,18 @@ ABBREVIATIONS = dict( zip( ['Ge','Ex','Le','Nu','De','Jos','Jud','Ru','1Sa','2Sa
 _RANGES = r'\d{1,3}(?::\d{1,3})?(?:\s*[-–]\s*\d{1,3}(?::\d{1,3})?)?'
 PART_RE = re.compile( rf'(?:(?P<book>(?:[1-3]\s?)?[A-Z][a-z]+)\.?\s+)?(?P<ranges>{_RANGES}(?:\s*,\s*{_RANGES}(?![A-Za-z]))*)' )
 SMALL_WORDS = {'a','an','and','as','at','by','for','from','in','of','on','or','the','to','with'}
+# What starts a line of a topic, and isn't kept: Nave's arrows, and Torrey's ‘- ’ (and ‘. ’ for a line under another)
+LINE_MARK_RE = re.compile( r'^\s*(?:→|[-.](?=\s))\s*' )
+# What an OSIS commentary (e.g., Matthew Henry's) has before a verse's note: the book's introduction, the chapter's outline, or a section's title
+PREVERSE_RE = re.compile( r'<div type="x-milestone" subType="x-preverse" sID="[^"]*"/>(.*?)<div type="x-milestone" subType="x-preverse" eID="[^"]*"/>', re.S )
+# How each of Matthew Henry's notes starts (what's before it in a chapter's first verse is the chapter's title and outline)
+NOTE_START_RE = re.compile( r'<hi type="bold">Verses? \d' )
+SPANS = { 'hi':None, 'i':'italic', 'b':'bold' }
 
 
 def book_code( name:str ) -> str|None:
     """ A book's name or abbreviation as a module's text shows it (e.g., Ge, Joh, 1Ch, Rev., 1 Chr.) → its BOS code, or None """
-    name = name.strip().rstrip( '.' )
+    name = name.replace( '\xa0', ' ' ).strip().rstrip( '.' ) # (Smith's has ‘1\xa0Chronicles’)
     return ABBREVIATIONS.get( name.replace( ' ', '' ) ) or references.book_code( name )
 
 
@@ -112,6 +121,18 @@ def read_dictionary( archive:zipfile.ZipFile, dataPath:str, encoding:str ) -> li
     return entries
 
 
+def read_raw_dictionary( archive:zipfile.ZipFile, dataPath:str, encoding:str ) -> list:
+    """ A RawLD module's entries: [ (key, text), … ] (Its index has a 4-byte offset and a 2-byte size for each entry, and each entry is its key, a line break, and its text) """
+    index, records = archive.read( dataPath + '.idx' ), archive.read( dataPath + '.dat' )
+    entries = []
+    for number in range( len(index) // 6 ):
+        offset, size = struct.unpack_from( '<IH', index, number * 6 )
+        key, _newline, text = records[offset:offset+size].partition( b'\n' )
+        if text.startswith( b'@LINK' ) or not text.strip(): continue
+        entries.append( (key.rstrip( b'\r' ).decode( encoding ), text.rstrip( b'\0' ).decode( encoding )) )
+    return entries
+
+
 def kjv_chapters( versificationPath:Path ) -> dict:
     """ { BBB: [verses in chapter 1, verses in chapter 2, …] } for the KJV, from BibleOrgSys's versification table """
     chapters = {}
@@ -120,26 +141,31 @@ def kjv_chapters( versificationPath:Path ) -> dict:
     return chapters
 
 
-def read_commentary( archive:zipfile.ZipFile, dataPath:str, encoding:str, chapters:dict ) -> list:
+def read_commentary( archive:zipfile.ZipFile, dataPath:str, encoding:str, chapters:dict, width:int=10 ) -> list:
     """
-    A zCom module's entries: [ (BBB, chapter, verse, text), … ] for the ones that have text.
-    Each testament's index has a slot for the module's heading, the testament's, each book's, each chapter's (verse 0), and each verse, in order.
+    A zCom module's entries: [ (BBB, chapter, verse, last verse, text), … ] for the ones that have text.
+    Each testament's index has a slot for the module's heading, the testament's, each book's, each chapter's (verse 0), and each verse, in order:
+    each slot is a block number, an offset in that block, and a size (of 2 bytes, or of 4 in a zCom4 module, whose slots are 12 bytes wide).
+    A note on several verses is linked to each of them (their slots are the same), so it's one entry, from its first verse to its last.
     """
-    entries = []
+    entries, last = [], None
     for testament, books in (('ot', BOOKS[:OLD_TESTAMENT]), ('nt', BOOKS[OLD_TESTAMENT:])):
         blockIndex, verseIndex, blocks = ( archive.read( f'{dataPath}{testament}.{suffix}' ) for suffix in ('bzs', 'bzv', 'bzz') )
         slots = [ (None, 0, 0), (None, 0, 0) ] + [ slot for BBB in books for slot in
                     [ (BBB, 0, 0) ] + [ (BBB, chapter, verse) for chapter, count in enumerate( chapters[BBB], start=1 ) for verse in range( count + 1 ) ] ]
-        if len(slots) * 10 != len(verseIndex): raise ValueError( f'{testament}: {len(verseIndex) // 10} slots in the module, but the KJV has {len(slots)}' )
+        if len(slots) * width != len(verseIndex): raise ValueError( f'{testament}: {len(verseIndex) // width} slots in the module, but the KJV has {len(slots)}' )
         unpacked = {}
         for number, (BBB, chapter, verse) in enumerate( slots ):
-            block, offset, size = struct.unpack_from( '<IIH', verseIndex, number * 10 )
+            block, offset, size = struct.unpack_from( '<IIH' if width == 10 else '<III', verseIndex, number * width )
             if not size: continue
+            if (block, offset, size) == last and verse and entries and entries[-1][:2] == (BBB, chapter) and entries[-1][3] == verse - 1:
+                entries[-1] = entries[-1][:3] + (verse, entries[-1][4]); continue # (The same note as the verse before's)
+            last = (block, offset, size)
             if block not in unpacked:
                 blockOffset, blockSize, _unpackedSize = struct.unpack_from( '<III', blockIndex, block * 12 )
                 unpacked[block] = zlib.decompress( blocks[blockOffset:blockOffset+blockSize] )
             text = unpacked[block][offset:offset+size].decode( encoding )
-            if text.strip() and BBB: entries.append( (BBB, chapter, verse, text) )
+            if text.strip() and BBB: entries.append( (BBB, chapter, verse, verse, text) )
     return entries
 
 
@@ -172,12 +198,14 @@ class SwordParser( items._Parser ):
         self.context = Context( chapters )
         self.separator = ''
         self.line_style = 'li' if edition['sword'].get( 'topics' ) else 'p' # What a line break (<lb/> or <br/>) starts
+        self.show_titles = False # Whether a <title> is a heading in the entry (in a commentary), rather than the entry's own title (in a dictionary)
         self.lastWasReference = False
 
     def add_reference( self, text:str, osisRef:str|None, passage:str|None=None ) -> None:
         """ A reference element's text (e.g., ‘Ex 6:16-20’, ‘10’, or ‘Job 26:7; Isa 45:18’): each reference in it is a cites anchor
             (or, where the element says what it is, e.g., passage="Ge 1:3" for the 3 in a TSK chapter's outline, that) """
-        if passage and (match := PART_RE.fullmatch( passage.strip() )):
+        if passage: passage = re.sub( r'^([1-3]?\s?)([a-z])', lambda match: match.group( 1 ) + match.group( 2 ).upper(), passage.strip() ) # (Smith's ‘1ch 12:27’)
+        if passage and (match := PART_RE.fullmatch( passage )):
             start = len(self.doc.tokens)
             self.add_text( text )
             passages = Context( self.chapters ).passages( match.group( 'book' ), match.group( 'ranges' ) )
@@ -209,28 +237,41 @@ class SwordParser( items._Parser ):
             a word of the verse is on one line, and its references on the next): then they're kept together, with ‘; ’ between references. """
         tag, tokens = element.tag, self.doc.tokens
         if tag in ('lb', 'br'):
-            tail = (element.tail or '').lstrip().removeprefix( '→' ) if self.line_style == 'li' else element.tail
+            tail = LINE_MARK_RE.sub( '', element.tail or '' ) if self.line_style == 'li' else element.tail
             if following is not None and following.tag == 'scripRef' and not (element.tail or '').strip() and len(tokens) > self.paraStart:
                 self.add_text( '; ' if self.lastWasReference else ' ' )
             else: self.start_paragraph( self.line_style, {} )
             self.add_text( tail ); self.lastWasReference = False
             return
-        if tag in ('p', 'item'): self.start_paragraph( 'li' if tag == 'item' else 'p', {} )
-        elif tag == 'title': self.add_text( element.tail ); return # (The entry's title is its first paragraph)
+        if tag in ('chapter', 'milestone') or (tag == 'div' and len(element) == 0 and not (element.text or '').strip()): # (OSIS's milestones)
+            if tag == 'div' and element.get( 'sID' ) and element.get( 'type' ) == 'x-p': self.start_paragraph( 'p', {} )
+            self.add_text( element.tail ); self.lastWasReference = False
+            return
+        if tag == 'title' and not self.show_titles: self.add_text( element.tail ); return # (The entry's title is its first paragraph)
+        if tag in ('p', 'item', 'li', 'row', 'title'): self.start_paragraph( { 'p':'p', 'title':'h2' }.get( tag, 'li' ), {} )
         start = len(tokens)
-        if tag in ('ref', 'scripRef') and element.get( 'target' ) is None:
+        if tag in ('ref', 'scripRef', 'reference') and element.get( 'target' ) is None:
             if tag == 'scripRef': # (In the TSK, each line of references starts again from the verse that the entry is about)
                 self.context = Context( self.chapters, *self.home )
             self.add_reference( ''.join( element.itertext() ), element.get( 'osisRef' ), element.get( 'passage' ) )
         else:
-            if tag not in ('entry', 'entryFree', 'def', 'p', 'list', 'item', 'ref', 'hi', 'sync', 'orth', 'sense', 'foreign'): self.doc.warn( f'unknown element <{tag}>' )
-            self.add_text( element.text )
-            for ix, child in enumerate( element ): self.walk( child, element[ix+1] if ix + 1 < len(element) else None )
+            if tag not in ('entry', 'entryFree', 'def', 'p', 'list', 'item', 'ref', 'hi', 'sync', 'orth', 'sense', 'foreign',
+                           'title', 'table', 'row', 'cell', 'div', 'term', 'i', 'b', 'ol', 'ul', 'li'): self.doc.warn( f'unknown element <{tag}>' )
+            text = element.text
+            if tag == 'entry' and self.line_style == 'li': text = LINE_MARK_RE.sub( '', text or '' ) # (A topic's first line)
+            self.add_text( text )
+            for ix, child in enumerate( element ):
+                if child.tag == 'cell' and ix: self.add_text( ' ' ) # (Between a table's cells, e.g., the topic and its verses in Matthew Henry's outlines)
+                self.walk( child, element[ix+1] if ix + 1 < len(element) else None )
         end = len(tokens)
         if tag == 'ref' and element.get( 'target', '' ).count( ':' ) == 1 and end > start: # e.g., target="Nave:CHILDREN"
             self.parsed.links.append( (start, end, 'see', f"{self.document} {entry_name( topic_title( element.get( 'target' ).split( ':' )[1] ) )}") )
-        elif tag == 'hi' and end > start: self.doc.nodes.append( ('span', start, end, element.get( 'type', 'hi' ), {}) )
-        if tag in ('p', 'item'): self.end_paragraph()
+        elif tag == 'term' and end > start: # e.g., Smith's ‘See <term>MONTH</term>’
+            self.parsed.links.append( (start, end, 'see', f"{self.document} {entry_name( topic_title( ''.join( element.itertext() ).strip() ) )}") )
+        elif tag in SPANS and end > start: self.doc.nodes.append( ('span', start, end, SPANS[tag] or element.get( 'type', 'hi' ), {}) )
+        if tag in ('p', 'item', 'li', 'row', 'title'):
+            self.end_paragraph()
+            if tag in ('row', 'title'): self.start_paragraph( 'p', {} ) # (For what follows it, which isn't in a paragraph of its own)
         self.lastWasReference = tag == 'scripRef'
         self.add_text( element.tail )
         if (element.tail or '').strip(): self.lastWasReference = False
@@ -250,7 +291,7 @@ class SwordParser( items._Parser ):
         # (Whitespace, the arrows that start Nave's lines, and the semicolons put between the TSK's lines of references, aside)
         ours = ''.join( tokenlessText + ''.join( before+text+after for before,text,after,_features in tokens[paraStart:paraEnd] )
                         for _name, _kind, paraStart, paraEnd, tokenlessText in self.doc.paragraphs[firstParagraph:] )
-        theirs = heading + ''.join( _shown_text( root ) )
+        theirs = heading + ''.join( _shown_text( root, self.show_titles, self.line_style == 'li' ) )
         reduce = lambda text: re.sub( r'[\s→;]', '', text )
         ours, theirs = reduce( ours ), reduce( theirs )
         if ours != theirs:
@@ -258,11 +299,14 @@ class SwordParser( items._Parser ):
             self.parsed.text_differences.append( { 'entry':name, 'offset':ix, 'ours':ours[max(0,ix-30):ix+30], 'source':theirs[max(0,ix-30):ix+30] } )
 
 
-def _shown_text( element:ET.Element, top:bool=True ) -> list:
-    """ The text of an entry as it's shown: all of it but its <title> (whose text is the entry's heading instead) """
-    parts = [] if element.tag == 'title' else [ element.text or '' ]
-    for child in element: parts += _shown_text( child, False )
-    if not top: parts.append( element.tail or '' )
+def _shown_text( element:ET.Element, titles:bool=False, topics:bool=False, top:bool=True ) -> list:
+    """ The text of an entry as it's shown: all of it but its <title> in a dictionary (whose text is the entry's heading instead),
+        and the marks that start a topic's lines """
+    text = element.text or ''
+    if topics and (top or element.tag in ('lb', 'br')): text = LINE_MARK_RE.sub( '', text )
+    parts = [] if element.tag == 'title' and not titles else [ text ]
+    for child in element: parts += _shown_text( child, titles, topics, False )
+    if not top: parts.append( LINE_MARK_RE.sub( '', element.tail or '' ) if topics and element.tag in ('lb', 'br') else element.tail or '' )
     return parts
 
 
@@ -276,9 +320,12 @@ def parse( edition:dict, path:Path, versificationPath:Path ) -> dict:
         dataPath = conf['DataPath'].removeprefix( './' )
         driver = conf['ModDrv'].lower()
         chapters = { BBB:counts for BBB, counts in kjv_chapters( versificationPath ).items() if BBB in BOOKS }
-        if driver == 'zld': return { settings['document']: parse_dictionary( edition, read_dictionary( archive, dataPath, encoding ), chapters, path.name ) }
-        if driver == 'zcom':
-            return parse_commentary( edition, read_commentary( archive, dataPath, encoding, chapters ), chapters, path.name )
+        if driver in ('zld', 'rawld'):
+            read = read_dictionary if driver == 'zld' else read_raw_dictionary
+            return { settings['document']: parse_dictionary( edition, read( archive, dataPath, encoding ), chapters, path.name ) }
+        if driver in ('zcom', 'zcom4'):
+            return parse_commentary( edition, read_commentary( archive, dataPath, encoding, chapters, 10 if driver == 'zcom' else 12 ), chapters, path.name,
+                                     conf.get( 'SourceType', '' ).upper() == 'OSIS' )
         raise ValueError( f"{edition['id']}: SWORD's {conf['ModDrv']} modules can't be read yet" )
 
 
@@ -311,17 +358,66 @@ def parse_dictionary( edition:dict, entries:list, chapters:dict, sourceName:str 
     return parser.finish(), [sourceName]
 
 
-def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str ) -> dict:
-    """ One document for each book. The TSK keeps a chapter's outline at its first verse, before a blank line: that becomes an entry of its own. """
-    parsers = {}
-    for BBB, chapter, verse, text in entries:
-        if BBB not in parsers: parsers[BBB] = SwordParser( edition, chapters )
+def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str, osis:bool=False ) -> dict:
+    """
+    One document for each book, with an entry for each note (of the type that the registry's `sword.notes` says: `CrossReferences` by default, as for the TSK).
+    The TSK keeps a chapter's outline at its first verse, before a blank line: that becomes an entry of its own.
+    An OSIS commentary (e.g., Matthew Henry's) keeps what comes before a verse's note between ‘pre-verse’ milestones: at the book's first note,
+    that's the book's introduction (an entry of its own, up to the chapter's title, if it has one), and at a chapter's first note,
+    its title and outline in Matthew Henry's (an entry of its own, if it has more than titles); titles alone (e.g., a section's title) stay with the note.
+    The book's own slot (chapter 0) goes with its introduction (e.g., Jamieson, Fausset, and Brown's ‘Commentary by David Brown’), as does,
+    in an OSIS commentary, its first chapter's (where Matthew Henry's keeps a book of one chapter's introduction).
+    A chapter's own slot (verse 0) that has only a title or nothing is left out.
+    In Matthew Henry's, a note starts with the verses it's about (‘Verses 1-8’), except where a chapter has only one note, which is about the whole chapter
+    (e.g., Psalm 23's), though SWORD has it only at the chapter's first verse.
+    """
+    noteType = edition['sword'].get( 'notes', 'CrossReferences' )
+    hasText = lambda text: bool( re.sub( r'<[^>]*>', '', re.sub( r'<title\b.*?</title>', '', text, flags=re.S ) ).strip() ) # (Outside its titles)
+    parsers, bookSlots, introduced = {}, {}, set()
+    notes = {}
+    for BBB, chapter, verse, _lastVerse, _text in entries:
+        if verse: notes[(BBB, chapter)] = notes.get( (BBB, chapter), 0 ) + 1
+    headed = any( NOTE_START_RE.search( text ) for *_slot, text in entries )
+    for BBB, chapter, verse, lastVerse, text in entries:
+        if BBB not in parsers:
+            parsers[BBB] = SwordParser( edition, chapters )
+            parsers[BBB].show_titles = True
         parser = parsers[BBB]
-        parts = [ (f'{chapter}', 'Outline', [f'{BBB} {chapter}:1-{chapter}:{chapters[BBB][chapter-1]}'], outline) for outline in [text.split( '\n<br />\n<br />', 1 )[0]]
-                    if verse == 1 and '\n<br />\n<br />' in text and text.lstrip().startswith( '<br /><scripRef passage=' ) ]
-        rest = text.split( '\n<br />\n<br />', 1 )[1] if parts else text
-        if verse: parts.append( (f'{chapter}:{verse}', 'CrossReferences', [f'{BBB} {chapter}:{verse}'], rest) )
-        else: parts.append( (f'{chapter}:0' if chapter else 'Intro', 'Introduction', [f'{BBB} {chapter}' if chapter else f'{BBB} 1-{len(chapters[BBB])}'], rest) )
+        if not chapter or (osis and chapter == 1 and not verse and BBB not in introduced): bookSlots[BBB] = bookSlots.get( BBB, '' ) + text; continue
+        first = bool( verse ) and BBB not in introduced # (The book's first note)
+        if first: introduced.add( BBB )
+        bookSlot = bookSlots.pop( BBB, '' ) if first else ''
+        bookCount = len(chapters[BBB])
+        wholeBook = f'{BBB} 1' if bookCount == 1 else f'{BBB} 1-{bookCount}'
+        wholeChapter = f'{BBB} {chapter}:1-{chapter}:{chapters[BBB][chapter-1]}' if chapter else ''
+        parts = []
+        if first and not (verse and PREVERSE_RE.search( text )) and hasText( bookSlot ):
+            parts.append( ('Intro', 'Introduction', [wholeBook], bookSlot) )
+        if verse == 1 and '\n<br />\n<br />' in text and text.lstrip().startswith( '<br /><scripRef passage=' ):
+            outline, text = text.split( '\n<br />\n<br />', 1 )
+            parts.append( (f'{chapter}', 'Outline', [wholeChapter], outline) )
+        elif verse and (match := PREVERSE_RE.search( text )):
+            start, end = match.span( 1 )
+            noteStart = NOTE_START_RE.search( text, match.start() )
+            if noteStart and '<title type="x-s2">' in text[start:noteStart.start()]: end = noteStart.start()
+            before, kept = text[start:end], ''
+            ix = before.find( '<title type="x-s2">' )
+            if first:
+                titles = set( re.findall( r'<title[^>]*>(.*?)</title>', before, re.S ) ) # (Without a title that the book's slot and its introduction both have)
+                bookSlot = re.sub( r'<title[^>]*>(.*?)</title>', lambda match: '' if match.group( 1 ) in titles else match.group(), bookSlot, flags=re.S )
+                intro = bookSlot + (before[:ix] if ix >= 0 else before)
+                if hasText( intro ): # (Otherwise, e.g., only a section's title, it stays with the note)
+                    parts.append( ('Intro', 'BookIntro', [wholeBook], intro) )
+                    before = before[ix:] if ix >= 0 else ''
+            if '<title type="x-s2">' in before and hasText( before ):
+                parts.append( (f'{chapter}', 'Outline' if noteStart or '<table>' in before else 'Introduction', [wholeChapter], before) )
+            else: kept = before
+            text = text[:start] + kept + text[end:]
+        if verse:
+            if headed and notes[(BBB, chapter)] == 1 and verse == 1 and not NOTE_START_RE.search( text ): lastVerse = chapters[BBB][chapter-1]
+            verses = f'{verse}' if lastVerse == verse else f'{verse}-{lastVerse}'
+            parts.append( (f'{chapter}:{verses}', noteType, [f'{BBB} {chapter}:{verse}' + ('' if lastVerse == verse else f'-{chapter}:{lastVerse}')], text) )
+        elif hasText( text ): parts.append( (f'{chapter}:0', 'Introduction', [f'{BBB} {chapter}'], text) )
         for name, entryType, about, part in parts:
             if not re.sub( r'<[^>]*>', '', part ).strip(): continue
             root = as_xml( part )
