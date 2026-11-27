@@ -131,8 +131,8 @@ const _books = <String, List<String>>{
   'JAM': ['James', 'Santiago'], 'PE1': ['1 Peter', '1 Pedro'], 'PE2': ['2 Peter', '2 Pedro'], 'JN1': ['1 John', '1 Juan'], 'JN2': ['2 John', '2 Juan'],
   'JN3': ['3 John', '3 Juan'], 'JDE': ['Jude', 'Judas'], 'REV': ['Revelation', 'Apocalipsis'],
   'TOB': ['Tobit', 'Tobías'], 'JDT': ['Judith', 'Judit'], 'ESG': ['Esther (Greek)', 'Ester (griego)'], 'WIS': ['Wisdom', 'Sabiduría'], 'SIR': ['Sirach', 'Eclesiástico'],
-  'BAR': ['Baruch', 'Baruc'], 'LJE': ['Letter of Jeremiah', 'Carta de Jeremías'], 'DAG': ['Daniel (Greek)', 'Daniel (griego)'], 'PAZ': ['Prayer of Azariah', 'Oración de Azarías'],
+  'BAR': ['Baruch', 'Baruc'], 'LJE': ['Letter of Jeremiah', 'Carta de Jeremías'], 'DNG': ['Daniel (Greek)', 'Daniel (griego)'], 'PAZ': ['Prayer of Azariah', 'Oración de Azarías'],
   'SUS': ['Susanna', 'Susana'], 'BEL': ['Bel and the Dragon', 'Bel y el Dragón'], 'MA1': ['1 Maccabees', '1 Macabeos'], 'MA2': ['2 Maccabees', '2 Macabeos'],
-  'MA3': ['3 Maccabees', '3 Macabeos'], 'MA4': ['4 Maccabees', '4 Macabeos'], 'ES1': ['1 Esdras', '1 Esdras'], 'ES2': ['2 Esdras', '2 Esdras'],
+  'MA3': ['3 Maccabees', '3 Macabeos'], 'MA4': ['4 Maccabees', '4 Macabeos'], 'GES': ['1 Esdras', '1 Esdras'], 'LES': ['2 Esdras', '2 Esdras'],
   'MAN': ['Prayer of Manasseh', 'Oración de Manasés'], 'PS2': ['Psalm 151', 'Salmo 151'],
 };

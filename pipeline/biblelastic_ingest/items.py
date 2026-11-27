@@ -36,7 +36,7 @@ BOOKS = { 'Gen':'GEN', 'Exod':'EXO', 'Lev':'LEV', 'Num':'NUM', 'Deut':'DEU', 'Jo
           'Eph':'EPH', 'Phil':'PHP', 'Col':'COL', '1Thes':'TH1', '2Thes':'TH2', '1Tim':'TI1', '2Tim':'TI2', 'Titus':'TIT', 'Phlm':'PHM',
           'Heb':'HEB', 'Jas':'JAM', '1Pet':'PE1', '2Pet':'PE2', '1Jn':'JN1', '2Jn':'JN2', '3Jn':'JN3', 'Jude':'JDE', 'Rev':'REV',
           'Tb':'TOB', 'Jdt':'JDT', 'AddEsth':'ESG', 'Wisd':'WIS', 'Ecclus':'SIR', 'Bar':'BAR', 'Bel':'BEL',
-          '1Macc':'MA1', '2Macc':'MA2', '3Macc':'MA3', '4Macc':'MA4', '1Esd':'ES1', '2Esd':'ES2' }
+          '1Macc':'MA1', '2Macc':'MA2', '3Macc':'MA3', '4Macc':'MA4', '1Esd':'GES', '2Esd':'LES' }
 
 
 def parse_references( text:str ) -> list:

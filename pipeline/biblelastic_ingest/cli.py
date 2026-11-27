@@ -26,15 +26,11 @@ import time
 import tomllib
 import urllib.request
 
-from . import aquifer, aquifer_alignment, epub, items, normalise, ubs, usfm
+from . import aquifer, aquifer_alignment, book_codes, epub, items, normalise, ubs, usfm
 
 PIPELINE_FOLDER = Path( __file__ ).resolve().parent.parent
 REPOSITORY_FOLDER = PIPELINE_FOLDER.parent
 
-# USFM book codes that differ from the BibleOrgSys ones that we use
-USFM_TO_BBB = { '1SA':'SA1','2SA':'SA2', '1KI':'KI1','2KI':'KI2', '1CH':'CH1','2CH':'CH2', 'EZK':'EZE', 'JON':'JNA', 'NAM':'NAH',
-                '1CO':'CO1','2CO':'CO2', '1TH':'TH1','2TH':'TH2', '1TI':'TI1','2TI':'TI2', 'JAS':'JAM',
-                '1PE':'PE1','2PE':'PE2', '1JN':'JN1','2JN':'JN2','3JN':'JN3', 'JUD':'JDE' }
 FEATURE_ATTRIBUTES = { 'lemma':'lemma', 'strong':'strong', 'x-strong':'strong', 'x-morph':'morph', 'x-koine':'koine' }
 MORPH_LANGUAGES = { 'He':'hbo', 'Ar':'arc', 'Gr':'grc' }
 TABLE_KEY_FUNCTIONS = { 'Grek':normalise.greek, 'Hebr':normalise.hebrew_consonants }
@@ -42,17 +38,15 @@ NOTES_RE = re.compile( r'\\(fe|fig|f|x)\b.*?\\\1\*', re.DOTALL )
 
 
 def book_code( path:Path ) -> str:
-    """ The book in a USFM or ESFM file, from its \\id line (e.g., \\id 1SA → SA1);
+    """ The BibleOrgSys code of the book in a USFM or ESFM file (see book_codes.py), from its \\id line (e.g., \\id 1SA → SA1, \\id 4MA → MA4);
         or from its name: OET-RV_MRK.ESFM → MRK and 42-MRK.usfm → MRK and 09-1SA.usfm → SA1 and 43JHNRV09.SFM → JHN """
     if path.suffix.upper() in ('.USFM', '.SFM', '.ESFM') and path.is_file():
         with open( path, encoding='utf-8-sig' ) as file:
             for line in itertools.islice( file, 5 ):
-                if found := re.match( r'\\id ([1-4A-Z][A-Z0-9]{2})\b', line.strip(), re.IGNORECASE ):
-                    code = found.group( 1 ).upper()
-                    return USFM_TO_BBB.get( code, code )
-    numbered = re.match( r'\d\d([1-3A-Z][A-Z]{2})', path.stem )
-    code = numbered.group( 1 ) if numbered else re.split( '[-_]', path.stem )[-1].upper()
-    return USFM_TO_BBB.get( code, code )
+                if found := re.match( r'\\id ([1-6A-Z][A-Z0-9]{2})\b', line.strip(), re.IGNORECASE ):
+                    return book_codes.bos( found.group( 1 ) )
+    numbered = re.match( r'\d\d([1-6A-Z][A-Z0-9]{2})', path.stem )
+    return book_codes.bos( numbered.group( 1 ) if numbered else re.split( '[-_]', path.stem )[-1] )
 
 
 def load_row_table( edition:dict, sourceRoot:Path ) -> tuple:

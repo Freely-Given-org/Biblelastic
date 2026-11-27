@@ -165,7 +165,8 @@ pub struct Text {
     pub before: Column,
     pub text: Column,
     pub after: Column,
-    pub document_names: Strings,
+    /// Each document's name: for Scripture, its book's BibleOrgSys code (converted as the module is loaded, if it was built with USFM ones)
+    pub document_names: DocumentNames,
     pub document_starts: Packed,
     /// Only Scripture has verses
     pub verses: Option<Nodes>,
@@ -174,10 +175,23 @@ pub struct Text {
     pub paragraphs: Nodes,
 }
 
+/// A module's document names, with any USFM book code made a BibleOrgSys one (e.g., 4MA → MA4), so that nothing else sees any other kind
+pub struct DocumentNames(Vec<String>);
+
+impl DocumentNames {
+    pub fn open(module: &Module) -> Result<DocumentNames> {
+        let names = module.strings("documents.names")?;
+        Ok(DocumentNames((0..names.len()).map(|number| crate::reference::bos_book(&names.get(number))).collect()))
+    }
+    pub fn len(&self) -> usize { self.0.len() }
+    pub fn is_empty(&self) -> bool { self.0.is_empty() }
+    pub fn get(&self, index: usize) -> String { self.0[index].clone() }
+}
+
 impl Text {
     pub fn open(module: &Module) -> Result<Text> {
         Ok(Text { before: Column::open(module, "col.before")?, text: Column::open(module, "col.text")?, after: Column::open(module, "col.after")?,
-                  document_names: module.strings("documents.names")?, document_starts: module.packed("documents.starts")?,
+                  document_names: DocumentNames::open(module)?, document_starts: module.packed("documents.starts")?,
                   verses: optional_nodes(module, "verse")?, entries: optional_nodes(module, "entry")?, paragraphs: Nodes::open(module, "para")? })
     }
 

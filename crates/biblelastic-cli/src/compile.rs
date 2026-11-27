@@ -279,7 +279,7 @@ const BOOK_ORDER: &[&str] = &[
     "JN1", "JN2", "JN3", "JDE", "REV",
     "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "SA1", "SA2", "KI1", "KI2", "CH1", "CH2", "EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG",
     "ISA", "JER", "LAM", "EZE", "DAN", "HOS", "JOL", "AMO", "OBA", "JNA", "MIC", "NAH", "HAB", "ZEP", "HAG", "ZEC", "MAL",
-    "TOB", "JDT", "ESG", "WIS", "SIR", "BAR", "LJE", "DAG", "PAZ", "SUS", "BEL", "MA1", "MA2", "MA3", "MA4", "ES1", "ES2", "MAN", "PS2", "PSS", "ODE", "LAO",
+    "TOB", "JDT", "ESG", "WIS", "SIR", "BAR", "LJE", "DNG", "PAZ", "SUS", "BEL", "MA1", "MA2", "MA3", "MA4", "GES", "LES", "MAN", "PS2", "PSS", "ODE", "LAO",
 ];
 
 fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edition> {

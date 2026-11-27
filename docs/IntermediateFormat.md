@@ -44,7 +44,11 @@ in a folder alongside this one. Without it, a warning is given and those columns
         thesaurus/
             <LANGUAGE>.tsv                  What people search for → the titles of entries about it
 
-`<BBB>` is the three-character BibleOrgSys book code (GEN, SA1, MRK, etc.).
+`<BBB>` is the three-character BibleOrgSys (BOS) book code (GEN, SA1, MRK, MA4, GES, DNG, etc.), which always starts with a letter.
+Biblelastic uses BOS codes everywhere: any other (e.g., USFM's 1SA, 4MA, 1ES, or DAG, as in a USFM or ESFM file's `\id` line) is converted to one
+as soon as it comes in, by `pipeline/biblelastic_ingest/book_codes.py`, whose table is written from BibleOrgSys's BibleBooksCodes table.
+The engine converts the same ones (`reference.rs`), both in the passages it's given (e.g., `1CO 13:4` is `CO1 13:4`) and in a module's document names
+as the module is loaded; `book_codes.py` writes its table too, and a test checks that the two are the same.
 One *document* is one ‘book’. Nothing assumes any particular set of documents,
 and the documents of other kinds of work have other names (see *Commentaries and dictionaries* below).
 

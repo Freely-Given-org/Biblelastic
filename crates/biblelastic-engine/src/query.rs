@@ -551,8 +551,8 @@ pub fn lemma_verses(library: &Library, edition: &str, original_edition: &str, le
 pub fn find_entry<'a>(library: &'a Library, edition: Option<&'a str>, locator: &str) -> Result<Option<(&'a crate::library::Installed, u32)>> {
     let Some((document, name)) = locator.split_once(' ') else { return Ok(None) };
     for installed in library.item_modules(edition) {
-        let documents = installed.module.strings("documents.names")?;
-        let Some(number) = (0..documents.len()).find(|&number| documents.get(number) == document) else { continue };
+        let documents = crate::library::DocumentNames::open(&installed.module)?;
+        let Some(number) = (0..documents.len()).find(|&number| documents.get(number) == crate::reference::bos_book(document)) else { continue };
         let starts = installed.module.packed("documents.starts")?;
         let entries = Nodes::open(&installed.module, "entry")?;
         for entry in entries.starts.lower_bound(starts.get(number))..entries.starts.lower_bound(starts.get(number + 1)) {
