@@ -387,6 +387,105 @@ files = ["Biblelastic/build/converted/Wycl/Wycl_*.usfm"]
 convert = { reader = "ZefaniaXMLBible", from = "OpenBibleData/copiedBibles/English/Zefania/WYC/SF_2009-01-20_ENG_BIBLE_WYCLIFFE_(JOHN WYCLIFFE BIBLE).xml", remove = ["`"] } # (A backtick starts some of its phrases: no one knows why)
 sections_from = "OET-RV"
 
+# Public-domain reference works, from CrossWire's SWORD library (see sword.py). Their references are to the KJV's chapters and verses.
+[[edition]]
+id = "Easton"
+kind = "dictionary"
+name = "Easton’s Bible Dictionary (1897)"
+author = "M. G. Easton"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { document = "Articles" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Easton"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Easton.zip"
+files = ["Biblelastic/build/downloads/crosswire/Easton.zip"]
+copyright = "M. G. Easton, Illustrated Bible Dictionary, third edition (Thomas Nelson, 1897): public domain. The text is CrossWire's SWORD module (version 2.0.1, from the Christian Classics Ethereal Library), without the illustrations: ‘Public Domain -- Copy Freely’."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org. References that are only numbers (e.g., the 11 in ‘Rev. 1:8, 11’) were linked to the book of the reference before them, as the text means, where the SWORD module had linked them to Genesis."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Nave"
+kind = "dictionary"
+name = "Nave’s Topical Bible"
+author = "Orville J. Nave"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { document = "Topics", topics = true }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Nave"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Nave.zip"
+files = ["Biblelastic/build/downloads/crosswire/Nave.zip"]
+copyright = "Orville J. Nave, Nave’s Topical Bible (c. 1896): public domain. The text is CrossWire's SWORD module (version 3.0, from the Christian Classics Ethereal Library's https://ccel.org/ccel/n/nave/bible.xml)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with the topics' names in lower case (e.g., ‘Love’ for ‘LOVE’)."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "TSK"
+kind = "commentary"
+name = "Treasury of Scripture Knowledge"
+author = "R. A. Torrey (and Canne, Browne, Blayney, Scott, and others)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = {}
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=TSK"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/TSK.zip"
+files = ["Biblelastic/build/downloads/crosswire/TSK.zip"]
+meaning = false # (No vectors for meaning-based search: it's mostly references)
+copyright = "The Treasury of Scripture Knowledge (c. 1880): public domain. The text is CrossWire's SWORD module (version 1.4)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each chapter's outline as a note of its own, and each word of a verse on the same line as its references."
+redistributable = true
+licence_verified = true
+starter = false
+
+# Public-domain books, from Standard Ebooks (which dedicates its own work on them to the public domain, with CC0)
+[[edition]]
+id = "UnspokenSermons"
+kind = "book"
+name = "Unspoken Sermons"
+author = "George MacDonald"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/george-macdonald/unspoken-sermons"
+download = "https://standardebooks.org/ebooks/george-macdonald/unspoken-sermons/downloads/george-macdonald_unspoken-sermons.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/george-macdonald_unspoken-sermons.epub"]
+copyright = "George MacDonald, Unspoken Sermons (three series, 1867, 1885, and 1889): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Orthodoxy"
+kind = "book"
+name = "Orthodoxy"
+author = "G. K. Chesterton"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/g-k-chesterton/orthodoxy"
+download = "https://standardebooks.org/ebooks/g-k-chesterton/orthodoxy/downloads/g-k-chesterton_orthodoxy.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/g-k-chesterton_orthodoxy.epub"]
+copyright = "G. K. Chesterton, Orthodoxy (1908): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
 # Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
 [disclaimers]
 commentary = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."

@@ -1,7 +1,8 @@
 """ Book codes: Biblelastic uses BibleOrgSys's (BOS) codes for books everywhere (e.g., SA1, CO1, MA4, GES, DNG: each starts with a letter),
     and converts any other (e.g., USFM's 1SA, 1CO, 4MA, 1ES, DAG) to one of those as soon as it comes in.
 
-USFM_TO_BOS and BOS_CODES are written from BibleOrgSys's BibleBooksCodes table (where a USFM code could be several BOS books, the first is taken).
+USFM_TO_BOS, OSIS_TO_BOS, and BOS_CODES are written from BibleOrgSys's BibleBooksCodes table (where a code could be several BOS books, the first is taken).
+OSIS_TO_BOS's keys are in upper case (e.g., EXOD and 1CHR, for OSIS's Exod and 1Chr).
 To write them again (e.g., when BibleOrgSys's table changes), from the pipeline folder:
     python3 -m biblelastic_ingest.book_codes ../../BibleOrgSys/BibleOrgSys/DataFiles/DerivedFiles/BibleBooksCodes_Tables.json
 """
@@ -35,6 +36,19 @@ BOS_CODES = {
     'VAM', 'VSE', 'WDF', 'WIS', 'WJC', 'WOM', 'WRD', 'WSI', 'XXA', 'XXB', 'XXC', 'XXD', 'XXE', 'XXF', 'XXG', 'ZEC', 'ZEP' }
 
 
+OSIS_TO_BOS = {
+    '1CHR':'CH1', '1COR':'CO1', '1ESD':'GES', '1JOHN':'JN1', '1KGS':'KI1', '1MACC':'MA1', '1PET':'PE1', '1SAM':'SA1', '1THESS':'TH1', '1TIM':'TI1',
+    '2CHR':'CH2', '2COR':'CO2', '2EN':'EN2', '2ESD':'LES', '2JOHN':'JN2', '2KGS':'KI2', '2MACC':'MA2', '2PET':'PE2', '2SAM':'SA2', '2THESS':'TH2',
+    '2TIM':'TI2', '3BAR':'BA3', '3JOHN':'JN3', '3MACC':'MA3', '4MACC':'MA4', '5MACC':'MA5', 'ACTS':'ACT', 'ADDDAN':'DNG', 'ADDESTH':'ESA', 'ADDPS':'PS2',
+    'AMOS':'AMO', 'BAR':'BAR', 'BEL':'BEL', 'COL':'COL', 'DAN':'DAN', 'DEUT':'DEU', 'ECCL':'ECC', 'EPH':'EPH', 'EPJER':'LJE', 'ESTH':'EST',
+    'ESTHGR':'ESG', 'EXOD':'EXO', 'EZEK':'EZE', 'EZRA':'EZR', 'GAL':'GAL', 'GEN':'GEN', 'HAB':'HAB', 'HAG':'HAG', 'HEB':'HEB', 'HOS':'HOS',
+    'ISA':'ISA', 'JAS':'JAM', 'JDT':'JDT', 'JER':'JER', 'JOB':'JOB', 'JOEL':'JOL', 'JOHN':'JHN', 'JONAH':'JNA', 'JOSH':'JOS', 'JUDE':'JDE',
+    'JUDG':'JDG', 'LAM':'LAM', 'LEV':'LEV', 'LUKE':'LUK', 'MAL':'MAL', 'MARK':'MRK', 'MATT':'MAT', 'MIC':'MIC', 'NAH':'NAH', 'NEH':'NEH',
+    'NUM':'NUM', 'OBAD':'OBA', 'PHIL':'PHP', 'PHLM':'PHM', 'PRAZAR':'PAZ', 'PRMAN':'MAN', 'PROV':'PRO', 'PS':'PSA', 'REV':'REV', 'REVEZRA':'RVE',
+    'ROM':'ROM', 'RUTH':'RUT', 'SIR':'SIR', 'SIRP':'SIP', 'SONG':'SNG', 'SUS':'SUS', 'TITUS':'TIT', 'TOB':'TOB', 'VISEZRA':'VSE', 'WIS':'WIS',
+    'ZECH':'ZEC', 'ZEPH':'ZEP' }
+
+
 def bos( code:str ) -> str:
     """ The BOS code for a book code, whichever kind it is (e.g., 1Co, 1CO, or CO1 → CO1; 4MA → MA4; DAG → DNG). Raises ValueError for one that isn't a book's. """
     code = code.strip().upper()
@@ -43,16 +57,23 @@ def bos( code:str ) -> str:
     return code
 
 
+def osis( name:str ) -> str|None:
+    """ The BOS code for an OSIS book name (e.g., Exod → EXO, 1Chr → CH1), or None """
+    return OSIS_TO_BOS.get( name.upper() )
+
+
 def write_tables( tablesPath:Path ) -> None:
     """ Write this file's tables again from BibleOrgSys's BibleBooksCodes_Tables.json """
     tables = json.loads( tablesPath.read_text( encoding='utf-8' ) )
     first = lambda value: value[0] if isinstance( value, list ) else value
     usfm = { code:first( entry[1] ) for code, entry in sorted( tables['USFMAbbreviationDict'].items() ) if code != first( entry[1] ) }
+    osisCodes = { name:first( entry[1] ) for name, entry in sorted( tables['OSISAbbreviationDict'].items() ) }
     codes = sorted( tables['referenceAbbreviationDict'] )
     def wrap( items:list, per:int ) -> str: return ',\n'.join( '    ' + ', '.join( items[ix:ix+per] ) for ix in range( 0, len(items), per ) )
     path = Path( __file__ )
     text = path.read_text( encoding='utf-8' )
     text = re.sub( r'USFM_TO_BOS = \{.*?\}', lambda _match: 'USFM_TO_BOS = {\n' + wrap( [ f"'{key}':'{value}'" for key, value in usfm.items() ], 10 ) + ' }', text, count=1, flags=re.DOTALL )
+    text = re.sub( r'OSIS_TO_BOS = \{.*?\}', lambda _match: 'OSIS_TO_BOS = {\n' + wrap( [ f"'{key}':'{value}'" for key, value in osisCodes.items() ], 10 ) + ' }', text, count=1, flags=re.DOTALL )
     text = re.sub( r'BOS_CODES = \{.*?\}', lambda _match: 'BOS_CODES = {\n' + wrap( [ f"'{code}'" for code in codes ], 20 ) + ' }', text, count=1, flags=re.DOTALL )
     path.write_text( text, encoding='utf-8' )
     # The engine's copy (for references that it's given, and modules built with USFM codes)
@@ -62,7 +83,7 @@ def write_tables( tablesPath:Path ) -> None:
     rustText = re.sub( r'(pub const USFM_TO_BOS: &\[\(&str, &str\)\] = &\[\n).*?(\n\];)', lambda match: match.group( 1 ) + rust + match.group( 2 ),
                        rustPath.read_text( encoding='utf-8' ), count=1, flags=re.DOTALL )
     rustPath.write_text( rustText, encoding='utf-8' )
-    print( f'Wrote {len(usfm)} USFM codes and {len(codes)} BOS codes into {path}, and the USFM codes into {rustPath}' )
+    print( f'Wrote {len(usfm)} USFM codes, {len(osisCodes)} OSIS names, and {len(codes)} BOS codes into {path}, and the USFM codes into {rustPath}' )
 
 
 if __name__ == '__main__':

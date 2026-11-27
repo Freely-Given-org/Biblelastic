@@ -45,6 +45,22 @@ and those whose licences need reading first (the LSV, FBV, T4T, and TCNT, all on
 Question: the King James Bible (1611 and 1769) is under letters patent in the United Kingdom, which restrict printing it there.
 Electronic copies are widely given away (eBible.org, Crosswire), and the registry says so in its copyright notice. Is that enough?
 
+## Public-domain reference works and books (added 27 November 2026)
+
+None is in the English starter set. Each was checked at its source on 27 November 2026.
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| `Easton` Easton's Bible Dictionary (M. G. Easton, third edition, 1897) | Public domain | The SWORD module's `mods.d/easton.conf` (in `build/downloads/crosswire/Easton.zip`, from https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Easton.zip) | `DistributionLicense=Public Domain`; ‘Public Domain -- Copy Freely’; `TextSource=CCEL` |
+| `Nave` Nave's Topical Bible (Orville J. Nave, c. 1896) | Public domain | `mods.d/nave.conf` in `Nave.zip` (as above) | `DistributionLicense=Public Domain`; the text is from https://ccel.org/ccel/n/nave/bible.xml |
+| `TSK` Treasury of Scripture Knowledge (c. 1880) | Public domain | `mods.d/tsk.conf` in `TSK.zip` (as above) | `DistributionLicense=Public Domain` |
+| `UnspokenSermons` *Unspoken Sermons* (George MacDonald, 1867, 1885, and 1889) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/george-macdonald/unspoken-sermons) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0. MacDonald died in 1905 |
+| `Orthodoxy` *Orthodoxy* (G. K. Chesterton, 1908) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/g-k-chesterton/orthodoxy) | As above. Chesterton died in 1936 |
+
+All five were first published before 1931 by authors who died before 1956, so they're in the public domain in the United States and in countries where copyright lasts 70 years after the author's death.
+CrossWire's modules are from the Christian Classics Ethereal Library's texts. CCEL claims copyright on its own formatting, but the modules are CrossWire's conversions, and CrossWire only hosts a module
+whose text is in the public domain or whose holder has given it permission.
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

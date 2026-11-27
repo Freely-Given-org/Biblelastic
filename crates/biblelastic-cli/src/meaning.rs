@@ -161,7 +161,9 @@ pub fn embed(modules: &Path, editions: &[String], model_name: Option<&str>, opti
     let models: Vec<_> = library.modules.iter().filter(|installed| installed.kind == "model" && model_name.is_none_or(|name| installed.edition == name)).collect();
     if models.is_empty() { return Err("no model is installed (make one with `biblelastic model`)".into()); }
     // Each work is embedded by the model for its language
+    // (Not a work whose registry entry says `meaning = false`)
     let wanted: Vec<_> = library.modules.iter().filter(|installed| installed.kind == "text" && installed.edition != "OET-LV"
+        && !(installed.module.has("module.meaning") && installed.module.text("module.meaning").is_ok_and(|value| value == "false"))
         && models.iter().any(|model| model.language == installed.language) && (editions.is_empty() || editions.contains(&installed.edition))).collect();
     let mut opened: HashMap<String, Model> = HashMap::new();
     for installed in wanted {

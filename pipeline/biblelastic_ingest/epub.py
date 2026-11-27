@@ -1,5 +1,6 @@
 """
-Books (EPUB files): each top-level item of the book's table of contents becomes an entry, e.g., a chapter.
+Books (EPUB files): each top-level item of the book's table of contents becomes an entry, e.g., a chapter
+(or, where a top-level item is only a title page for the items under it, each of those: see entry_items).
 
 - Paragraphs are the book's blocks (paragraphs, list items, table cells, notes). A heading is an h1-h6 element,
   a block that the table of contents points to below its top level, or a block whose text the book's stylesheet makes bold and large.
@@ -193,14 +194,43 @@ class BookParser( items._Parser ):
             for passage in passages: self.parsed.anchors.append( (word_at( first ), word_at( max( first, last - 1 ) ) + 1, 'cites', passage) )
 
 
+def entry_items( contents:list, blocks:list ) -> tuple:
+    """
+    (starts, headings) for a book's table of contents: { block index: title } where each entry starts, and { block index: heading level } for the items below them.
+    Each top-level item is an entry, except one with items under it whose own text is only its title (e.g., Standard Ebooks' half-title page, with the book's name,
+    before all its chapters, or a page that only says ‘Book I’): the items under it are entries instead, and its title page goes with the first of them.
+    """
+    simple = lambda text: re.sub( r'\W', '', text ).casefold()
+    tree, stack = [], []
+    for depth, label, index in contents:
+        node = (depth, label, index, [])
+        while stack and stack[-1][0] >= depth: stack.pop()
+        (stack[-1][3] if stack else tree).append( node )
+        stack.append( node )
+    starts, headings = {}, {}
+    def descendants( node:tuple ):
+        for child in node[3]: yield child; yield from descendants( child )
+    def visit( node:tuple ) -> None:
+        depth, label, index, children = node
+        own = [ block.text for block in blocks[index:children[0][2]] if block.text.strip() ] if children and children[0][2] >= index else None
+        if own is not None and all( simple( text ) == simple( label ) for text in own ):
+            before = set( starts )
+            for child in children: visit( child )
+            added = sorted( set( starts ) - before )
+            if added and index < added[0]: starts[index] = starts.pop( added[0] ) # (The title page goes with the first of them)
+            return
+        starts.setdefault( index, label )
+        for descendant in descendants( node ): headings.setdefault( descendant[2], descendant[0] - depth + 1 ) # Lower levels of the contents are headings
+    for node in tree: visit( node )
+    return starts, headings
+
+
 def parse( path:str, context:str|None=None, language:str='eng' ) -> tuple:
     """ Returns (parsed items, table of contents) for a book, with one entry for each top-level item of its contents """
     blocks, contents = read_epub( path )
     parser = BookParser( context, language )
     tokens = parser.doc.tokens
-    top = min( (depth for depth, _label, _index in contents), default=1 )
-    starts = { index:label for depth, label, index in contents if depth == top }
-    headings = { index:depth - top + 1 for depth, _label, index in contents if depth > top } # Lower levels of the contents are headings
+    starts, headings = entry_items( contents, blocks )
     if 0 not in starts: starts[0] = 'Front matter'
     names, entry, entryStart, entryTitle = 0, None, 0, ''
     def finish_entry() -> None:

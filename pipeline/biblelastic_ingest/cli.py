@@ -26,7 +26,7 @@ import time
 import tomllib
 import urllib.request
 
-from . import aquifer, aquifer_alignment, book_codes, epub, items, normalise, ubs, usfm
+from . import aquifer, aquifer_alignment, book_codes, epub, items, normalise, sword, ubs, usfm
 
 PIPELINE_FOLDER = Path( __file__ ).resolve().parent.parent
 REPOSITORY_FOLDER = PIPELINE_FOLDER.parent
@@ -343,7 +343,7 @@ def read_column( path:Path, columnName:str ) -> list:
 
 def has_items( edition:dict ) -> bool:
     """ Whether an edition is made of items (a commentary, dictionary, or book), rather than being a Bible text """
-    return 'item_documents' in edition or edition.get( 'format' ) in ('EPUB', 'Aquifer')
+    return 'item_documents' in edition or edition.get( 'format' ) in ('EPUB', 'Aquifer', 'SWORD')
 
 
 def book_extent( folder:Path ):
@@ -442,6 +442,15 @@ def main() -> int:
                 digest = hashlib.sha256( b''.join( path.read_bytes() for path in paths ) ).hexdigest()
                 futures[edition['id']] = []
                 for document, (parsedItems, sourceNames) in parsed.items():
+                    if wantedBooks and document.upper() not in wantedBooks: continue
+                    future = Future(); future.set_result( write_items( parsedItems, document, sourceNames, digest, str(folder), edition['script'] ) )
+                    futures[edition['id']].append( future )
+                continue
+            if edition.get( 'format' ) == 'SWORD': # A module from CrossWire's SWORD library (see sword.py): its documents are written here (it's quick)
+                versification = arguments.source_root / registry.get( 'tools', {} ).get( 'kjv_versification', 'BibleOrgSys/BibleOrgSys/DataFiles/VersificationSystems/BibleVersificationSystem_KJV.xml' )
+                digest = hashlib.sha256( paths[0].read_bytes() ).hexdigest()
+                futures[edition['id']] = []
+                for document, (parsedItems, sourceNames) in sword.parse( edition, paths[0], versification ).items():
                     if wantedBooks and document.upper() not in wantedBooks: continue
                     future = Future(); future.set_result( write_items( parsedItems, document, sourceNames, digest, str(folder), edition['script'] ) )
                     futures[edition['id']].append( future )

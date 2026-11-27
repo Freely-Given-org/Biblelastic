@@ -336,6 +336,8 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
     let rights = Rights::from_json(&manifest_json, &Rights::default());
     // Whether a language's starter set has it (unless the registry says `starter = false`, e.g., for all but a few of the Bibles in a language)
     let starter = !matches!(manifest_json.get("starter"), Some(Json::Bool(false)));
+    // Whether `biblelastic embed` makes vectors of it (unless the registry says `meaning = false`, e.g., for the TSK, which is mostly references)
+    let meaning = !matches!(manifest_json.get("meaning"), Some(Json::Bool(false)));
     // A layer can have rights of its own (e.g., the UBS meanings of the words of the UHB)
     let layer_rights = |layer: &str| -> Rights {
         match manifest_json.get("layers") {
@@ -354,6 +356,7 @@ fn compile_edition(folder: &Path, output: &Path, options: Options) -> Result<Edi
         if !language.is_empty() { writer.raw("module.language", language.as_bytes()); }
         if !disclaimer.is_empty() { writer.raw("module.disclaimer", disclaimer.as_bytes()); }
         if !starter { writer.raw("module.starter", b"false"); }
+        if !meaning { writer.raw("module.meaning", b"false"); }
         rights.write(&mut writer);
         writer.raw("manifest", &manifest);
         writer.strings("documents.names", &documents);

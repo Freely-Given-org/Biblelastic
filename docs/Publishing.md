@@ -67,6 +67,7 @@ and each work on its own (see [App.md](App.md)). It works these out from the cat
 so publishing needs nothing more for a new work to be offered in the right places.
 A work is in its language's starter set unless the registry says `starter = false`, as it does for all the English Bibles but the OET's
 (the catalogue then says `"starter": "false"` for its modules).
+`biblelastic embed` makes vectors for meaning-based search for every work unless the registry says `meaning = false`, as it does for the TSK, which is mostly references.
 
 ## Downloads that break, or arrive wrong
 

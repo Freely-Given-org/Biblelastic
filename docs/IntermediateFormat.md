@@ -218,13 +218,33 @@ So far there are two, both from [Tyndale Open Resources](https://tyndaleopenreso
 | `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.12 million | 17,478 `about` and 55,554 `cites` |
 | `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.53 million | 47,393 `cites` |
 
-A third, `UBSH`, is the United Bible Societies' handbooks *Animals in the Bible*, *Plants and Trees in the Bible*, and *Objects in the Bible* (a `dictionary`,
+Three more are public-domain works from CrossWire's [SWORD](https://crosswire.org/sword) library, read from each module's zip file by `pipeline/biblelastic_ingest/sword.py`
+(the registry's `format = "SWORD"`): a dictionary module (zLD) becomes one document, with an entry for each key, and a commentary module (zCom) a document for each book,
+with an entry for each verse that has a note (named like `1:1`, and `about` that verse). Their references are to the KJV's chapters and verses, which are taken from
+BibleOrgSys's versification table, and are checked against it.
+
+| Edition | Kind | Documents | Entries | Words | Anchors |
+| --- | --- | --- | --- | --- | --- |
+| `Easton` Easton's Bible Dictionary (1897) | `dictionary` | `Articles` | 3,963 | 0.47 million | 24,078 `cites` |
+| `Nave` Nave's Topical Bible | `dictionary` | `Topics`: each line of a topic is a paragraph (`li`), and the topics' names are in lower case (`Love`, not `LOVE`) | 5,322 | 0.32 million | 77,922 `cites` |
+| `TSK` Treasury of Scripture Knowledge | `commentary` | One for each of the 66 books: each verse's note (each word of the verse on a line with its references), and each chapter's outline (named like `1`, and `about` the whole chapter) | 32,309 | 1.35 million | 32,309 `about` and 388,051 `cites` |
+
+Their references are read from the text that's shown, not from the modules' own `osisRef` attributes, because Easton's module gives every reference that's only numbers
+(e.g., the ‘11’ and ‘21:6’ in ‘Rev. 1:8, 11; 21:6’) to Genesis. Such a reference is in the book of the reference before it: after a comma it's verses (unless it has a chapter),
+and after a semicolon it's chapters (e.g., Nave's ‘1Ch 6:3; 24’). In the TSK, each line of references starts again from the verse that the note is about,
+so its ‘8,13’ in the note on Genesis 1:5 is Genesis 1:8 and 1:13. A link to an entry that doesn't exist goes to the nearest one that does: its singular or plural,
+or else the first whose name starts with it (e.g., Nave's ‘See ANGEL’ goes to ‘Angel (a Spirit)’). About a hundred references, and 89 links (mostly to a topic's sub-topics), are still left out.
+The TSK has no vectors for meaning-based search (its registry entry says `meaning = false`), because it's mostly references.
+
+A sixth, `UBSH`, is the United Bible Societies' handbooks *Animals in the Bible*, *Plants and Trees in the Bible*, and *Objects in the Bible* (a `dictionary`,
 with the documents `Fauna`, `Flora`, and `Realia`: 762 articles). It comes from a different XML format, but becomes the same files: see the next section.
 
 ## Books
 
 A book is read from an EPUB file by `pipeline/biblelastic_ingest/epub.py`, and becomes the same files as a commentary or dictionary,
 with one document, `Chapter`: each top-level item of the book's table of contents is an entry (so locators are `Chapter 1`, `Chapter 2`, …, and each entry's title is its item in the contents).
+An item whose own text is only its title (e.g., Standard Ebooks' half-title page, with the book's name before all its chapters, or a page that only says ‘Book I’)
+isn't an entry: the items under it are, and its title page goes with the first of them.
 
 - **Paragraphs** are the book's blocks (paragraphs, list items, table cells), styled `h1`–`h3` (headings), `p`, `li`, or `note` (footnotes and endnotes;
     the footnote markers in the text are left out). A heading is an h1–h6 element, a block that the contents points to below its top level,
@@ -239,7 +259,7 @@ with one document, `Chapter`: each top-level item of the book's table of content
     a heading that names one (e.g., ‘1:21-28 Jesus heals’), up to the next heading of the same or a higher level. So a book's chapters are found by the notes on a verse, like a commentary's.
 
 The registry gives each book's `download` address: the file is fetched once into `files` (under `build/downloads/`) and kept there.
-There are sixty-two, all from [books.freely.giving](https://books.freely.giving), and all CC0 (or in the public domain). Five are in `sources.toml` itself:
+Sixty-two are from [books.freely.giving](https://books.freely.giving), and all CC0 (or in the public domain). Five of those are in `sources.toml` itself:
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
@@ -247,10 +267,17 @@ There are sixty-two, all from [books.freely.giving](https://books.freely.giving)
 | `PritchardJude` *Jude: A Theological Commentary* (Shelby Pritchard, 2025) | `commentary` | 8 | 30,000 | 13 `about` and 143 `cites` |
 | `DoreanPrinciple` *The Dorean Principle* (Conley Owens, 2021) | `book` | 22 | 47,000 | 402 `cites` |
 | `DoctrineOfSimony` *The Doctrine of Simony: A Theological Retrieval and Appraisal* (Conley Owens, 2026; from [simony.info](https://simony.info)) | `book` | 27 | 100,000 | 6 `about` and 360 `cites` |
-| `AbolishTheJesusTrade` *Abolish the Jesus Trade* (Andrew Case, Conley Owens, Jon Here, and others, 2025) | `book` | 10 | 129,000 | 20 `about` and 933 `cites` |
+| `AbolishTheJesusTrade` *Abolish the Jesus Trade* (Andrew Case, Conley Owens, Jon Here, and others, 2025) | `book` | 40 | 129,000 | 21 `about` and 933 `cites` |
 
 The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
 so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
+
+Two more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
+
+| Edition | Kind | Entries | Words | Anchors |
+| --- | --- | --- | --- | --- |
+| `UnspokenSermons` *Unspoken Sermons* (George MacDonald, three series, 1867–1889) | `book` | 44 | 177,000 | 59 `cites` |
+| `Orthodoxy` *Orthodoxy* (G. K. Chesterton, 1908) | `book` | 14 | 65,000 | none |
 
 The other fifty-seven are every English or Spanish book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
 (which `sources.toml` includes), written by
