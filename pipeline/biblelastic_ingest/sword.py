@@ -1,7 +1,7 @@
 """
 Reference works from CrossWire's SWORD library (https://crosswire.org/sword), read straight from a module's zip file:
-dictionaries and topical indexes (zLD and RawLD, e.g., Easton's Bible Dictionary and Nave's Topical Bible), and commentaries (zCom and zCom4,
-e.g., the Treasury of Scripture Knowledge and Matthew Henry's Concise Commentary).
+dictionaries and topical indexes (zLD and RawLD, e.g., Easton's Bible Dictionary and Nave's Topical Bible), commentaries (zCom and zCom4,
+e.g., the Treasury of Scripture Knowledge and Matthew Henry's Concise Commentary), and general books (RawGenBook, e.g., Josephus's works and Owen's: see parse_genbook).
 
 A dictionary's keys and entries become one document (e.g., `Articles`), with an entry for each key.
 A commentary becomes a document for each Bible book, with an entry for each note (named like `1:1`, or `3:1-8` for a note on several verses, and about those verses),
@@ -13,6 +13,7 @@ because some modules' converters gave every reference that's only numbers (e.g.,
 Such a reference takes its book (and chapter, if it hasn't one) from the reference before it, or, in a commentary, from the verse that the entry is about.
 """
 import collections
+import fnmatch
 import re
 import struct
 import xml.etree.ElementTree as ET
@@ -51,7 +52,12 @@ PREVERSE_RE = re.compile( r'<div type="x-milestone" subType="x-preverse" sID="[^
 NOTE_START_RE = re.compile( r'<hi type="bold">Verses? \d' )
 CHAPTER_TITLE_RE = re.compile( r'<title type="x-s2">|<title type="x-s">Introduction</title>' )
 PREFACE_RE = re.compile( r'<title type="x-s">Preface' ) # (Adam Clarke's book's preface, at its first note, which runs on into its first chapter's outline)
-SPANS = { 'hi':None, 'i':'italic', 'b':'bold' }
+SPANS = { 'hi':None, 'i':'italic', 'b':'bold', 'em':'italic', 'strong':'bold' }
+# What starts a paragraph (of this kind), and the other elements that are known (whose text is kept), in OSIS, ThML (whose HTML elements, e.g., Finney's <h2>), and TEI
+BLOCKS = { 'p':'p', 'item':'li', 'li':'li', 'row':'li', 'tr':'li', 'title':'h2', 'h1':'h2', 'h2':'h2', 'h3':'h3', 'h4':'h4', 'h5':'h4', 'h6':'h4', 'l':'p', 'note':'note' }
+INLINE = { 'entry', 'entryFree', 'def', 'list', 'ref', 'sync', 'orth', 'sense', 'foreign', 'table', 'cell', 'td', 'th', 'div', 'term', 'ol', 'ul', 'w', 'seg',
+           'blockquote', 'lg', 'verse', 'font', 'small', 'sup', 'sub', 'a', 'span', 'label', 'inscription', 'hr' }
+OSIS_PASSAGE_RE = re.compile( r'(?:[1-3]?[A-Z][A-Za-z]+\.\d+(?:\.\d+)?(?:-[1-3]?[A-Z][A-Za-z]+\.\d+(?:\.\d+)?)?\s*)+' )
 
 
 def book_code( name:str ) -> str|None:
@@ -204,8 +210,9 @@ def read_commentary( archive:zipfile.ZipFile, dataPath:str, encoding:str, chapte
 
 def as_xml( text:str ) -> ET.Element:
     """ A module's entry as an element (with any stray ‘<’ and ‘&’ escaped, and the control characters left by an old conversion from DOS removed,
-        except the TSK's section signs, which were DOS's character 21) """
+        except the TSK's section signs, which were DOS's character 21, and with a tag's name that's broken by a new line joined, e.g., the Westminster catechism's ‘<referen⏎ce’) """
     text = re.sub( r'[\x00-\x08\x0b\x0c\x0e-\x14\x16-\x1f\x80-\x9f]', '', text.replace( '\x15', '§' ) )
+    text = re.sub( r'(<[A-Za-z]+)\r?\n([A-Za-z]+[\s>])', r'\1\2', text )
     text = re.sub( r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)', '&amp;', text )
     text = re.sub( r'<(?![/?!]?[A-Za-z])|<(?=[A-Z][a-z]+ )', '&lt;', text ) # e.g., ‘<See’, which isn't a tag
     try: return ET.fromstring( f'<entry>{text}</entry>' )
@@ -251,10 +258,18 @@ class SwordParser( items._Parser ):
         self.line_style = 'li' if edition['sword'].get( 'topics' ) else 'p' # What a line break (<lb/> or <br/>) starts
         self.show_titles = False # Whether a <title> is a heading in the entry (in a commentary), rather than the entry's own title (in a dictionary)
         self.lastWasReference = False
+        self.inNote = False # (A paragraph in a note, e.g., each proof in the Westminster Confession's, is a note's paragraph)
 
     def add_reference( self, text:str, osisRef:str|None, passage:str|None=None ) -> None:
         """ A reference element's text (e.g., ‘Ex 6:16-20’, ‘10’, or ‘Job 26:7; Isa 45:18’): each reference in it is a cites anchor
             (or, where the element says what it is, e.g., passage="Ge 1:3" for the 3 in a TSK chapter's outline, that) """
+        if passage and OSIS_PASSAGE_RE.fullmatch( passage.strip() ): # (Walther's ‘<scripRef passage="Matt.15.13">Matt. 15, 13</scripRef>’)
+            start = len(self.doc.tokens)
+            self.add_text( text )
+            passages = [ found for part in passage.split() for found in osis_passages( part ) if self.context.exists( found ) ]
+            if not passages: self.parsed.bad_references.append( passage )
+            self.parsed.anchors.extend( (start, len(self.doc.tokens), 'cites', found) for found in passages )
+            return
         if passage: passage = re.sub( r'^([1-3]?\s?)([a-z])', lambda match: match.group( 1 ) + match.group( 2 ).upper(), passage.strip() ) # (Smith's ‘1ch 12:27’)
         if passage and (match := PART_RE.fullmatch( passage )):
             start = len(self.doc.tokens)
@@ -263,20 +278,27 @@ class SwordParser( items._Parser ):
             if not passages: self.parsed.bad_references.append( passage )
             self.parsed.anchors.extend( (start, len(self.doc.tokens), 'cites', found) for found in passages )
             return
-        position = 0
+        position, elementStart, anchorCount, badCount = 0, len(self.doc.tokens), len(self.parsed.anchors), len(self.parsed.bad_references)
         for match in PART_RE.finditer( text ):
             before = text[position:match.start()]
             self.add_text( before )
             separator = before.strip()[-1:] or self.separator
             start = len(self.doc.tokens)
             self.add_text( match.group() )
-            passages = self.context.passages( match.group( 'book' ), match.group( 'ranges' ), separator )
+            book = 'Revelation' if match.group( 'book' ) == 'John' and before.endswith( 'Revelation of ' ) else match.group( 'book' ) # (CCEL's ‘Revelation of John 22:16’)
+            passages = self.context.passages( book, match.group( 'ranges' ), separator )
             if not passages and osisRef and len(text.strip()) == len(match.group()): # e.g., ‘1 Macc. 1:23’, whose book the text's names don't include
                 passages = [ passage for passage in osis_passages( osisRef ) if self.context.exists( passage ) ]
             if not passages: self.parsed.bad_references.append( match.group() )
             self.parsed.anchors.extend( (start, len(self.doc.tokens), 'cites', passage) for passage in passages )
             position, self.separator = match.end(), ''
         self.add_text( text[position:] )
+        if osisRef and len(self.parsed.bad_references) > badCount and len(self.parsed.anchors) == anchorCount and re.match( r'\W*[1-3]?[A-Z]{2,3}\s+\d', text ):
+            # A reference that starts with a book's code (e.g., the Westminster Confession's ‘ROM 2:14’): what the element says it is
+            # (only then, because some modules' osisRef attributes are wrong: see above)
+            if (passages := [ passage for part in osisRef.split() for passage in osis_passages( part ) if self.context.exists( passage ) ]):
+                del self.parsed.bad_references[badCount:]
+                self.parsed.anchors.extend( (elementStart, len(self.doc.tokens), 'cites', passage) for passage in passages )
 
     def add_text( self, text:str|None ) -> None:
         """ (Remembering the last punctuation, which says what a reference that's only numbers is: see Context.passages) """
@@ -291,40 +313,38 @@ class SwordParser( items._Parser ):
             tail = LINE_MARK_RE.sub( '', element.tail or '' ) if self.line_style == 'li' else element.tail
             if following is not None and following.tag == 'scripRef' and not (element.tail or '').strip() and len(tokens) > self.paraStart:
                 self.add_text( '; ' if self.lastWasReference else ' ' )
-            else: self.start_paragraph( self.line_style, {} )
+            else: self.start_paragraph( 'note' if self.inNote else self.line_style, {} )
             self.add_text( tail ); self.lastWasReference = False
             return
         if tag in ('chapter', 'milestone') or (tag == 'div' and len(element) == 0 and not (element.text or '').strip()): # (OSIS's milestones)
-            if tag == 'div' and element.get( 'sID' ) and element.get( 'type' ) == 'x-p': self.start_paragraph( 'p', {} )
+            if tag == 'div' and element.get( 'sID' ) and element.get( 'type' ) == 'x-p': self.start_paragraph( 'note' if self.inNote else 'p', {} )
             self.add_text( element.tail ); self.lastWasReference = False
             return
         if tag == 'title' and not self.show_titles: self.add_text( element.tail ); return # (The entry's title is its first paragraph)
-        if tag in ('p', 'item', 'li', 'row', 'title', 'l', 'h3', 'h4', 'note'):
-            self.start_paragraph( { 'p':'p', 'title':'h2', 'l':'p', 'h3':'h3', 'h4':'h4', 'note':'note' }.get( tag, 'li' ), {} )
+        if tag in BLOCKS: self.start_paragraph( 'note' if self.inNote and BLOCKS[tag] == 'p' else BLOCKS[tag], {} )
+        wasInNote, self.inNote = self.inNote, self.inNote or tag == 'note'
         start = len(tokens)
         if tag in ('ref', 'scripRef', 'reference') and element.get( 'target' ) is None:
             if tag == 'scripRef': # (In the TSK, each line of references starts again from the verse that the entry is about)
                 self.context = Context( self.chapters, *self.home )
             self.add_reference( ''.join( element.itertext() ), element.get( 'osisRef' ), element.get( 'passage' ) )
         else:
-            if tag not in ('entry', 'entryFree', 'def', 'p', 'list', 'item', 'ref', 'hi', 'sync', 'orth', 'sense', 'foreign',
-                           'title', 'table', 'row', 'cell', 'div', 'term', 'i', 'b', 'ol', 'ul', 'li', 'w', 'seg', 'blockquote', 'lg', 'l', 'font', 'h3', 'h4',
-                           'note'): self.doc.warn( f'unknown element <{tag}>' )
+            if tag not in BLOCKS and tag not in SPANS and tag not in INLINE: self.doc.warn( f'unknown element <{tag}>' )
             text = element.text
             if tag == 'entry' and self.line_style == 'li': text = LINE_MARK_RE.sub( '', text or '' ) # (A topic's first line)
             self.add_text( text )
             for ix, child in enumerate( element ):
-                if child.tag == 'cell' and ix: self.add_text( ' ' ) # (Between a table's cells, e.g., the topic and its verses in Matthew Henry's outlines)
+                if child.tag in ('cell', 'td', 'th') and ix: self.add_text( ' ' ) # (Between a table's cells, e.g., the topic and its verses in Matthew Henry's outlines)
                 self.walk( child, element[ix+1] if ix + 1 < len(element) else None )
-        end = len(tokens)
+        end, self.inNote = len(tokens), wasInNote
         if tag == 'ref' and element.get( 'target', '' ).count( ':' ) == 1 and end > start: # e.g., target="Nave:CHILDREN"
             self.parsed.links.append( (start, end, 'see', f"{self.document} {entry_name( topic_title( element.get( 'target' ).split( ':' )[1] ) )}") )
         elif tag == 'term' and end > start: # e.g., Smith's ‘See <term>MONTH</term>’
             self.parsed.links.append( (start, end, 'see', f"{self.document} {entry_name( topic_title( ''.join( element.itertext() ).strip() ) )}") )
         elif tag in SPANS and end > start: self.doc.nodes.append( ('span', start, end, SPANS[tag] or element.get( 'type', 'hi' ), {}) )
-        if tag in ('p', 'item', 'li', 'row', 'title', 'l', 'h3', 'h4', 'note'):
+        if tag in BLOCKS:
             self.end_paragraph()
-            if tag in ('row', 'title', 'l', 'h3', 'h4', 'note'): self.start_paragraph( 'p', {} ) # (For what follows it, which isn't in a paragraph of its own)
+            if tag not in ('p', 'item', 'li'): self.start_paragraph( 'note' if wasInNote else 'p', {} ) # (For what follows it, which isn't in a paragraph of its own)
         self.lastWasReference = tag == 'scripRef'
         self.add_text( element.tail )
         if (element.tail or '').strip(): self.lastWasReference = False
@@ -538,26 +558,100 @@ def lift_notes( root:ET.Element ) -> ET.Element:
     return root
 
 
+# The note that CCEL's modernizing left after each word it changed (e.g., in Owen's works: ‘you<note n="thou">Auto-modernized</note>’), which isn't kept
+AUTO_MODERNIZED_RE = re.compile( r'<note n="[^"]*">Auto-modernized</note>' )
+# The printed edition's page numbers, as links (e.g., in Walther's Law and Gospel: ‘<small><sup><a href="#29">29</a></sup></small><a name="29"/>’), which aren't kept
+PAGE_MARKER_RE = re.compile( r'<small><sup><a href="#[^"]*">[^<]*</a></sup></small><a name="[^"]*"/>\s*' )
+GENBOOK_LIMIT = 100_000 # (characters of a module's markup: more than this in one entry is split, where it can be)
+HEADINGS = {'title', 'h1', 'h2', 'h3', 'h4'}
+
+
+ROMAN_RE = re.compile( r'(?=[IVXLC])C{0,3}(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})[.,:]?' )
+
+
+def key_name( name:str ) -> str:
+    """ A general book's key as it's shown: Lecture_01_Thesis_I → Lecture 1 Thesis I, Section 2_1 → Section 2.1,
+        BOOK FIRST. - OF THE KNOWLEDGE OF GOD → Book First: Of the Knowledge of God, II. THE WAGES OF SIN. → II. The Wages of Sin, and its spacing tidied """
+    name = re.sub( r'(?<=\d)_(?=\d)', '.', name ).replace( '_', ' ' )
+    name = re.sub( r'\.\s+-\s+', ': ', ' '.join( re.sub( r'\b0+(?=\d)', '', name ).split() ) ).rstrip( '.,;:' )
+    if name.upper() != name: return name
+    name, words = name.replace( '—', '— ' ), []
+    for word in name.split( ' ' ):
+        if ROMAN_RE.fullmatch( word ): words.append( word )
+        elif words and word.lower() in SMALL_WORDS and not words[-1].endswith( (':', '.', '-') ): words.append( word.lower() )
+        else: words.append( word[:1] + word[1:].lower() )
+    return ' '.join( words ).replace( '— ', '—' )
+
+
+def heading_text( element:ET.Element ) -> str|None:
+    """ The text of the heading that an element is, or starts with (e.g., the Westminster catechisms' ‘<p><title>Q. 1. …</title>’), if it's one """
+    if element.tag not in HEADINGS:
+        if element.tag != 'p' or (element.text or '').strip() or not len( element ) or element[0].tag not in HEADINGS: return None
+        element = element[0]
+    return ' '.join( ''.join( element.itertext() ).split() )
+
+
+def has_text( element:ET.Element, top:bool=True ) -> bool:
+    """ Whether an entry has any text but its headings """
+    if not top and element.tag in HEADINGS: return bool( (element.tail or '').strip() )
+    return bool( (element.text or '').strip() ) or any( has_text( child, False ) for child in element ) or (not top and bool( (element.tail or '').strip() ))
+
+
 def parse_genbook( edition:dict, tree:tuple, chapters:dict, sourceName:str ) -> dict:
     """
     A general book (e.g., Josephus's works) as one document, `Chapter`, like an EPUB book's: an entry (named 1, 2, …, and titled with its keys,
     e.g., ‘The Antiquities of the Jews, Book 1, Chapter 1’) for each key whose keys under it have none under them (e.g., a chapter and its sections),
-    unless it has more than 20 (e.g., the sections of Josephus's Life), when each of those is an entry. A key's own text goes with the next entry.
+    unless it has more than 20 (e.g., the sections of Josephus's Life) or they're long, when each of those is an entry.
+    A key's own text goes with the next entry, as does an entry that has nothing but headings.
+    A long entry that has headings (e.g., each question of a catechism) is split at them. The notes that CCEL's modernizing left, and links for a printed edition's pages, aren't kept.
+    When the book has only one key at the top, its name isn't in the titles, and a key named for the module (e.g., Owen's `JOChrist`) is named for the book.
+    The `sword` settings can name keys (`names`, e.g., `WSC` → ‘The Westminster Shorter Catechism’, or ‘’ to leave a key's name out of the titles), and leave keys out (`skip`, with any `*` in a key matching anything, e.g., ‘Index of *’).
     """
-    parser = SwordParser( edition, chapters )
-    parser.show_titles = True
+    settings = edition.get( 'sword', {} )
+    names, skip, moduleName = settings.get( 'names', {} ), settings.get( 'skip', [] ), Path( sourceName ).stem.lower()
+    def skipped( name:str ) -> bool: return any( fnmatch.fnmatchcase( name, pattern ) for pattern in skip )
+    def label( name:str ) -> str: return names[name] if name in names else edition['name'] if name.lower() == moduleName else key_name( name )
+    def size( node:tuple ) -> int: return len( node[1] ) + sum( size( child ) for child in node[2] )
     entries, pending = [], ''
     def visit( node:tuple, path:list ) -> None:
         nonlocal pending
         name, text, children = node
-        title = ', '.join( path + [name] )
-        if not children or (len(children) <= 20 and all( not child[2] for child in children )):
-            entries.append( (title, pending + text + ''.join( child[1] for child in children )) ); pending = ''
+        children = [ child for child in children if not skipped( child[0] ) ]
+        path = path + [label( name )] if label( name ) else path
+        if not children or (len(children) <= 20 and all( not child[2] for child in children ) and size( (name, text, children) ) <= GENBOOK_LIMIT):
+            entries.append( (', '.join( path ) or edition['name'], pending + text + ''.join( child[1] for child in children )) ); pending = ''
         else:
             pending += text
-            for child in children: visit( child, path + [name] )
-    for work in tree[2]: visit( work, [] )
-    for number, (title, text) in enumerate( entries, start=1 ):
+            for child in children: visit( child, path )
+    works = [ work for work in tree[2] if not skipped( work[0] ) ]
+    if len(works) == 1 and works[0][2]: pending, works = works[0][1], [ work for work in works[0][2] if not skipped( work[0] ) ]
+    for work in works: visit( work, [] )
+    roots = []
+    for title, text in entries:
+        root = lift_notes( as_xml( PAGE_MARKER_RE.sub( '', AUTO_MODERNIZED_RE.sub( '', text ) ) ) )
+        pieces = [(None, [])]
+        if len(text) > GENBOOK_LIMIT:
+            for child in root:
+                if (heading := heading_text( child )): pieces.append( (heading, []) )
+                pieces[-1][1].append( child )
+        if sum( 1 for heading, _elements in pieces if heading ) < 2: roots.append( (title, root) ); continue
+        for heading, elements in pieces:
+            if not elements: continue
+            piece = ET.Element( 'entry' ); piece.extend( elements )
+            if heading is None: piece.text = root.text
+            roots.append( (f'{title}, {heading}' if heading else title, piece) )
+    merged, carried = [], []
+    for title, root in roots:
+        if not has_text( root ): carried.append( root ); continue
+        inserted = [ child for earlier in carried for child in earlier ]
+        if inserted:
+            for position, child in enumerate( inserted ): root.insert( position, child )
+            inserted[-1].tail, root.text = (inserted[-1].tail or '') + (root.text or ''), None
+        merged.append( (title, root) ); carried = []
+    for earlier in carried: merged[-1][1].extend( list( earlier ) )
+    parser = SwordParser( edition, chapters )
+    parser.show_titles = True
+    for number, (title, root) in enumerate( merged, start=1 ):
         parser.context = Context( chapters )
-        parser.add_entry( str(number), 'Chapter', title, lift_notes( as_xml( text ) ), [] )
+        parser.add_entry( str(number), 'Chapter', title, root, [] )
     return { 'Chapter': (parser.finish(), [sourceName]) }

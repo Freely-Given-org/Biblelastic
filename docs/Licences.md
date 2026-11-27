@@ -146,6 +146,37 @@ Left out: Robertson's *Word Pictures* (CrossWire's module says ‘Copyrighted; F
 (1915, but by many contributors, some of whom may have died after 1956, which would need checking one by one), and, for now, the largest commentaries (Calvin's, Matthew Henry's complete commentary, and Keil and Delitzsch's,
 whose translators would need checking). Manzoni's *The Betrothed* is only on Standard Ebooks' list of wanted books.
 
+## General books from CrossWire, and a fifth batch of books (added 28 November 2026)
+
+None is in the English starter set. Each was checked at its source on 28 November 2026. Each was first published (or translated) before 1931,
+by an author (and translator) who died before 1956, except where it says otherwise below. The CrossWire modules' settings files (`mods.d/*.conf`) are in the zip files in `build/downloads/crosswire/`.
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| `Holiness` *Holiness* (J. C. Ryle, died 1900; 1877, enlarged 1879) | Public domain | `mods.d/jcrholiness.conf` in `JCRHoliness.zip` | `DistributionLicense=Public Domain`; `TextSource=CCEL` |
+| `EdwardsSermons` *Select Sermons* (Jonathan Edwards, died 1758) | Public domain | `mods.d/jesermons.conf` in `JESermons.zip` | `DistributionLicense=Public Domain`; `TextSource=CCEL` |
+| `Christologia` *Christologia* (John Owen, died 1683; 1679), with William H. Goold's prefatory note (died 1897; 1850–1853) | Public domain | `mods.d/jochrist.conf` in `JOChrist.zip` | `DistributionLicense=Public Domain`; `TextSource=CCEL`; ‘Archaic words in the text have been automatically modernized’ |
+| `CommunionWithGod` *Of Communion with God* (John Owen; 1657), with Goold's notes | Public domain | `mods.d/jocommgod.conf` in `JOCommGod.zip` | As above |
+| `GloryOfChrist` *Meditations and Discourses on the Glory of Christ* (John Owen; 1684), with Goold's note | Public domain | `mods.d/joglory.conf` in `JOGlory.zip` | As above |
+| `GospelThemes` *Sermons on Gospel Themes* (Charles G. Finney, died 1875; 1876) | Public domain | `mods.d/finney.conf` in `Finney.zip` | `DistributionLicense=Public Domain`; `TextSource=CCEL` |
+| `LawAndGospel` *The Proper Distinction Between Law and Gospel* (C. F. W. Walther, died 1887; translated by W. H. T. Dau, died 1944, in 1929) | Public domain | `mods.d/lawgospel.conf` in `LawGospel.zip` | `DistributionLicense=Public Domain`; ‘As the 1929 edition was not copyrighted, it is in the public domain’ |
+| `Westminster` The Westminster Confession of Faith (1646) and Shorter and Larger Catechisms (1647), with their proofs (the KJV) | Public domain | `mods.d/westminster.conf` in `Westminster.zip` | `DistributionLicense=Public Domain`; from reformed.org (the Center for Reformed Theology and Apologetics) in 2011 |
+| `PracticeOfThePresence` *The Practice of the Presence of God* (Brother Lawrence, died 1691; c. 1692; the translator isn't named) | Public domain | `mods.d/practice.conf` in `Practice.zip` | `DistributionLicense=Public Domain`; John Harris's electronic edition (1994), which he calls ‘this Public Domain edition’ |
+| `Enoch` *The Book of Enoch* (translated by R. H. Charles, died 1931; 1913) | Public domain | `mods.d/enoch.conf` in `Enoch.zip` | `DistributionLicense=Public Domain`; from *The Apocrypha and Pseudepigrapha of the Old Testament* (1913), https://archive.org/details/apocryphapseudep02charuoft |
+| `Jubilees` *The Book of Jubilees* (translated, with an introduction, by R. H. Charles; 1913) | Public domain | `mods.d/jubilees.conf` in `Jubilees.zip` | `DistributionLicense=Public Domain`; from the same (1913) |
+| `VanDykePoetry` *Poetry* (Henry van Dyke, died 1933; 1897–1927) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/henry-van-dyke-jr/poetry) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+
+Things that were weighed when they were checked: *The Practice of the Presence of God*'s translator isn't named; the text is from an Epworth Press printing (‘Authentic Edition’) that its transcriber dates
+to between 1932 and 1948, though its title (‘The Best Rule of a Holy Life’) is the older translation's, so its unsigned preface is left out; Owen's works are CCEL's automatically modernized texts
+(the modernizing isn't creative work, but it isn't Owen's wording either); Walther's and *Holiness*'s modules each had something modern in them, which is left out
+(Walther's has twenty sermons whose translations are later: eight are Donald E. Heck's, of 1960, and twelve E. Myers's, for Hope Press, undated, and *Holiness* a foreword that seems to be D. Martyn Lloyd-Jones's, who died in 1981); and Enoch's text was edited by Marjan Šavli
+and Barbara Hojkar Šavli in 2023, which, from what it says, was correcting the scan rather than adding to it.
+
+Left out: Calvin's *Institutes* (CCEL's text, which CrossWire's module is, has John Murray's introduction of 1949, and Robert J. Dunzweiler's modern footnotes mixed into the text without markup),
+*The Dark Night of the Soul* (CrossWire's text is E. Allison Peers's third revised edition, of 1959), and Spurgeon's *Treasury of David* (which needs more work: CrossWire's module keeps each
+psalm's whole commentary at its first verse). *The Mortification of Sin*, *Religious Affections*, *The Pilgrim's Progress*, and the Baptist Confession of 1689 were left out because they're already here,
+from books.freely.giving.
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

@@ -711,6 +711,227 @@ redistributable = true
 licence_verified = true
 starter = false
 
+# General books from CrossWire (added 28 November 2026)
+[[edition]]
+id = "PracticeOfThePresence"
+kind = "book"
+name = "The Practice of the Presence of God"
+author = "Brother Lawrence (Nicholas Herman)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { skip = ["Preface", "Appendix to electronic edition"] }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Practice"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Practice.zip"
+files = ["Biblelastic/build/downloads/crosswire/Practice.zip"]
+copyright = "Brother Lawrence (Nicholas Herman), The Practice of the Presence of God: The Best Rule of a Holy Life (c. 1692), in an English translation reprinted by the Epworth Press (between 1932 and 1948): public domain. The text is CrossWire's SWORD module (version 1.0, from John Harris's electronic edition of 1994, by way of the Christian Classics Ethereal Library)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with the conversations and the letters as entries, and without the printing's unsigned preface or the electronic edition's appendix."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Holiness"
+kind = "book"
+name = "Holiness"
+author = "J. C. Ryle"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { skip = ["Foreword"] }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=JCRHoliness"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/JCRHoliness.zip"
+files = ["Biblelastic/build/downloads/crosswire/JCRHoliness.zip"]
+copyright = "J. C. Ryle, Holiness: Its Nature, Hindrances, Difficulties, and Roots (1877, enlarged 1879): public domain. The text is CrossWire's SWORD module (version 1.0, from the Christian Classics Ethereal Library's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter, and without the foreword of a modern reprint."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "EdwardsSermons"
+kind = "book"
+name = "Select Sermons of Jonathan Edwards"
+author = "Jonathan Edwards"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = {}
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=JESermons"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/JESermons.zip"
+files = ["Biblelastic/build/downloads/crosswire/JESermons.zip"]
+copyright = "Jonathan Edwards (died 1758), sermons: public domain. The text is CrossWire's SWORD module (version 1.0.1, from the Christian Classics Ethereal Library's selection)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each sermon."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Christologia"
+kind = "book"
+name = "Christologia"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { skip = ["Index of *"] }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=JOChrist"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/JOChrist.zip"
+files = ["Biblelastic/build/downloads/crosswire/JOChrist.zip"]
+copyright = "John Owen, Christologia: or, A Declaration of the Glorious Mystery of the Person of Christ (1679), with William H. Goold's prefatory note (1850–1853): public domain. The text is CrossWire's SWORD module (version 0.5, from the Christian Classics Ethereal Library's text, whose archaic words were modernized automatically)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter, without the notes that marked each modernized word, or the indexes."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "CommunionWithGod"
+kind = "book"
+name = "Communion with God"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { skip = ["Index of *"] }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=JOCommGod"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/JOCommGod.zip"
+files = ["Biblelastic/build/downloads/crosswire/JOCommGod.zip"]
+copyright = "John Owen, Of Communion with God the Father, Son, and Holy Ghost (1657), with William H. Goold's prefatory notes (1850–1853): public domain. The text is CrossWire's SWORD module (version 0.1, from the Christian Classics Ethereal Library's text, whose archaic words were modernized automatically)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter, without the notes that marked each modernized word, or the indexes."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "GloryOfChrist"
+kind = "book"
+name = "The Glory of Christ"
+author = "John Owen"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { skip = ["Index of *"] }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=JOGlory"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/JOGlory.zip"
+files = ["Biblelastic/build/downloads/crosswire/JOGlory.zip"]
+copyright = "John Owen, Meditations and Discourses on the Glory of Christ (1684), with William H. Goold's prefatory note (1850–1853): public domain. The text is CrossWire's SWORD module (version 0.5, from the Christian Classics Ethereal Library's text, whose archaic words were modernized automatically)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter, without the notes that marked each modernized word, or the indexes."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "GospelThemes"
+kind = "book"
+name = "Sermons on Gospel Themes"
+author = "Charles G. Finney"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = {}
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Finney"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Finney.zip"
+files = ["Biblelastic/build/downloads/crosswire/Finney.zip"]
+copyright = "Charles G. Finney, Sermons on Gospel Themes (1876): public domain. The text is CrossWire's SWORD module (version 1.1, from the Christian Classics Ethereal Library's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each sermon."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "LawAndGospel"
+kind = "book"
+name = "The Proper Distinction Between Law and Gospel"
+author = "C. F. W. Walther (translated by W. H. T. Dau)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { skip = ["Sermons", "Sermons_Part_2"] }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=LawGospel"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/LawGospel.zip"
+files = ["Biblelastic/build/downloads/crosswire/LawGospel.zip"]
+copyright = "C. F. W. Walther, The Proper Distinction Between Law and Gospel (1897), translated by W. H. T. Dau (Concordia Publishing House, 1929): public domain. The text is CrossWire's SWORD module (version 2.1.1, from lutherantheology.com's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each lecture, and without the module's extra sermons (whose translations are later)."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Westminster"
+kind = "book"
+name = "The Westminster Confession and Catechisms"
+author = "The Westminster Assembly"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { names = { WCF = "The Westminster Confession of Faith", WSC = "The Westminster Shorter Catechism", WLC = "The Westminster Larger Catechism", "Q1-50" = "", "Q51-90" = "", "Q91-150" = "", "Q150-196" = "" } }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Westminster"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Westminster.zip"
+files = ["Biblelastic/build/downloads/crosswire/Westminster.zip"]
+copyright = "The Westminster Assembly, the Westminster Confession of Faith (1646) and the Shorter and Larger Catechisms (1647), with the Bible passages that prove them: public domain. The text is CrossWire's SWORD module (version 1.0.1, from the Center for Reformed Theology and Apologetics' text at reformed.org)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter of the Confession and each question of the Catechisms, and the proofs after the paragraphs they're in."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Enoch"
+kind = "book"
+name = "The Book of Enoch"
+author = "Translated by R. H. Charles"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = {}
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Enoch"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Enoch.zip"
+files = ["Biblelastic/build/downloads/crosswire/Enoch.zip"]
+copyright = "1 Enoch, translated by R. H. Charles, from The Apocrypha and Pseudepigrapha of the Old Testament in English (Oxford: Clarendon Press, 1913): public domain. The text is CrossWire's SWORD module (version 2.0, from Joshua Williams's text of 1995, edited by Marjan Šavli and Barbara Hojkar Šavli in 2023)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter (or, in the longer sections, each section), and the notes after the paragraphs they're in."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Jubilees"
+kind = "book"
+name = "The Book of Jubilees"
+author = "Translated by R. H. Charles"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = {}
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Jubilees"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Jubilees.zip"
+files = ["Biblelastic/build/downloads/crosswire/Jubilees.zip"]
+copyright = "The Book of Jubilees, translated by R. H. Charles, with his introduction, from The Apocrypha and Pseudepigrapha of the Old Testament in English (Oxford: Clarendon Press, 1913): public domain. The text is CrossWire's SWORD module (version 1.0, from Joshua Williams's text of about 1995)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter."
+redistributable = true
+licence_verified = true
+starter = false
+
 # Public-domain books, from Standard Ebooks (which dedicates its own work on them to the public domain, with CC0)
 [[edition]]
 id = "UnspokenSermons"
@@ -1358,6 +1579,25 @@ source = "https://standardebooks.org/ebooks/george-macdonald/short-fiction"
 download = "https://standardebooks.org/ebooks/george-macdonald/short-fiction/downloads/george-macdonald_short-fiction.epub?source=download"
 files = ["Biblelastic/build/downloads/standardebooks/george-macdonald_short-fiction.epub"]
 copyright = "George MacDonald, short fiction (1858–1891): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+# A fifth batch of public-domain books from Standard Ebooks (added 28 November 2026)
+[[edition]]
+id = "VanDykePoetry"
+kind = "book"
+name = "Henry van Dyke’s Poetry"
+author = "Henry van Dyke"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/henry-van-dyke-jr/poetry"
+download = "https://standardebooks.org/ebooks/henry-van-dyke-jr/poetry/downloads/henry-van-dyke-jr_poetry.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/henry-van-dyke-jr_poetry.epub"]
+copyright = "Henry van Dyke, poems (1897–1927): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
 licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
 redistributable = true
 licence_verified = true

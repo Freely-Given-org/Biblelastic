@@ -218,7 +218,7 @@ So far there are two, both from [Tyndale Open Resources](https://tyndaleopenreso
 | `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.12 million | 17,478 `about` and 55,554 `cites` |
 | `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.53 million | 47,393 `cites` |
 
-Sixteen more are public-domain works from CrossWire's [SWORD](https://crosswire.org/sword) library, read from each module's zip file by `pipeline/biblelastic_ingest/sword.py`
+Twenty-seven more are public-domain works from CrossWire's [SWORD](https://crosswire.org/sword) library, read from each module's zip file by `pipeline/biblelastic_ingest/sword.py`
 (the registry's `format = "SWORD"`): a dictionary module (zLD or RawLD) becomes one document, with an entry for each key, a general book (RawGenBook) a `Chapter` document like an EPUB book's,
 and a commentary module (zCom or zCom4, of the whole Bible or the New Testament, in blocks of a book or a chapter) a document for each book, with an entry for each note (named like `1:1`, or `3:1-8` for a note on several verses, which SWORD links to each of them, and `about` those verses).
 A note's type is the registry's `sword.notes` (`CrossReferences` by default). Their references are to the KJV's chapters and verses, which are taken from
@@ -240,6 +240,15 @@ keeps them as parts that start with ‘*Morning*:’ and ‘*Evening*:’, under
 *Daily Light*'s lines are wrapped with line breaks, so a single one is a space (`sword.wrapped`), and two start a paragraph. Josephus's works are a tree of keys (each work, its books, their chapters,
 and their sections): an entry is a key whose keys under it have none under them (a chapter, with its sections), unless there are more than 20 (the *Life*'s and *Against Apion*'s sections),
 when each is an entry; a key's own text (e.g., a book's title and summary) goes with the next entry, and Whiston's notes follow the paragraphs they're in, as `note` paragraphs.
+The other general books follow the same rule, with a few more. Keys under a key that together are longer than 100,000 characters of markup are entries of their own
+(e.g., the 19 sermons that are all under one key in Edwards's), and a long entry with headings is split at them (e.g., the Westminster catechisms, whose questions are each a heading in one long key).
+An entry with nothing but headings goes with the next. A book that has only one key at the top doesn't have it in its titles, and a key named for the module (e.g., Owen's `JOGlory`) is named for the book.
+Keys' names are tidied: `Lecture_01_Thesis_I` is ‘Lecture 1 Thesis I’, `Section 2_1` ‘Section 2.1’, and a name in capitals (e.g., `II. THE WAGES OF SIN.`) ‘II. The Wages of Sin’.
+The registry's `sword.names` names keys (or, with ‘’, leaves a key out of the titles, e.g., the Westminster Larger Catechism's `Q1-50`), and `sword.skip` leaves keys out
+(e.g., an index, or a modern reprint's foreword: a `*` matches anything). CCEL modernized the archaic words in Owen's works, with a note after each (‘you<note n="thou">Auto-modernized</note>’),
+which isn't kept; nor are the links for a printed edition's pages in Walther's (‘<small><sup><a href="#29">29</a></sup></small>’). A paragraph in a note (e.g., each proof in the Westminster Confession's)
+is a `note` paragraph. A reference that starts with a book's code (the Westminster Confession's ‘ROM 2:14’) is what its `osisRef` says, as is a ThML reference whose `passage` is an OSIS reference
+(Walther's ‘<scripRef passage="Matt.15.13">Matt. 15, 13</scripRef>’, where ‘15, 13’ would otherwise be two chapters); and CCEL's ‘Revelation of John 22:16’ is Revelation's.
 
 | Edition | Kind | Documents | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- | --- |
@@ -259,6 +268,17 @@ when each is an entry; a key's own text (e.g., a book's title and summary) goes 
 | `MorningAndEvening` Spurgeon's *Morning and Evening* | `book` | `Readings`: two for each day | 732 | 0.26 million | 779 `cites` |
 | `DailyLight` *Daily Light on the Daily Path* | `book` | `Readings`: two for each day | 732 | 0.15 million | 7,001 `cites` |
 | `Josephus` *The Works of Josephus* (William Whiston's translation) | `book` | `Chapter`: the *Life*'s and *Against Apion*'s sections, and the *Antiquities*' and *War*'s chapters | 657 | 0.84 million | none |
+| `Holiness` *Holiness* (J. C. Ryle, 1879) | `book` | `Chapter`: Ryle's introduction, and each of the 21 papers | 22 | 0.17 million | 803 `cites` |
+| `EdwardsSermons` *Select Sermons of Jonathan Edwards* | `book` | `Chapter`: each sermon | 19 | 0.19 million | 629 `cites` |
+| `Christologia` *Christologia* (John Owen, 1679) | `book` | `Chapter`: the preface, and each chapter | 23 | 0.14 million | 711 `cites` |
+| `CommunionWithGod` *Communion with God* (John Owen, 1657) | `book` | `Chapter`: each chapter and digression, and the *Vindication* | 32 | 0.19 million | 2,028 `cites` |
+| `GloryOfChrist` *The Glory of Christ* (John Owen, 1684) | `book` | `Chapter`: each chapter, and the application to unconverted sinners | 21 | 0.10 million | 528 `cites` |
+| `GospelThemes` *Sermons on Gospel Themes* (Charles G. Finney, 1876) | `book` | `Chapter`: each sermon | 26 | 0.14 million | none |
+| `LawAndGospel` *The Proper Distinction Between Law and Gospel* (C. F. W. Walther, translated by W. H. T. Dau, 1929) | `book` | `Chapter`: each of the 39 lectures, and the preface and theses | 42 | 0.20 million | 520 `cites` |
+| `Westminster` The Westminster Confession of Faith and Catechisms (1646–1647) | `book` | `Chapter`: each of the Confession's 33 chapters, and each question of the Shorter and Larger Catechisms, with their proofs as notes | 338 | 0.24 million | 5,736 `cites` |
+| `PracticeOfThePresence` *The Practice of the Presence of God* (Brother Lawrence) | `book` | `Chapter`: the conversations, and the letters | 3 | 0.01 million | none |
+| `Enoch` *The Book of Enoch* (R. H. Charles's translation, 1913) | `book` | `Chapter`: each chapter (or, in sections IV and V, the whole section), with Charles's notes and the cross-references | 75 | 0.06 million | 717 `cites` |
+| `Jubilees` *The Book of Jubilees* (R. H. Charles's translation, 1913) | `book` | `Chapter`: Charles's introduction, and each chapter | 51 | 0.06 million | none |
 
 Their references are read from the text that's shown, not from the modules' own `osisRef` attributes, because Easton's module gives every reference that's only numbers
 (e.g., the ‘11’ and ‘21:6’ in ‘Rev. 1:8, 11; 21:6’) to Genesis. Such a reference is in the book of the reference before it: after a comma it's verses (unless it has a chapter),
@@ -307,7 +327,7 @@ Sixty-two are from [books.freely.giving](https://books.freely.giving), and all C
 The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
 so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
 
-Thirty-six more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
+Thirty-seven more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
@@ -347,6 +367,7 @@ Thirty-six more are public-domain classics from [Standard Ebooks](https://standa
 | `CrimeAndPunishment` *Crime and Punishment* (Fyodor Dostoevsky (translated by Constance Garnett), 1866) | `book` | 46 | 205,000 | none |
 | `Resurrection` *Resurrection* (Leo Tolstoy (translated by Louise Maude), 1899) | `book` | 135 | 175,000 | 11 `cites` |
 | `MacDonaldShortFiction` *Short Fiction* (George MacDonald, 1858–1891: its numbered chapters are titled with their story's name, e.g., ‘A Double Story, III’) | `book` | 92 | 224,000 | 1 `cites` |
+| `VanDykePoetry` *Poetry* (Henry van Dyke, 1897–1927) | `book` | 231 | 69,000 | 7 `cites` |
 
 The other fifty-seven are every English or Spanish book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
 (which `sources.toml` includes), written by

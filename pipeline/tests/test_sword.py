@@ -128,6 +128,49 @@ class DictionaryTests( unittest.TestCase ):
         self.assertEqual( texts, [ ('p', 'BOOK I'), ('p', 'CHAPTER 1.'), ('p', '1. In the beginning God.'), ('note', 'A note.') ] )
         self.assertEqual( parsed.text_differences, [] )
 
+    def paragraphs( self, parsed, entry:int ) -> list:
+        """ An entry's paragraphs, as (kind, text) """
+        tokens, (start, end) = parsed.doc.tokens, parsed.entries[entry][:2]
+        return [ (name, ''.join( before+text+after for before,text,after,_features in tokens[paraStart:paraEnd] ).strip())
+                 for name, _kind, paraStart, paraEnd, _text in parsed.doc.paragraphs if paraEnd > paraStart and start <= paraStart < end ]
+
+    def test_general_book_keys( self ):
+        """ A book whose one key at the top isn't in the titles, a key named for the module, keys' names tidied, renamed, or left out,
+            a heading-only entry that goes with the next, and CCEL's notes on modernized words and links for printed pages left out """
+        tree = ('', '', [ ('Owen', '', [ ('JOGlory', '<title>The Glory of Christ</title>', []),
+                                         ('Prefatory_note', '<p>It was <small><sup><a href="#29">29</a></sup></small><a name="29"/>written to<note n="unto">Auto-modernized</note> the church.</p>', []),
+                                         ('PART 1. - OF THE GLORY OF CHRIST', '', [ ('Section 1_2', '<p>One.</p>', []), ('Section 1_3', '<p>Two.</p>', []) ]),
+                                         ('II. THE WAGES OF SIN.', '<p>Text.</p>', []), ('Index of Texts', '<p>1, 2</p>', []), ('Old', '<p>Gone.</p>', []) ]) ])
+        edition = { 'id':'GloryOfChrist', 'name':'The Glory of Christ', 'sword':{ 'skip':['Index of *'], 'names':{ 'Old':'' } } }
+        parsed = sword.parse_genbook( edition, tree, CHAPTERS, 'JOGlory.zip' )['Chapter'][0]
+        self.assertEqual( [ entry[4] for entry in parsed.entries ], ['Prefatory note', 'Part 1: Of the Glory of Christ', 'II. The Wages of Sin', 'The Glory of Christ'] )
+        self.assertEqual( self.paragraphs( parsed, 0 ), [ ('h2', 'The Glory of Christ'), ('p', 'It was written to the church.') ] )
+        self.assertEqual( parsed.text_differences, [] )
+
+    def test_long_general_book_entries( self ):
+        """ Keys whose keys under them are long are entries of their own, and a long entry with headings is split at them;
+            each proof in a note is a note's paragraph, a reference that starts with a book's code is what its osisRef says, and so is Walther's ‘Matt. 15, 13’ """
+        answer = 'A. ' + 'Words. ' * 2000
+        proof = '<note><p><reference osisRef="Rev.1.8">REV 1:8</reference> I am Alpha.</p><p><reference osisRef="Rev.2.1">Revelation of John 2:1</reference> Unto the angel.</p></note>'
+        catechism = ''.join( f'<p><title>Q. {n}. Why?</title>\n{answer}{proof}</p>' for n in range( 1, 9 ) )
+        chapters = [ (f'Chapter {n}', '<p>' + 'Text. ' * 6000 + '<scripRef passage="Gen.2.3">Gen. 2, 3</scripRef></p>', []) for n in range( 1, 4 ) ]
+        tree = ('', '', [ ('WSC', '<title>THE CATECHISM</title>' + catechism, []), ('Book 1', '', chapters) ])
+        edition = { 'id':'Westminster', 'name':'Westminster', 'sword':{ 'names':{ 'WSC':'The Shorter Catechism' } } }
+        parsed = sword.parse_genbook( edition, tree, CHAPTERS, 'Westminster.zip' )['Chapter'][0]
+        self.assertEqual( [ entry[4] for entry in parsed.entries ], [ f'The Shorter Catechism, Q. {n}. Why?' for n in range( 1, 9 ) ] + [ f'Book 1, Chapter {n}' for n in range( 1, 4 ) ] )
+        self.assertEqual( [ kind for kind, _text in self.paragraphs( parsed, 0 ) ], ['h2', 'h2', 'p', 'note', 'note'] )
+        tokens = parsed.doc.tokens
+        cites = [ (''.join( before+text+after for before,text,after,_features in tokens[start:end] ).strip(), passage) for start, end, kind, passage in parsed.anchors[:3] ]
+        self.assertEqual( cites, [ ('REV 1:8', 'REV 1:8'), ('John 2:1', 'REV 2:1'), ('REV 1:8', 'REV 1:8') ] )
+        self.assertEqual( parsed.anchors[-1][3], 'GEN 2:3' )
+        self.assertEqual( parsed.text_differences, [] )
+
+    def test_key_names( self ):
+        self.assertEqual( sword.key_name( 'BOOK FIRST. - OF THE KNOWLEDGE OF GOD THE CREATOR' ), 'Book First: Of the Knowledge of God the Creator' )
+        self.assertEqual( sword.key_name( 'XXIV. THE ESSENTIAL ELEMENTS OF CIVIL EXPERIENCE.' ), 'XXIV. The Essential Elements of Civil Experience' )
+        self.assertEqual( sword.key_name( 'Lecture_01_Thesis_I' ), 'Lecture 1 Thesis I' )
+        self.assertEqual( sword.key_name( 'Part 1 Concerning The   Nature' ), 'Part 1 Concerning The Nature' )
+
     def test_balanced( self ):
         """ Scofield's list that starts in one verse's note and ends in the next's """
         self.assertEqual( sword.balanced( 'Seven things:<list> <item>(1) he worships' ), 'Seven things:<list> <item>(1) he worships</item></list>' )
