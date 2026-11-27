@@ -101,6 +101,38 @@ class DictionaryTests( unittest.TestCase ):
         self.assertEqual( [ link[3] for link in articles.links ], ['Articles Month'] )
         self.assertEqual( [ anchor[3] for anchor in articles.anchors ], ['CH1 12:27'] ) # (From its passage attribute, ‘1ch 12:27’)
 
+    def test_devotionals( self ):
+        """ Spurgeon's Morning and Evening: each section's an entry. Daily Light: its Morning and Evening are, titled with the date, and its wrapped lines are joined. """
+        spurgeon = '<div type="entry"><div type="section"><title>Morning, January 1</title><p>One.</p></div><div type="section"><title>Evening, January 1</title><p>Two.</p></div></div>'
+        daily = '<i>Morning</i>:<br />\n<br />\n  The LORD is my<br />\n   shepherd.<br />\n<br />\nI shall not want.<br />\n<br />\n<i>Evening</i>:<br />\n<br />\nHe leadeth me.\n'
+        parsed, _names = sword.parse_dictionary( { 'id':'SME', 'sword':{ 'document':'Readings', 'entries':'Reading' } }, [('01.01', spurgeon)], CHAPTERS, 'SME.zip' )
+        self.assertEqual( [ (entry[2], entry[3], entry[4]) for entry in parsed.entries ], [ ('MorningJanuary1', 'Reading', 'Morning, January 1'), ('EveningJanuary1', 'Reading', 'Evening, January 1') ] )
+        settings = { 'document':'Readings', 'dates':True, 'wrapped':True, 'parts':['Morning', 'Evening'] }
+        parsed, _names = sword.parse_dictionary( { 'id':'Daily', 'sword':settings }, [('01.31', daily)], CHAPTERS, 'Daily.zip' )
+        self.assertEqual( [ entry[4] for entry in parsed.entries ], ['Morning, January 31', 'Evening, January 31'] )
+        tokens = parsed.doc.tokens
+        texts = [ ''.join( before+text+after for before,text,after,_features in tokens[start:end] ).strip() for _name, _kind, start, end, _text in parsed.doc.paragraphs if end > start ]
+        self.assertEqual( texts, ['Morning, January 31', 'The LORD is my shepherd.', 'I shall not want.', 'Evening, January 31', 'He leadeth me.'] )
+        self.assertEqual( parsed.text_differences, [] )
+
+    def test_general_book( self ):
+        """ A RawGenBook module (Josephus's): an entry for each key whose keys under it have none under them, and notes after their paragraphs """
+        tree = ('', '', [ ('The Life', '<p>The Life</p>', [ (f'Section {n}', f'<p>{n}. Text.</p>', []) for n in range( 1, 23 ) ]),
+                          ('Antiquities', '', [ ('Book 1', '<p>BOOK I</p>', [ ('Chapter 1', '<p>CHAPTER 1.</p>', [ ('Section 1', '<p>1. In the beginning<note>A note.</note> God.</p>', []) ]) ]) ]) ])
+        parsed = sword.parse_genbook( { 'id':'Josephus', 'sword':{} }, tree, CHAPTERS, 'Josephus.zip' )['Chapter'][0]
+        self.assertEqual( len(parsed.entries), 23 ) # (The Life's 22 sections are more than 20, so each is an entry)
+        self.assertEqual( [ entry[4] for entry in parsed.entries[:1] + parsed.entries[-1:] ], ['The Life, Section 1', 'Antiquities, Book 1, Chapter 1'] )
+        tokens = parsed.doc.tokens
+        start, end = parsed.entries[-1][:2]
+        texts = [ (name, ''.join( before+text+after for before,text,after,_features in tokens[paraStart:paraEnd] ).strip()) for name, _kind, paraStart, paraEnd, _text in parsed.doc.paragraphs if paraEnd > paraStart and paraStart >= start ]
+        self.assertEqual( texts, [ ('p', 'BOOK I'), ('p', 'CHAPTER 1.'), ('p', '1. In the beginning God.'), ('note', 'A note.') ] )
+        self.assertEqual( parsed.text_differences, [] )
+
+    def test_balanced( self ):
+        """ Scofield's list that starts in one verse's note and ends in the next's """
+        self.assertEqual( sword.balanced( 'Seven things:<list> <item>(1) he worships' ), 'Seven things:<list> <item>(1) he worships</item></list>' )
+        self.assertEqual( sword.balanced( '<hi type="bold">Abel</hi></item> </list> Abel' ), '<hi type="bold">Abel</hi>  Abel' )
+
 
 class CommentaryTests( unittest.TestCase ):
     def test_parse( self ):
@@ -153,6 +185,25 @@ class CommentaryTests( unittest.TestCase ):
         self.assertEqual( [ (entry[2], entry[3]) for entry in john.entries ], [ ('1:1', 'Commentary') ] ) # (A section's title stays with its note)
         self.assertEqual( [ paragraph[0] for paragraph in john.doc.paragraphs if paragraph[3] > paragraph[2] ], ['h2', 'p'] )
 
+    def test_thml_and_clarke( self ):
+        """ A ThML module's chapter slot that repeats another note is left out; Barnes's book introductions are about the book too;
+            Adam Clarke's preface (at the book's first note) and each chapter's ‘Introduction’ are entries of their own """
+        note = 'Verse 44. And the rest.'
+        entries = [ ('ACT', 27, 44, 44, note), ('ROM', 1, 0, 0, note), ('ROM', 1, 1, 1, '  ROMANS Chapter One <br /><br /> PREFACE <br /><br /> THE Epistle ... Paul, a servant.'),
+                    ('ROM', 1, 3, 3, 'Verse 3. Concerning his Son.') ]
+        documents = sword.parse_commentary( { 'id':'Barnes', 'sword':{ 'notes':'Commentary' } }, entries, { 'ACT':[60]*28, 'ROM':[32, 29] }, 'Barnes.zip' )
+        romans = documents['ROM'][0]
+        self.assertEqual( [ (entry[2], entry[3]) for entry in romans.entries ], [ ('1:1', 'BookIntro'), ('1:3', 'Commentary') ] )
+        self.assertEqual( [ anchor[3] for anchor in romans.anchors if anchor[2] == 'about' ][:2], ['ROM 1-2', 'ROM 1:1'] )
+        verse = lambda n: f'<div sID="g{n}" type="x-p"/> <hi type="bold">Verse {n}</hi> <div eID="g{n}" type="x-p"/> A note on verse {n}.'
+        entries = [ ('GEN', 1, 0, 0, '<chapter n="1" osisID="Gen.1" sID="Gen.1"/> '),
+                    ('GEN', 1, 1, 1, '<title type="x-s">Preface to the Book of Genesis</title> Moses wrote it. The creation, <reference osisRef="Gen.1.1">Gen 1:1</reference>.' + verse( 1 ) ),
+                    ('GEN', 1, 2, 2, verse( 2 )),
+                    ('GEN', 2, 1, 1, '<title type="x-s">Introduction</title> The sabbath, <reference osisRef="Gen.2.1-Gen.2.3">Gen 2:1-3</reference>.' + verse( 1 )) ]
+        genesis = sword.parse_commentary( { 'id':'Clarke', 'sword':{ 'notes':'Commentary' } }, entries, { 'GEN':[2, 3] }, 'Clarke.zip', osis=True )['GEN'][0]
+        self.assertEqual( [ (entry[2], entry[3]) for entry in genesis.entries ], [ ('Intro', 'BookIntro'), ('1:1', 'Commentary'), ('1:2', 'Commentary'), ('2', 'Outline'), ('2:1', 'Commentary') ] )
+        self.assertEqual( genesis.text_differences, [] )
+
 
 class TitlePageTests( unittest.TestCase ):
     def test_entries( self ):
@@ -175,6 +226,15 @@ class TitlePageTests( unittest.TestCase ):
         contents = [ (1, 'Lilith', 0), (2, 'Book I', 2), (3, 'I', 4), (3, 'II', 6), (2, 'Book II', 8), (3, 'I', 10) ]
         starts, _headings = epub.entry_items( contents, blocks )
         self.assertEqual( starts, { 0:'Book I, I', 6:'Book I, II', 8:'Book II, I' } )
+
+    def test_collection( self ):
+        """ In a collection of stories (several items at the top level have items under them), a chapter labelled only with a number gets its story's title """
+        class Block:
+            def __init__( self, text:str ) -> None: self.text = text
+        blocks = [ Block( 'A Double Story' ), Block( 'I' ), Block( 'Text.' ), Block( 'II' ), Block( 'Text.' ), Block( 'Cross Purposes' ), Block( 'I' ), Block( 'Text.' ) ]
+        contents = [ (1, 'A Double Story', 0), (2, 'I', 1), (2, 'II', 3), (1, 'Cross Purposes', 5), (2, 'I', 6) ]
+        starts, _headings = epub.entry_items( contents, blocks )
+        self.assertEqual( starts, { 0:'A Double Story, I', 3:'A Double Story, II', 5:'Cross Purposes, I' } )
 
 
 if __name__ == '__main__':

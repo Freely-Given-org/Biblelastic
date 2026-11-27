@@ -200,6 +200,8 @@ def entry_items( contents:list, blocks:list ) -> tuple:
     Each top-level item is an entry, except one with items under it whose own text is only its title (e.g., a page that only says ‘Book I’, or ‘Part I’ and
     ‘On the Creature Called Man’ for ‘Part I: On the Creature Called Man’), or, at the top level, its title and a subtitle (e.g., Standard Ebooks' half-title page,
     ‘Lilith’ and ‘A Romance’, before all its chapters): the items under it are entries instead, and its title page goes with the first of them.
+    An item labelled only with a number gets the label of the item it's under (e.g., ‘Book I, III’), except under a book's own half-title
+    (the only item at the top level that has items under it; in a collection, e.g., George MacDonald's stories, there are several: ‘A Double Story, III’).
     """
     simple = lambda text: re.sub( r'\W', '', text ).casefold()
     def title_page( own:list, label:str, top:bool ) -> bool:
@@ -224,7 +226,7 @@ def entry_items( contents:list, blocks:list ) -> tuple:
         """ The text of an item's own page (before the items under it), or None if it has none under it """
         _depth, _label, index, children = node
         return [ block.text for block in blocks[index:children[0][2]] if block.text.strip() ] if children and children[0][2] >= index else None
-    def visit( node:tuple, top:bool, prefix:str='', likeSiblings:bool=False ) -> None:
+    def visit( node:tuple, top:bool, prefix:str='', likeSiblings:bool=False, collection:bool=False ) -> None:
         depth, label, index, children = node
         if re.fullmatch( r'[IVXLC]+|\d+', label.strip().rstrip( '.' ) ) and prefix: label = f'{prefix}, {label.strip()}' # e.g., ‘Book I, III’ for chapter III of Book I
         own = own_text( node )
@@ -232,13 +234,14 @@ def entry_items( contents:list, blocks:list ) -> tuple:
         if own is not None and (title_page( own, node[1], top ) or (likeSiblings and sum( len(text.strip()) for text in own ) <= 600)):
             before = set( starts )
             split = any( own_text( child ) is not None and title_page( own_text( child ), child[1], False ) for child in children )
-            for child in children: visit( child, False, label.split( ':' )[0].strip() if not top else '', split )
+            for child in children: visit( child, False, label.split( ':' )[0].strip() if not top or collection else '', split )
             added = sorted( set( starts ) - before )
             if added and index < added[0]: starts[index] = starts.pop( added[0] ) # (The title page goes with the first of them)
             return
         starts.setdefault( index, label )
         for descendant in descendants( node ): headings.setdefault( descendant[2], descendant[0] - depth + 1 ) # Lower levels of the contents are headings
-    for node in tree: visit( node, True )
+    collection = sum( 1 for node in tree if node[3] ) > 1
+    for node in tree: visit( node, True, collection=collection )
     return starts, headings
 
 

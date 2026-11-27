@@ -550,6 +550,167 @@ redistributable = true
 licence_verified = true
 starter = false
 
+# Still more public-domain works from CrossWire (added 27 November 2026)
+[[edition]]
+id = "MorningAndEvening"
+kind = "book"
+name = "Morning and Evening: Daily Readings"
+author = "C. H. Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { document = "Readings", entries = "Reading" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=SME"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/SME.zip"
+files = ["Biblelastic/build/downloads/crosswire/SME.zip"]
+copyright = "C. H. Spurgeon, Morning and Evening: Daily Readings (1865–1868): public domain. The text is CrossWire's SWORD module (version 1.7, from the Christian Classics Ethereal Library's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each morning's and evening's reading as an entry of its own."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "DailyLight"
+kind = "book"
+name = "Daily Light on the Daily Path"
+author = "Jonathan Bagster and his family"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { document = "Readings", entries = "Reading", dates = true, wrapped = true, parts = ["Morning", "Evening"] }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Daily"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Daily.zip"
+files = ["Biblelastic/build/downloads/crosswire/Daily.zip"]
+copyright = "Jonathan Bagster and others of his family, Daily Light on the Daily Path (c. 1875): public domain. The text is CrossWire's SWORD module (version 1.0): ‘Public Domain -- Copy Freely’."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each morning's and evening's reading as an entry of its own, titled with its date (e.g., ‘Morning, January 1’), and its lines unwrapped."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Wesley"
+kind = "commentary"
+name = "John Wesley’s Notes on the Bible"
+author = "John Wesley"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Wesley"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Wesley.zip"
+files = ["Biblelastic/build/downloads/crosswire/Wesley.zip"]
+copyright = "John Wesley, Explanatory Notes upon the New Testament (1755) and upon the Old Testament (1765): public domain. The text is CrossWire's SWORD module (version 2.0, from Sulu Kelley and Bill Brown's electronic edition and the Christian Classics Ethereal Library's)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Scofield"
+kind = "commentary"
+name = "Scofield Reference Notes (1917)"
+author = "C. I. Scofield"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Scofield"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Scofield.zip"
+files = ["Biblelastic/build/downloads/crosswire/Scofield.zip"]
+copyright = "C. I. Scofield (and the consulting editors), the notes of the Scofield Reference Bible, 1917 edition: public domain. The text is CrossWire's SWORD module (version 2.1, from Wikisource's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each book's introduction as an entry of its own."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Barnes"
+kind = "commentary"
+name = "Barnes’ New Testament Notes"
+author = "Albert Barnes"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Barnes"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Barnes.zip"
+files = ["Biblelastic/build/downloads/crosswire/Barnes.zip"]
+copyright = "Albert Barnes, Notes, Explanatory and Practical, on the New Testament (1832–1851): public domain. The text is CrossWire's SWORD module (version 1.1)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org. Some of the module's characters that weren't readable are shown as ‘�’."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "PNT"
+kind = "commentary"
+name = "The People’s New Testament (1891)"
+author = "B. W. Johnson"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=PNT"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/PNT.zip"
+files = ["Biblelastic/build/downloads/crosswire/PNT.zip"]
+copyright = "B. W. Johnson, The People's New Testament, with Explanatory Notes (1889–1891): public domain. The text is CrossWire's SWORD module (version 1.1)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Clarke"
+kind = "commentary"
+name = "Adam Clarke’s Commentary on the Bible"
+author = "Adam Clarke"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Clarke"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Clarke.zip"
+files = ["Biblelastic/build/downloads/crosswire/Clarke.zip"]
+copyright = "Adam Clarke, The Holy Bible ... with a Commentary and Critical Notes (1810–1826): public domain. The text is CrossWire's SWORD module (version 2.0, from Wikisource's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each book's preface and each chapter's introduction as entries of their own."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Josephus"
+kind = "book"
+name = "The Works of Josephus"
+author = "Flavius Josephus (translated by William Whiston)"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = {}
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Josephus"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Josephus.zip"
+files = ["Biblelastic/build/downloads/crosswire/Josephus.zip"]
+copyright = "Flavius Josephus, The Works of Josephus, translated by William Whiston (1737): public domain. The text is CrossWire's SWORD module (version 1.1, from the Christian Classics Ethereal Library's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with an entry for each chapter (or, in the Life and Against Apion, each section), and Whiston's notes after the paragraphs they're in."
+redistributable = true
+licence_verified = true
+starter = false
+
 # Public-domain books, from Standard Ebooks (which dedicates its own work on them to the public domain, with CC0)
 [[edition]]
 id = "UnspokenSermons"
@@ -1106,6 +1267,97 @@ source = "https://standardebooks.org/ebooks/harriet-beecher-stowe/uncle-toms-cab
 download = "https://standardebooks.org/ebooks/harriet-beecher-stowe/uncle-toms-cabin/downloads/harriet-beecher-stowe_uncle-toms-cabin.epub?source=download"
 files = ["Biblelastic/build/downloads/standardebooks/harriet-beecher-stowe_uncle-toms-cabin.epub"]
 copyright = "Harriet Beecher Stowe, Uncle Tom’s Cabin (1852): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+# A fourth batch of public-domain books from Standard Ebooks (added 27 November 2026)
+[[edition]]
+id = "ChristmasCarol"
+kind = "book"
+name = "A Christmas Carol"
+author = "Charles Dickens"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/charles-dickens/a-christmas-carol"
+download = "https://standardebooks.org/ebooks/charles-dickens/a-christmas-carol/downloads/charles-dickens_a-christmas-carol.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/charles-dickens_a-christmas-carol.epub"]
+copyright = "Charles Dickens, A Christmas Carol (1843): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "LesMiserables"
+kind = "book"
+name = "Les Misérables"
+author = "Victor Hugo"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/victor-hugo/les-miserables/isabel-f-hapgood"
+download = "https://standardebooks.org/ebooks/victor-hugo/les-miserables/isabel-f-hapgood/downloads/victor-hugo_les-miserables_isabel-f-hapgood.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/victor-hugo_les-miserables_isabel-f-hapgood.epub"]
+copyright = "Victor Hugo, Les Misérables (1862), translated by Isabel F. Hapgood (1888): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "CrimeAndPunishment"
+kind = "book"
+name = "Crime and Punishment"
+author = "Fyodor Dostoevsky"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/fyodor-dostoevsky/crime-and-punishment/constance-garnett"
+download = "https://standardebooks.org/ebooks/fyodor-dostoevsky/crime-and-punishment/constance-garnett/downloads/fyodor-dostoevsky_crime-and-punishment_constance-garnett.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/fyodor-dostoevsky_crime-and-punishment_constance-garnett.epub"]
+copyright = "Fyodor Dostoevsky, Crime and Punishment (1866), translated by Constance Garnett (1914): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Resurrection"
+kind = "book"
+name = "Resurrection"
+author = "Leo Tolstoy"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/leo-tolstoy/resurrection/louise-maude"
+download = "https://standardebooks.org/ebooks/leo-tolstoy/resurrection/louise-maude/downloads/leo-tolstoy_resurrection_louise-maude.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/leo-tolstoy_resurrection_louise-maude.epub"]
+copyright = "Leo Tolstoy, Resurrection (1899), translated by Louise Maude (1900): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "MacDonaldShortFiction"
+kind = "book"
+name = "George MacDonald’s Short Fiction"
+author = "George MacDonald"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/george-macdonald/short-fiction"
+download = "https://standardebooks.org/ebooks/george-macdonald/short-fiction/downloads/george-macdonald_short-fiction.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/george-macdonald_short-fiction.epub"]
+copyright = "George MacDonald, short fiction (1858–1891): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
 licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
 redistributable = true
 licence_verified = true

@@ -12,6 +12,7 @@ References in the text become `cites` anchors. They're read from the text that's
 because some modules' converters gave every reference that's only numbers (e.g., the ‘11’ and ‘21:6’ in ‘Rev. 1:8, 11; 21:6’) to Genesis.
 Such a reference takes its book (and chapter, if it hasn't one) from the reference before it, or, in a commentary, from the verse that the entry is about.
 """
+import collections
 import re
 import struct
 import xml.etree.ElementTree as ET
@@ -32,6 +33,13 @@ ABBREVIATIONS = dict( zip( ['Ge','Ex','Le','Nu','De','Jos','Jud','Ru','1Sa','2Sa
                             'Isa','Jer','La','Eze','Da','Ho','Joe','Am','Ob','Jon','Mic','Na','Hab','Zep','Hag','Zec','Mal',
                             'Mt','Mr','Lu','Joh','Ac','Ro','1Co','2Co','Ga','Eph','Php','Col','1Th','2Th','1Ti','2Ti','Tit','Phm','Heb','Jas',
                             '1Pe','2Pe','1Jo','2Jo','3Jo','Jude','Re'], BOOKS ) )
+# Other abbreviations, in Adam Clarke's (‘Sol’, ‘Zac’, ‘Phi’ for Philippians, ‘Plm’ for Philemon), Jamieson, Fausset, and Brown's (‘Jr’), Daily Light's (‘He’, ‘Ph’),
+# Wesley's (‘Numb’, ‘Psal’), Spurgeon's (the ‘Solomon’ of ‘Song of Solomon 1:4’), and Barnes's, whose converter doubled some letters (‘1Timm’, ‘Romm’, ‘Gall’, ‘Hoss’)
+ABBREVIATIONS |= { 'Sol':'SNG', 'Zac':'ZEC', 'Phi':'PHP', 'Plm':'PHM', 'Amo':'AMO', 'Jde':'JDE', 'Rut':'RUT', 'Oba':'OBA', 'Jr':'JER',
+                   'He':'HEB', 'Ph':'PHP', 'Je':'JER', 'Mi':'MIC', '1Joh':'JN1', '2Joh':'JN2', '3Joh':'JN3', 'Mk':'MRK', 'Lk':'LUK', 'Jn':'JHN', '1Jn':'JN1', '2Jn':'JN2', '3Jn':'JN3', 'Ep':'EPH',
+                   'Numb':'NUM', 'Psal':'PSA', 'Levit':'LEV', 'Isai':'ISA', '1Kin':'KI1', '2Kin':'KI2', 'Solomon':'SNG',
+                   '1Timm':'TI1', '2Timm':'TI2', 'Romm':'ROM', 'Gall':'GAL', 'Hoss':'HOS', 'Lkke':'LUK', 'Jnn':'JHN', 'Nehh':'NEH', 'Revv':'REV', 'Levv':'LEV', 'Genn':'GEN',
+                   'Nahh':'NAH', 'Provo':'PRO', 'Actst':'ACT', 'Actsts':'ACT' }
 _RANGES = r'\d{1,3}(?::\d{1,3})?(?:\s*[-–]\s*\d{1,3}(?::\d{1,3})?)?'
 PART_RE = re.compile( rf'(?:(?P<book>(?:[1-3]\s?)?[A-Z][a-z]+)\.?\s+)?(?P<ranges>{_RANGES}(?:\s*,\s*{_RANGES}(?![A-Za-z]))*)' )
 SMALL_WORDS = {'a','an','and','as','at','by','for','from','in','of','on','or','the','to','with'}
@@ -39,8 +47,10 @@ SMALL_WORDS = {'a','an','and','as','at','by','for','from','in','of','on','or','t
 LINE_MARK_RE = re.compile( r'^\s*(?:→|[-.](?=\s))\s*' )
 # What an OSIS commentary (e.g., Matthew Henry's) has before a verse's note: the book's introduction, the chapter's outline, or a section's title
 PREVERSE_RE = re.compile( r'<div type="x-milestone" subType="x-preverse" sID="[^"]*"/>(.*?)<div type="x-milestone" subType="x-preverse" eID="[^"]*"/>', re.S )
-# How each of Matthew Henry's notes starts (what's before it in a chapter's first verse is the chapter's title and outline)
+# How each of Matthew Henry's and Adam Clarke's notes starts (what's before it in a chapter's first verse is the chapter's title and outline), and their chapters' titles
 NOTE_START_RE = re.compile( r'<hi type="bold">Verses? \d' )
+CHAPTER_TITLE_RE = re.compile( r'<title type="x-s2">|<title type="x-s">Introduction</title>' )
+PREFACE_RE = re.compile( r'<title type="x-s">Preface' ) # (Adam Clarke's book's preface, at its first note, which runs on into its first chapter's outline)
 SPANS = { 'hi':None, 'i':'italic', 'b':'bold' }
 
 
@@ -133,6 +143,27 @@ def read_raw_dictionary( archive:zipfile.ZipFile, dataPath:str, encoding:str ) -
     return entries
 
 
+def read_genbook( archive:zipfile.ZipFile, dataPath:str, encoding:str ) -> tuple:
+    """
+    A RawGenBook module's tree of keys: (name, text, [children]) for its root.
+    Its .idx has a 4-byte offset in .dat for each node; a node there is its parent's, next sibling's, and first child's numbers (each × 4, or -1),
+    its name (ending with a 0), and its data's size (2 bytes) and data: the offset and size of its text in .bdt.
+    """
+    index, nodes, texts = ( archive.read( dataPath + suffix ) for suffix in ('.idx', '.dat', '.bdt') )
+    def node( number:int ) -> tuple:
+        offset, = struct.unpack_from( '<I', index, number * 4 )
+        _parent, _next, child = struct.unpack_from( '<iii', nodes, offset )
+        end = nodes.index( b'\0', offset + 12 )
+        size, = struct.unpack_from( '<H', nodes, end + 1 )
+        textOffset, textSize = struct.unpack_from( '<II', nodes, end + 3 ) if size >= 8 else (0, 0)
+        children = []
+        while child >= 0:
+            children.append( node( child // 4 ) )
+            child = struct.unpack_from( '<iii', nodes, struct.unpack_from( '<I', index, child )[0] )[1]
+        return nodes[offset+12:end].decode( encoding ), texts[textOffset:textOffset+textSize].decode( encoding, 'replace' ), children
+    return node( 0 )
+
+
 def kjv_chapters( versificationPath:Path ) -> dict:
     """ { BBB: [verses in chapter 1, verses in chapter 2, …] } for the KJV, from BibleOrgSys's versification table """
     chapters = {}
@@ -141,16 +172,18 @@ def kjv_chapters( versificationPath:Path ) -> dict:
     return chapters
 
 
-def read_commentary( archive:zipfile.ZipFile, dataPath:str, encoding:str, chapters:dict, width:int=10 ) -> list:
+def read_commentary( archive:zipfile.ZipFile, dataPath:str, encoding:str, chapters:dict, width:int=10, blockType:str='b' ) -> list:
     """
     A zCom module's entries: [ (BBB, chapter, verse, last verse, text), … ] for the ones that have text.
     Each testament's index has a slot for the module's heading, the testament's, each book's, each chapter's (verse 0), and each verse, in order:
     each slot is a block number, an offset in that block, and a size (of 2 bytes, or of 4 in a zCom4 module, whose slots are 12 bytes wide).
     A note on several verses is linked to each of them (their slots are the same), so it's one entry, from its first verse to its last.
+    The files' names start with the module's block type (e.g., nt.bzv for blocks of a book, nt.czv for blocks of a chapter), and a module of one testament has only its files.
     """
     entries, last = [], None
     for testament, books in (('ot', BOOKS[:OLD_TESTAMENT]), ('nt', BOOKS[OLD_TESTAMENT:])):
-        blockIndex, verseIndex, blocks = ( archive.read( f'{dataPath}{testament}.{suffix}' ) for suffix in ('bzs', 'bzv', 'bzz') )
+        if f'{dataPath}{testament}.{blockType}zv' not in archive.namelist(): continue
+        blockIndex, verseIndex, blocks = ( archive.read( f'{dataPath}{testament}.{blockType}{suffix}' ) for suffix in ('zs', 'zv', 'zz') )
         slots = [ (None, 0, 0), (None, 0, 0) ] + [ slot for BBB in books for slot in
                     [ (BBB, 0, 0) ] + [ (BBB, chapter, verse) for chapter, count in enumerate( chapters[BBB], start=1 ) for verse in range( count + 1 ) ] ]
         if len(slots) * width != len(verseIndex): raise ValueError( f'{testament}: {len(verseIndex) // width} slots in the module, but the KJV has {len(slots)}' )
@@ -164,7 +197,7 @@ def read_commentary( archive:zipfile.ZipFile, dataPath:str, encoding:str, chapte
             if block not in unpacked:
                 blockOffset, blockSize, _unpackedSize = struct.unpack_from( '<III', blockIndex, block * 12 )
                 unpacked[block] = zlib.decompress( blocks[blockOffset:blockOffset+blockSize] )
-            text = unpacked[block][offset:offset+size].decode( encoding )
+            text = unpacked[block][offset:offset+size].decode( encoding, 'replace' ) # (Barnes's has a few bytes that aren't UTF-8, e.g., a degree sign)
             if text.strip() and BBB: entries.append( (BBB, chapter, verse, verse, text) )
     return entries
 
@@ -175,7 +208,25 @@ def as_xml( text:str ) -> ET.Element:
     text = re.sub( r'[\x00-\x08\x0b\x0c\x0e-\x14\x16-\x1f\x80-\x9f]', '', text.replace( '\x15', '§' ) )
     text = re.sub( r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)', '&amp;', text )
     text = re.sub( r'<(?![/?!]?[A-Za-z])|<(?=[A-Z][a-z]+ )', '&lt;', text ) # e.g., ‘<See’, which isn't a tag
-    return ET.fromstring( f'<entry>{text}</entry>' )
+    try: return ET.fromstring( f'<entry>{text}</entry>' )
+    except ET.ParseError: return ET.fromstring( f'<entry>{balanced( text )}</entry>' )
+
+
+def balanced( text:str ) -> str:
+    """ An entry's markup with an end tag that has no start tag left out, and a start tag that has no end tag ended at the end
+        (e.g., Scofield's list that starts in the note on Genesis 4:1 and ends in the note on 4:2) """
+    parts, stack = [], []
+    for piece in re.split( r'(<[^>]+>)', text ):
+        if (match := re.fullmatch( r'<(/?)([A-Za-z][\w:.-]*)[^>]*?(/?)>', piece )):
+            closing, tag, empty = match.groups()
+            if empty: pass
+            elif not closing: stack.append( tag )
+            elif tag in stack:
+                while stack[-1] != tag: parts.append( f'</{stack.pop()}>' )
+                stack.pop()
+            else: continue
+        parts.append( piece )
+    return ''.join( parts ) + ''.join( f'</{tag}>' for tag in reversed( stack ) )
 
 
 def topic_title( key:str ) -> str:
@@ -248,7 +299,8 @@ class SwordParser( items._Parser ):
             self.add_text( element.tail ); self.lastWasReference = False
             return
         if tag == 'title' and not self.show_titles: self.add_text( element.tail ); return # (The entry's title is its first paragraph)
-        if tag in ('p', 'item', 'li', 'row', 'title'): self.start_paragraph( { 'p':'p', 'title':'h2' }.get( tag, 'li' ), {} )
+        if tag in ('p', 'item', 'li', 'row', 'title', 'l', 'h3', 'h4', 'note'):
+            self.start_paragraph( { 'p':'p', 'title':'h2', 'l':'p', 'h3':'h3', 'h4':'h4', 'note':'note' }.get( tag, 'li' ), {} )
         start = len(tokens)
         if tag in ('ref', 'scripRef', 'reference') and element.get( 'target' ) is None:
             if tag == 'scripRef': # (In the TSK, each line of references starts again from the verse that the entry is about)
@@ -256,7 +308,8 @@ class SwordParser( items._Parser ):
             self.add_reference( ''.join( element.itertext() ), element.get( 'osisRef' ), element.get( 'passage' ) )
         else:
             if tag not in ('entry', 'entryFree', 'def', 'p', 'list', 'item', 'ref', 'hi', 'sync', 'orth', 'sense', 'foreign',
-                           'title', 'table', 'row', 'cell', 'div', 'term', 'i', 'b', 'ol', 'ul', 'li'): self.doc.warn( f'unknown element <{tag}>' )
+                           'title', 'table', 'row', 'cell', 'div', 'term', 'i', 'b', 'ol', 'ul', 'li', 'w', 'seg', 'blockquote', 'lg', 'l', 'font', 'h3', 'h4',
+                           'note'): self.doc.warn( f'unknown element <{tag}>' )
             text = element.text
             if tag == 'entry' and self.line_style == 'li': text = LINE_MARK_RE.sub( '', text or '' ) # (A topic's first line)
             self.add_text( text )
@@ -269,9 +322,9 @@ class SwordParser( items._Parser ):
         elif tag == 'term' and end > start: # e.g., Smith's ‘See <term>MONTH</term>’
             self.parsed.links.append( (start, end, 'see', f"{self.document} {entry_name( topic_title( ''.join( element.itertext() ).strip() ) )}") )
         elif tag in SPANS and end > start: self.doc.nodes.append( ('span', start, end, SPANS[tag] or element.get( 'type', 'hi' ), {}) )
-        if tag in ('p', 'item', 'li', 'row', 'title'):
+        if tag in ('p', 'item', 'li', 'row', 'title', 'l', 'h3', 'h4', 'note'):
             self.end_paragraph()
-            if tag in ('row', 'title'): self.start_paragraph( 'p', {} ) # (For what follows it, which isn't in a paragraph of its own)
+            if tag in ('row', 'title', 'l', 'h3', 'h4', 'note'): self.start_paragraph( 'p', {} ) # (For what follows it, which isn't in a paragraph of its own)
         self.lastWasReference = tag == 'scripRef'
         self.add_text( element.tail )
         if (element.tail or '').strip(): self.lastWasReference = False
@@ -323,23 +376,49 @@ def parse( edition:dict, path:Path, versificationPath:Path ) -> dict:
         if driver in ('zld', 'rawld'):
             read = read_dictionary if driver == 'zld' else read_raw_dictionary
             return { settings['document']: parse_dictionary( edition, read( archive, dataPath, encoding ), chapters, path.name ) }
+        if driver == 'rawgenbook': return parse_genbook( edition, read_genbook( archive, dataPath, encoding ), chapters, path.name )
         if driver in ('zcom', 'zcom4'):
-            return parse_commentary( edition, read_commentary( archive, dataPath, encoding, chapters, 10 if driver == 'zcom' else 12 ), chapters, path.name,
+            blockType = conf.get( 'BlockType', 'BOOK' )[:1].lower()
+            return parse_commentary( edition, read_commentary( archive, dataPath, encoding, chapters, 10 if driver == 'zcom' else 12, blockType ), chapters, path.name,
                                      conf.get( 'SourceType', '' ).upper() == 'OSIS' )
         raise ValueError( f"{edition['id']}: SWORD's {conf['ModDrv']} modules can't be read yet" )
+
+
+MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+
+def dictionary_pieces( key:str, text:str, settings:dict ) -> list:
+    """
+    An entry's pieces: [ (title or None, root) ]. A devotional's readings for a day are each an entry: Spurgeon's Morning and Evening's sections
+    (each with its title, e.g., ‘Evening, January 1’), and, where the registry's `sword.parts` names them (e.g., Daily Light's ‘Morning’ and ‘Evening’), the parts
+    that start with those words in italics, titled with the date (from a key like 01.31, where `sword.dates` says so).
+    Where `sword.wrapped` says so, a single line break is only where the text was wrapped (e.g., Daily Light's), and two start a paragraph.
+    """
+    if settings.get( 'wrapped' ):
+        text = re.sub( r'\s*<br\s*/>\s*', ' ', re.sub( r'<br\s*/>\s*<br\s*/>', '\x1d', text ) ).replace( '\x1d', '<br /><br />' )
+    date = None
+    if settings.get( 'dates' ) and (match := re.fullmatch( r'(\d\d)\.(\d\d)', key.strip() )): date = f'{MONTHS[int(match.group( 1 ))-1]} {int(match.group( 2 ))}'
+    if (parts := settings.get( 'parts' )):
+        pattern = '|'.join( re.escape( f'<i>{part}</i>:' ) for part in parts )
+        pieces = re.split( f'({pattern})', text )
+        return [ (f'{re.sub( r"<[^>]*>|:", "", label )}, {date or key}', as_xml( piece )) for label, piece in zip( pieces[1::2], pieces[2::2] ) ]
+    root = as_xml( text )
+    sections = [ section for section in root.iter( 'div' ) if section.get( 'type' ) == 'section' and section.find( 'title' ) is not None ]
+    if len(sections) > 1: return [ (None, section) for section in sections ]
+    return [ (date, root) ]
 
 
 def parse_dictionary( edition:dict, entries:list, chapters:dict, sourceName:str ) -> tuple:
     parser = SwordParser( edition, chapters )
     names = set()
     for key, text in entries:
-        root = as_xml( text )
-        title = usfm.WHITESPACE_RE.sub( ' ', root.findtext( './/title' ) or '' ).strip() or (topic_title( key ) if edition['sword'].get( 'topics' ) else key.title())
-        name = entry_name( title )
-        while name in names: name += '_'
-        names.add( name )
-        parser.context = Context( chapters )
-        parser.add_entry( name, 'Topic' if edition['sword'].get( 'topics' ) else 'Article', title, root, [], heading=title )
+        for pieceTitle, root in dictionary_pieces( key, text, edition['sword'] ):
+            title = pieceTitle or usfm.WHITESPACE_RE.sub( ' ', root.findtext( './/title' ) or '' ).strip() or (topic_title( key ) if edition['sword'].get( 'topics' ) else key.title())
+            name = entry_name( title )
+            while name in names: name += '_'
+            names.add( name )
+            parser.context = Context( chapters )
+            parser.add_entry( name, edition['sword'].get( 'entries', 'Topic' if edition['sword'].get( 'topics' ) else 'Article' ), title, root, [], heading=title )
     # A link to a name that isn't an entry's goes to the nearest that is: its singular or plural, or else the first entry whose name starts with it
     # (e.g., Nave's ‘See ANGEL’, which is ‘Angel (a Spirit)’, and Easton's ‘Pilate’, which is ‘Pilate, Pontius’)
     document, ordered = edition['sword']['document'], [ entry[2] for entry in parser.parsed.entries ]
@@ -368,7 +447,10 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
     The book's own slot (chapter 0) goes with its introduction (e.g., Jamieson, Fausset, and Brown's ‘Commentary by David Brown’), as does,
     in an OSIS commentary, its first chapter's (where Matthew Henry's keeps a book of one chapter's introduction).
     A chapter's own slot (verse 0) that has only a title or nothing is left out.
-    In Matthew Henry's, a note starts with the verses it's about (‘Verses 1-8’), except where a chapter has only one note, which is about the whole chapter
+    Adam Clarke's has no milestones, but the same: a book's preface, and each chapter's ‘Introduction’, before the chapter's first note.
+    In ThML commentaries (e.g., the TSK, Barnes's, and the People's New Testament), a chapter's own slot repeats a note from elsewhere (e.g., Acts 27:44's, before Romans):
+    it's left out. Barnes's keeps a book's preface and introduction at its first verses, with those verses' notes after them: they're `BookIntro`s, about the whole book too.
+    In Matthew Henry's and Adam Clarke's, a note starts with the verses it's about (‘Verses 1-8’), except where a chapter has only one note, which is about the whole chapter
     (e.g., Psalm 23's), though SWORD has it only at the chapter's first verse.
     """
     noteType = edition['sword'].get( 'notes', 'CrossReferences' )
@@ -378,11 +460,13 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
     for BBB, chapter, verse, _lastVerse, _text in entries:
         if verse: notes[(BBB, chapter)] = notes.get( (BBB, chapter), 0 ) + 1
     headed = any( NOTE_START_RE.search( text ) for *_slot, text in entries )
+    repeated = { text for text, count in collections.Counter( text for *_slot, text in entries ).items() if count > 1 }
     for BBB, chapter, verse, lastVerse, text in entries:
         if BBB not in parsers:
             parsers[BBB] = SwordParser( edition, chapters )
             parsers[BBB].show_titles = True
         parser = parsers[BBB]
+        if not verse and not osis and text in repeated: continue # (A copy of another slot's note)
         if not chapter or (osis and chapter == 1 and not verse and BBB not in introduced): bookSlots[BBB] = bookSlots.get( BBB, '' ) + text; continue
         first = bool( verse ) and BBB not in introduced # (The book's first note)
         if first: introduced.add( BBB )
@@ -390,18 +474,24 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
         bookCount = len(chapters[BBB])
         wholeBook = f'{BBB} 1' if bookCount == 1 else f'{BBB} 1-{bookCount}'
         wholeChapter = f'{BBB} {chapter}:1-{chapter}:{chapters[BBB][chapter-1]}' if chapter else ''
-        parts = []
-        if first and not (verse and PREVERSE_RE.search( text )) and hasText( bookSlot ):
+        parts, opening = [], None # (Where what comes before the note starts and ends, and where the note starts, if it says)
+        if verse and (match := PREVERSE_RE.search( text )):
+            start, end = match.span( 1 )
+            noteStart = NOTE_START_RE.search( text, match.start() )
+            if noteStart and CHAPTER_TITLE_RE.search( text, start, noteStart.start() ): end = noteStart.start()
+            opening = (start, end, noteStart)
+        elif verse and headed and (noteStart := NOTE_START_RE.search( text )) and (CHAPTER_TITLE_RE.search( text, 0, noteStart.start() )
+                                                                              or (first and PREFACE_RE.search( text, 0, noteStart.start() ))):
+            opening = (0, noteStart.start(), noteStart) # (Adam Clarke's, which has no pre-verse milestones: a book's preface, and a chapter's ‘Introduction’)
+        if first and not opening and hasText( bookSlot ):
             parts.append( ('Intro', 'Introduction', [wholeBook], bookSlot) )
         if verse == 1 and '\n<br />\n<br />' in text and text.lstrip().startswith( '<br /><scripRef passage=' ):
             outline, text = text.split( '\n<br />\n<br />', 1 )
             parts.append( (f'{chapter}', 'Outline', [wholeChapter], outline) )
-        elif verse and (match := PREVERSE_RE.search( text )):
-            start, end = match.span( 1 )
-            noteStart = NOTE_START_RE.search( text, match.start() )
-            if noteStart and '<title type="x-s2">' in text[start:noteStart.start()]: end = noteStart.start()
+        elif opening:
+            start, end, noteStart = opening
             before, kept = text[start:end], ''
-            ix = before.find( '<title type="x-s2">' )
+            ix = chapterTitle.start() if (chapterTitle := CHAPTER_TITLE_RE.search( before )) else -1
             if first:
                 titles = set( re.findall( r'<title[^>]*>(.*?)</title>', before, re.S ) ) # (Without a title that the book's slot and its introduction both have)
                 bookSlot = re.sub( r'<title[^>]*>(.*?)</title>', lambda match: '' if match.group( 1 ) in titles else match.group(), bookSlot, flags=re.S )
@@ -409,14 +499,17 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
                 if hasText( intro ): # (Otherwise, e.g., only a section's title, it stays with the note)
                     parts.append( ('Intro', 'BookIntro', [wholeBook], intro) )
                     before = before[ix:] if ix >= 0 else ''
-            if '<title type="x-s2">' in before and hasText( before ):
+            if CHAPTER_TITLE_RE.search( before ) and hasText( before ):
                 parts.append( (f'{chapter}', 'Outline' if noteStart or '<table>' in before else 'Introduction', [wholeChapter], before) )
             else: kept = before
             text = text[:start] + kept + text[end:]
         if verse:
             if headed and notes[(BBB, chapter)] == 1 and verse == 1 and not NOTE_START_RE.search( text ): lastVerse = chapters[BBB][chapter-1]
             verses = f'{verse}' if lastVerse == verse else f'{verse}-{lastVerse}'
-            parts.append( (f'{chapter}:{verses}', noteType, [f'{BBB} {chapter}:{verse}' + ('' if lastVerse == verse else f'-{chapter}:{lastVerse}')], text) )
+            about = [f'{BBB} {chapter}:{verse}' + ('' if lastVerse == verse else f'-{chapter}:{lastVerse}')]
+            if not osis and chapter == 1 and verse <= 2 and re.match( r'\W*(?:\w+\W+){0,12}?(?:PREFACE|INTRODUCTION|Introduction to)\b', re.sub( r'<[^>]*>', ' ', text ) ):
+                parts.append( (f'{chapter}:{verses}', 'BookIntro', [wholeBook] + about, text) ) # (Barnes's)
+            else: parts.append( (f'{chapter}:{verses}', noteType, about, text) )
         elif hasText( text ): parts.append( (f'{chapter}:0', 'Introduction', [f'{BBB} {chapter}'], text) )
         for name, entryType, about, part in parts:
             if not re.sub( r'<[^>]*>', '', part ).strip(): continue
@@ -425,3 +518,46 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
             parser.context = Context( chapters, *parser.home )
             parser.add_entry( name, entryType, '', root, about )
     return { BBB: (parser.finish(), [sourceName]) for BBB, parser in parsers.items() }
+
+
+def lift_notes( root:ET.Element ) -> ET.Element:
+    """ Each <note> in a paragraph moved to just after it (e.g., Whiston's notes in Josephus), so that the paragraph isn't broken by it """
+    for paragraph in list( root.iter( 'p' ) ):
+        notes = [ child for child in paragraph if child.tag == 'note' ]
+        if not notes: continue
+        parent = next( element for element in root.iter() if paragraph in list( element ) )
+        position = list( parent ).index( paragraph )
+        for note in notes:
+            previous = next( (child for child, following in zip( paragraph, list( paragraph )[1:] ) if following is note), None )
+            if previous is None: paragraph.text = (paragraph.text or '') + (note.tail or '')
+            else: previous.tail = (previous.tail or '') + (note.tail or '')
+            paragraph.remove( note )
+            note.tail = None
+        for offset, note in enumerate( notes, start=1 ): parent.insert( position + offset, note )
+        notes[-1].tail, paragraph.tail = paragraph.tail, None
+    return root
+
+
+def parse_genbook( edition:dict, tree:tuple, chapters:dict, sourceName:str ) -> dict:
+    """
+    A general book (e.g., Josephus's works) as one document, `Chapter`, like an EPUB book's: an entry (named 1, 2, …, and titled with its keys,
+    e.g., ‘The Antiquities of the Jews, Book 1, Chapter 1’) for each key whose keys under it have none under them (e.g., a chapter and its sections),
+    unless it has more than 20 (e.g., the sections of Josephus's Life), when each of those is an entry. A key's own text goes with the next entry.
+    """
+    parser = SwordParser( edition, chapters )
+    parser.show_titles = True
+    entries, pending = [], ''
+    def visit( node:tuple, path:list ) -> None:
+        nonlocal pending
+        name, text, children = node
+        title = ', '.join( path + [name] )
+        if not children or (len(children) <= 20 and all( not child[2] for child in children )):
+            entries.append( (title, pending + text + ''.join( child[1] for child in children )) ); pending = ''
+        else:
+            pending += text
+            for child in children: visit( child, path + [name] )
+    for work in tree[2]: visit( work, [] )
+    for number, (title, text) in enumerate( entries, start=1 ):
+        parser.context = Context( chapters )
+        parser.add_entry( str(number), 'Chapter', title, lift_notes( as_xml( text ) ), [] )
+    return { 'Chapter': (parser.finish(), [sourceName]) }

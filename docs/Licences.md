@@ -118,6 +118,34 @@ so it rests on CrossWire's and CCEL's word that it's in the public domain; and S
 Left out again: Augustine's *Confessions* and *On Christian Doctrine*, *Introduction to the Devout Life*, Hopkins's and Milton's shorter poems, *Samson Agonistes*, and Pascal's *Pensées*
 have pages on Standard Ebooks, but they're only on its list of wanted books. *The Scandal of Father Brown* (1935) isn't in the US public domain until 2031.
 
+## Still more works from CrossWire, and a fourth batch of books (added 27 November 2026)
+
+None is in the English starter set. Each was checked at its source on 27 November 2026. Each was first published (or translated) before 1931,
+by an author (and translator) who died before 1956. The CrossWire modules' settings files (`mods.d/*.conf`) are in the zip files in `build/downloads/crosswire/`.
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| `MorningAndEvening` *Morning and Evening: Daily Readings* (C. H. Spurgeon, died 1892; 1865–1868) | Public domain | `mods.d/sme.conf` in `SME.zip` | `DistributionLicense=Public Domain`; from CCEL, ‘through a generous contribution by Logos Bible Software’ |
+| `DailyLight` *Daily Light on the Daily Path* (Jonathan Bagster, died 1872, and his family; c. 1875) | Public domain | `mods.d/daily.conf` in `Daily.zip` | `DistributionLicense=Public Domain`; ‘Public Domain -- Copy Freely’ |
+| `Wesley` *Explanatory Notes* (John Wesley, died 1791; 1755 and 1765) | Public domain | `mods.d/wesley.conf` in `Wesley.zip` | `DistributionLicense=Public Domain`; from Sulu Kelley and Bill Brown's electronic edition and CCEL's |
+| `Scofield` the Scofield Reference Bible's notes (C. I. Scofield, died 1921; 1917 edition) | Public domain | `mods.d/scofield.conf` in `Scofield.zip` | `DistributionLicense=Public Domain`; `TextSource=https://en.wikisource.org/wiki/Scofield_Reference_Bible_Notes` |
+| `Barnes` *Notes on the New Testament* (Albert Barnes, died 1870; 1832–1851) | Public domain | `mods.d/barnes.conf` in `Barnes.zip` | `DistributionLicense=Public Domain` |
+| `PNT` *The People's New Testament* (B. W. Johnson, died 1894; 1889–1891) | Public domain | `mods.d/pnt.conf` in `PNT.zip` | `DistributionLicense=Public Domain` |
+| `Clarke` *Commentary and Critical Notes* (Adam Clarke, died 1832; 1810–1826) | Public domain | `mods.d/clarke.conf` in `Clarke.zip` | `DistributionLicense=Public Domain`; `TextSource=https://en.wikisource.org/wiki/Commentary_and_critical_notes_on_the_Bible` |
+| `Josephus` *The Works of Josephus* (translated by William Whiston, died 1752; 1737) | Public domain | `mods.d/josephus.conf` in `Josephus.zip` | `DistributionLicense=Public Domain`; `TextSource=CCEL` |
+| `ChristmasCarol` *A Christmas Carol* (Charles Dickens, died 1870; 1843) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/charles-dickens/a-christmas-carol) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `LesMiserables` *Les Misérables* (Victor Hugo, died 1885; translated by Isabel F. Hapgood, died 1928, in 1888) | As above | https://standardebooks.org/ebooks/victor-hugo/les-miserables/isabel-f-hapgood | As above |
+| `CrimeAndPunishment` *Crime and Punishment* (Fyodor Dostoevsky; translated by Constance Garnett, died 1946, in 1914) | As above | https://standardebooks.org/ebooks/fyodor-dostoevsky/crime-and-punishment/constance-garnett | As above |
+| `Resurrection` *Resurrection* (Leo Tolstoy; translated by Louise Maude, died 1939, in 1900) | As above | https://standardebooks.org/ebooks/leo-tolstoy/resurrection/louise-maude | As above |
+| `MacDonaldShortFiction` *Short Fiction* (George MacDonald, died 1905) | As above | https://standardebooks.org/ebooks/george-macdonald/short-fiction | As above |
+
+Things that were weighed when they were checked: the Scofield notes' 1917 edition had consulting editors as well as Scofield (the last of them to die, Arno C. Gaebelein, died in 1945);
+*Daily Light*'s compilers, besides Jonathan Bagster, aren't named; and Spurgeon's module came to CCEL from Logos Bible Software, though the module says it's in the public domain.
+
+Left out: Robertson's *Word Pictures* (CrossWire's module says ‘Copyrighted; Free non-commercial distribution’), the *International Standard Bible Encyclopedia*
+(1915, but by many contributors, some of whom may have died after 1956, which would need checking one by one), and, for now, the largest commentaries (Calvin's, Matthew Henry's complete commentary, and Keil and Delitzsch's,
+whose translators would need checking). Manzoni's *The Betrothed* is only on Standard Ebooks' list of wanted books.
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),
