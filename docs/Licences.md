@@ -61,6 +61,34 @@ All five were first published before 1931 by authors who died before 1956, so th
 CrossWire's modules are from the Christian Classics Ethereal Library's texts. CCEL claims copyright on its own formatting, but the modules are CrossWire's conversions, and CrossWire only hosts a module
 whose text is in the public domain or whose holder has given it permission.
 
+## More books from Standard Ebooks (added 27 November 2026)
+
+Each EPUB's `uncopyright.xhtml` says that the text is believed to be in the United States public domain, and that Standard Ebooks' own work on it is CC0 1.0.
+Each was first published (or translated) before 1931, by an author (and translator) who died before 1956. None is in the English starter set. Each was checked at its source on 27 November 2026.
+
+| Work | First published | Author (and translator) | Source |
+| --- | --- | --- | --- |
+| `ImitationOfChrist` *The Imitation of Christ* | 1877 | Thomas à Kempis (died 1471), William Benham (died 1910) | https://standardebooks.org/ebooks/thomas-a-kempis/the-imitation-of-christ/william-benham |
+| `WayToGod` *The Way to God and How to Find It* | 1884 | D. L. Moody (died 1899) | https://standardebooks.org/ebooks/d-l-moody/the-way-to-god-and-how-to-find-it |
+| `PracticalMysticism` *Practical Mysticism: A Little Book for Normal People* | 1914 | Evelyn Underhill (died 1941) | https://standardebooks.org/ebooks/evelyn-underhill/practical-mysticism |
+| `ArtOfIllustration` *The Art of Illustration* | 1894 | C. H. Spurgeon (died 1892) | https://standardebooks.org/ebooks/c-h-spurgeon/the-art-of-illustration |
+| `NewmanVerses` *Verses on Various Occasions* | 1903 | John Henry Newman (died 1890) | https://standardebooks.org/ebooks/john-henry-newman/verses-on-various-occasions |
+| `Heretics` *Heretics* | 1905 | G. K. Chesterton (died 1936) | https://standardebooks.org/ebooks/g-k-chesterton/heretics |
+| `EverlastingMan` *The Everlasting Man* | 1925 | G. K. Chesterton (died 1936) | https://standardebooks.org/ebooks/g-k-chesterton/the-everlasting-man |
+| `WhatsWrongWithTheWorld` *What’s Wrong with the World* | 1910 | G. K. Chesterton (died 1936) | https://standardebooks.org/ebooks/g-k-chesterton/whats-wrong-with-the-world |
+| `ManWhoWasThursday` *The Man Who Was Thursday: A Nightmare* | 1908 | G. K. Chesterton (died 1936) | https://standardebooks.org/ebooks/g-k-chesterton/the-man-who-was-thursday |
+| `Phantastes` *Phantastes: A Faerie Romance for Men and Women* | 1858 | George MacDonald (died 1905) | https://standardebooks.org/ebooks/george-macdonald/phantastes |
+| `Lilith` *Lilith: A Romance* | 1895 | George MacDonald (died 1905) | https://standardebooks.org/ebooks/george-macdonald/lilith |
+| `BackOfTheNorthWind` *At the Back of the North Wind* | 1871 | George MacDonald (died 1905) | https://standardebooks.org/ebooks/george-macdonald/at-the-back-of-the-north-wind |
+| `PrincessAndTheGoblin` *The Princess and the Goblin* | 1872 | George MacDonald (died 1905) | https://standardebooks.org/ebooks/george-macdonald/the-princess-and-the-goblin |
+| `PrincessAndCurdie` *The Princess and Curdie* | 1883 | George MacDonald (died 1905) | https://standardebooks.org/ebooks/george-macdonald/the-princess-and-curdie |
+| `DivineComedy` *The Divine Comedy* | 1867 | Dante Alighieri (died 1321), Henry Wadsworth Longfellow (died 1882) | https://standardebooks.org/ebooks/dante-alighieri/the-divine-comedy/henry-wadsworth-longfellow |
+| `ParadiseLost` *Paradise Lost* | 1667 | John Milton (died 1674) | https://standardebooks.org/ebooks/john-milton/paradise-lost |
+| `BenHur` *Ben-Hur: A Tale of the Christ* | 1880 | Lew Wallace (died 1905) | https://standardebooks.org/ebooks/lew-wallace/ben-hur |
+
+Left out: A. W. Tozer's *The Pursuit of God* (1948: Tozer died in 1963, so it's in copyright in the United Kingdom until 2034), and Archibald Alexander's *A Day at a Time* (1916),
+because when its author died isn't known. Augustine's *Confessions*, *Introduction to the Devout Life*, and Hopkins's poems are only on Standard Ebooks' list of wanted books so far.
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

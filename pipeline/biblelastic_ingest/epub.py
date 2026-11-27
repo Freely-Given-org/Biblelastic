@@ -197,10 +197,20 @@ class BookParser( items._Parser ):
 def entry_items( contents:list, blocks:list ) -> tuple:
     """
     (starts, headings) for a book's table of contents: { block index: title } where each entry starts, and { block index: heading level } for the items below them.
-    Each top-level item is an entry, except one with items under it whose own text is only its title (e.g., Standard Ebooks' half-title page, with the book's name,
-    before all its chapters, or a page that only says ‘Book I’): the items under it are entries instead, and its title page goes with the first of them.
+    Each top-level item is an entry, except one with items under it whose own text is only its title (e.g., a page that only says ‘Book I’, or ‘Part I’ and
+    ‘On the Creature Called Man’ for ‘Part I: On the Creature Called Man’), or, at the top level, its title and a subtitle (e.g., Standard Ebooks' half-title page,
+    ‘Lilith’ and ‘A Romance’, before all its chapters): the items under it are entries instead, and its title page goes with the first of them.
     """
     simple = lambda text: re.sub( r'\W', '', text ).casefold()
+    def title_page( own:list, label:str, top:bool ) -> bool:
+        """ Whether a page's text (its blocks) is only its title, which may be in several blocks (and at the top level, a subtitle after it) """
+        joined = ''
+        for count, text in enumerate( own, start=1 ):
+            joined += simple( text )
+            if joined == simple( label ):
+                rest = own[count:]
+                return not rest or (top and len(rest) == 1 and len(rest[0].strip()) <= 80 and not re.search( r'[.!?]$', rest[0].strip() ))
+        return not own
     tree, stack = [], []
     for depth, label, index in contents:
         node = (depth, label, index, [])
@@ -210,18 +220,25 @@ def entry_items( contents:list, blocks:list ) -> tuple:
     starts, headings = {}, {}
     def descendants( node:tuple ):
         for child in node[3]: yield child; yield from descendants( child )
-    def visit( node:tuple ) -> None:
+    def own_text( node:tuple ) -> list|None:
+        """ The text of an item's own page (before the items under it), or None if it has none under it """
+        _depth, _label, index, children = node
+        return [ block.text for block in blocks[index:children[0][2]] if block.text.strip() ] if children and children[0][2] >= index else None
+    def visit( node:tuple, top:bool, prefix:str='', likeSiblings:bool=False ) -> None:
         depth, label, index, children = node
-        own = [ block.text for block in blocks[index:children[0][2]] if block.text.strip() ] if children and children[0][2] >= index else None
-        if own is not None and all( simple( text ) == simple( label ) for text in own ):
+        if re.fullmatch( r'[IVXLC]+|\d+', label.strip().rstrip( '.' ) ) and prefix: label = f'{prefix}, {label.strip()}' # e.g., ‘Book I, III’ for chapter III of Book I
+        own = own_text( node )
+        # (Where one of its siblings is only a title page, one whose own page is short, e.g., with an epigraph too, is split in the same way)
+        if own is not None and (title_page( own, node[1], top ) or (likeSiblings and sum( len(text.strip()) for text in own ) <= 600)):
             before = set( starts )
-            for child in children: visit( child )
+            split = any( own_text( child ) is not None and title_page( own_text( child ), child[1], False ) for child in children )
+            for child in children: visit( child, False, label.split( ':' )[0].strip() if not top else '', split )
             added = sorted( set( starts ) - before )
             if added and index < added[0]: starts[index] = starts.pop( added[0] ) # (The title page goes with the first of them)
             return
         starts.setdefault( index, label )
         for descendant in descendants( node ): headings.setdefault( descendant[2], descendant[0] - depth + 1 ) # Lower levels of the contents are headings
-    for node in tree: visit( node )
+    for node in tree: visit( node, True )
     return starts, headings
 
 

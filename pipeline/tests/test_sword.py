@@ -107,6 +107,16 @@ class TitlePageTests( unittest.TestCase ):
         self.assertEqual( starts, { 0:'Imprint', 1:'I: Introduction', 4:'II: The Maniac', 6:'Part Two' } )
         self.assertEqual( headings, { 8:2 } )
 
+    def test_subtitles_and_books( self ):
+        class Block:
+            def __init__( self, text:str ) -> None: self.text = text
+        # A half-title with a subtitle; Book I's page has only its title (in two blocks); Book II's has an epigraph too; chapters are numbered only
+        blocks = [ Block( 'Lilith' ), Block( 'A Romance' ), Block( 'Book' ), Block( 'I' ), Block( 'I' ), Block( 'Text.' ), Block( 'II' ), Block( 'Text.' ),
+                   Block( 'Book II' ), Block( '“There is a fire”' ), Block( 'I' ), Block( 'Text.' ) ]
+        contents = [ (1, 'Lilith', 0), (2, 'Book I', 2), (3, 'I', 4), (3, 'II', 6), (2, 'Book II', 8), (3, 'I', 10) ]
+        starts, _headings = epub.entry_items( contents, blocks )
+        self.assertEqual( starts, { 0:'Book I, I', 6:'Book I, II', 8:'Book II, I' } )
+
 
 if __name__ == '__main__':
     unittest.main()

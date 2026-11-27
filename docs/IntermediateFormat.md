@@ -244,7 +244,9 @@ with the documents `Fauna`, `Flora`, and `Realia`: 762 articles). It comes from 
 A book is read from an EPUB file by `pipeline/biblelastic_ingest/epub.py`, and becomes the same files as a commentary or dictionary,
 with one document, `Chapter`: each top-level item of the book's table of contents is an entry (so locators are `Chapter 1`, `Chapter 2`, …, and each entry's title is its item in the contents).
 An item whose own text is only its title (e.g., Standard Ebooks' half-title page, with the book's name before all its chapters, or a page that only says ‘Book I’)
-isn't an entry: the items under it are, and its title page goes with the first of them.
+isn't an entry: the items under it are, and its title page goes with the first of them. A title may be split across lines (‘Part I’ and ‘On the Creature Called Man’),
+and a book's own half-title page may have a subtitle too (‘Lilith’ and ‘A Romance’). Where one item at a level is split like this, so is a sibling whose page is short (e.g., with an epigraph too),
+so that all of a book's chapters are entries (as in *Ben-Hur*). A chapter whose title is only a number takes its book's too (e.g., ‘Book II, III’ in *The Imitation of Christ*).
 
 - **Paragraphs** are the book's blocks (paragraphs, list items, table cells), styled `h1`–`h3` (headings), `p`, `li`, or `note` (footnotes and endnotes;
     the footnote markers in the text are left out). A heading is an h1–h6 element, a block that the contents points to below its top level,
@@ -272,12 +274,29 @@ Sixty-two are from [books.freely.giving](https://books.freely.giving), and all C
 The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
 so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
 
-Two more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
+Nineteen more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
 | `UnspokenSermons` *Unspoken Sermons* (George MacDonald, three series, 1867–1889) | `book` | 44 | 177,000 | 59 `cites` |
 | `Orthodoxy` *Orthodoxy* (G. K. Chesterton, 1908) | `book` | 14 | 65,000 | none |
+| `ImitationOfChrist` *The Imitation of Christ* (Thomas à Kempis (translated by William Benham), 1877) | `book` | 120 | 64,000 | 184 `cites` |
+| `WayToGod` *The Way to God and How to Find It* (D. L. Moody, 1884) | `book` | 14 | 42,000 | 207 `cites` |
+| `PracticalMysticism` *Practical Mysticism: A Little Book for Normal People* (Evelyn Underhill, 1914) | `book` | 16 | 34,000 | none |
+| `ArtOfIllustration` *The Art of Illustration* (C. H. Spurgeon, 1894) | `book` | 10 | 48,000 | 3 `cites` |
+| `NewmanVerses` *Verses on Various Occasions* (John Henry Newman, 1903) | `book` | 190 | 36,000 | 1 `about` and 4 `cites` |
+| `Heretics` *Heretics* (G. K. Chesterton, 1905) | `book` | 24 | 65,000 | none |
+| `EverlastingMan` *The Everlasting Man* (G. K. Chesterton, 1925) | `book` | 22 | 108,000 | none |
+| `WhatsWrongWithTheWorld` *What’s Wrong with the World* (G. K. Chesterton, 1910) | `book` | 53 | 61,000 | none |
+| `ManWhoWasThursday` *The Man Who Was Thursday: A Nightmare* (G. K. Chesterton, 1908) | `book` | 19 | 59,000 | none |
+| `Phantastes` *Phantastes: A Faerie Romance for Men and Women* (George MacDonald, 1858) | `book` | 31 | 70,000 | none |
+| `Lilith` *Lilith: A Romance* (George MacDonald, 1895) | `book` | 52 | 96,000 | none |
+| `BackOfTheNorthWind` *At the Back of the North Wind* (George MacDonald, 1871) | `book` | 41 | 90,000 | none |
+| `PrincessAndTheGoblin` *The Princess and the Goblin* (George MacDonald, 1872) | `book` | 35 | 52,000 | none |
+| `PrincessAndCurdie` *The Princess and Curdie* (George MacDonald, 1883) | `book` | 38 | 57,000 | none |
+| `DivineComedy` *The Divine Comedy* (Dante Alighieri (translated by Henry Wadsworth Longfellow), 1867) | `book` | 12 | 315,000 | 176 `cites` |
+| `ParadiseLost` *Paradise Lost* (John Milton, 1667) | `book` | 15 | 83,000 | none |
+| `BenHur` *Ben-Hur: A Tale of the Christ* (Lew Wallace, 1880) | `book` | 87 | 201,000 | none |
 
 The other fifty-seven are every English or Spanish book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
 (which `sources.toml` includes), written by
