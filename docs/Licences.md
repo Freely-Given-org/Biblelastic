@@ -177,6 +177,36 @@ Left out: Calvin's *Institutes* (CCEL's text, which CrossWire's module is, has J
 psalm's whole commentary at its first verse). *The Mortification of Sin*, *Religious Affections*, *The Pilgrim's Progress*, and the Baptist Confession of 1689 were left out because they're already here,
 from books.freely.giving.
 
+## A sixth batch of books from Standard Ebooks (added 28 November 2026)
+
+None is in the English starter set. Each was first published (or translated) before 1931, by an author (and translator) who died before 1956, except where it says otherwise below.
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| `CityOfGod` *The City of God* (Augustine of Hippo, died 430; translated by Marcus Dods, died 1909, George Wilson and J. J. Smith, in 1871) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/augustine-of-hippo/the-city-of-god/marcus-dods_george-wilson_j-j-smith) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `OnTheMakingOfMan` *On the Making of Man* (Gregory of Nyssa, died about 395; translated by William Moore and Henry Austin Wilson, died 1927, in 1893) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/gregory-of-nyssa/on-the-making-of-man/william-moore_henry-austin-wilson) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `OlneyHymns` *Olney Hymns* (John Newton, died 1807, and William Cowper, died 1800; 1779) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/john-newton_william-cowper/olney-hymns) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `ThePearl` *The Pearl* (anonymous, late 14th century; translated by Sophie Jewett, died 1909, in 1908) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/anonymous/the-pearl/sophie-jewett) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `WheatleyPoems` *Poems on Various Subjects, Religious and Moral* (Phillis Wheatley, died 1784; 1773) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/phillis-wheatley/poems-on-various-subjects-religious-and-moral) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `WarAndChristianity` *An Inquiry Into the Accordancy of War with the Principles of Christianity* (Jonathan Dymond, died 1828; 1823) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/jonathan-dymond/an-inquiry-into-the-accordancy-of-war-with-the-principles-of-christianity) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `Hypatia` *Hypatia* (Charles Kingsley, died 1875; 1853) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/charles-kingsley/hypatia) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `WithinAndWithout` *Within and Without* (George MacDonald, died 1905; 1855) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/george-macdonald/within-and-without) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `ThePortent` *The Portent* (George MacDonald; 1864) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/george-macdonald/the-portent) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `IfIHadAFather` *If I Had a Father* (George MacDonald; 1882) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/george-macdonald/if-i-had-a-father) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `HouseOfRimmon` *The House of Rimmon* (Henry van Dyke, died 1933; 1908) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/henry-van-dyke-jr/the-house-of-rimmon) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `VarietiesOfReligiousExperience` *The Varieties of Religious Experience* (William James, died 1910; 1902) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/william-james/the-varieties-of-religious-experience) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `JesusTheSonOfMan` *Jesus the Son of Man* (Kahlil Gibran, died 1931; 1928) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/kahlil-gibran/jesus-the-son-of-man) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+
+Things to weigh when they're checked: three translators' death dates couldn't be found. George Wilson (of Glenluce) and J. J. Smith translated
+seven of *The City of God*'s twenty-two books in 1871, and William Moore (‘Rector of Appleton, late Fellow of Magdalen College, Oxford’) translated *On the Making of Man* with Wilson in 1893.
+To be in copyright anywhere that counts life plus 70 years, each would have had to live past 1956, 85 years or more after their translations were published, which is very unlikely.
+Two of the books aren't Christian writing as such: William James writes about religious experience as a psychologist, and Kahlil Gibran's portraits of Jesus, told by people who knew him, aren't orthodox.
+Standard Ebooks gives *The Portent* as published in 1894 (its later edition); it was first published as a book in 1864.
+
+Left out: Hilaire Belloc's *The Path to Rome* (its text is one continuous chapter, with no structure to divide it into entries), and *Barlaam and Ioasaph* (its Loeb translation's co-translator,
+Harold Mattingly, died in 1964). Augustine's *Confessions* and *On Christian Doctrine*, Calvin's *Institutes*, *Introduction to the Devout Life*, Pascal's *Pensées* and *Provincial Letters*,
+Hopkins's poems, and Benson's *Lord of the World* are still only on Standard Ebooks' wanted list.
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

@@ -1603,6 +1603,241 @@ redistributable = true
 licence_verified = true
 starter = false
 
+# A sixth batch of public-domain books from Standard Ebooks (added 28 November 2026)
+[[edition]]
+id = "CityOfGod"
+kind = "book"
+name = "The City of God"
+author = "Augustine of Hippo"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/augustine-of-hippo/the-city-of-god/marcus-dods_george-wilson_j-j-smith"
+download = "https://standardebooks.org/ebooks/augustine-of-hippo/the-city-of-god/marcus-dods_george-wilson_j-j-smith/downloads/augustine-of-hippo_the-city-of-god_marcus-dods-george-wilson-j-j-smith.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/augustine-of-hippo_the-city-of-god_marcus-dods-george-wilson-j-j-smith.epub"]
+copyright = "Augustine of Hippo, The City of God (426), translated by Marcus Dods, George Wilson and J. J. Smith (1871): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "OnTheMakingOfMan"
+kind = "book"
+name = "On the Making of Man"
+author = "Gregory of Nyssa"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/gregory-of-nyssa/on-the-making-of-man/william-moore_henry-austin-wilson"
+download = "https://standardebooks.org/ebooks/gregory-of-nyssa/on-the-making-of-man/william-moore_henry-austin-wilson/downloads/gregory-of-nyssa_on-the-making-of-man_william-moore-henry-austin-wilson.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/gregory-of-nyssa_on-the-making-of-man_william-moore-henry-austin-wilson.epub"]
+copyright = "Gregory of Nyssa, On the Making of Man (about 379), translated by William Moore and Henry Austin Wilson (1893): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "OlneyHymns"
+kind = "book"
+name = "Olney Hymns"
+author = "John Newton and William Cowper"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/john-newton_william-cowper/olney-hymns"
+download = "https://standardebooks.org/ebooks/john-newton_william-cowper/olney-hymns/downloads/john-newton-william-cowper_olney-hymns.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/john-newton-william-cowper_olney-hymns.epub"]
+copyright = "John Newton and William Cowper, Olney Hymns (1779): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "ThePearl"
+kind = "book"
+name = "The Pearl"
+author = "Anonymous"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/anonymous/the-pearl/sophie-jewett"
+download = "https://standardebooks.org/ebooks/anonymous/the-pearl/sophie-jewett/downloads/anonymous_the-pearl_sophie-jewett.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/anonymous_the-pearl_sophie-jewett.epub"]
+copyright = "The Pearl (late 14th century), translated by Sophie Jewett (1908): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "WheatleyPoems"
+kind = "book"
+name = "Poems on Various Subjects, Religious and Moral"
+author = "Phillis Wheatley"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/phillis-wheatley/poems-on-various-subjects-religious-and-moral"
+download = "https://standardebooks.org/ebooks/phillis-wheatley/poems-on-various-subjects-religious-and-moral/downloads/phillis-wheatley_poems-on-various-subjects-religious-and-moral.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/phillis-wheatley_poems-on-various-subjects-religious-and-moral.epub"]
+copyright = "Phillis Wheatley, Poems on Various Subjects, Religious and Moral (1773): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "WarAndChristianity"
+kind = "book"
+name = "An Inquiry Into the Accordancy of War with the Principles of Christianity"
+author = "Jonathan Dymond"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/jonathan-dymond/an-inquiry-into-the-accordancy-of-war-with-the-principles-of-christianity"
+download = "https://standardebooks.org/ebooks/jonathan-dymond/an-inquiry-into-the-accordancy-of-war-with-the-principles-of-christianity/downloads/jonathan-dymond_an-inquiry-into-the-accordancy-of-war-with-the-principles-of-christianity.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/jonathan-dymond_an-inquiry-into-the-accordancy-of-war-with-the-principles-of-christianity.epub"]
+copyright = "Jonathan Dymond, An Inquiry Into the Accordancy of War with the Principles of Christianity (1823): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Hypatia"
+kind = "book"
+name = "Hypatia"
+author = "Charles Kingsley"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/charles-kingsley/hypatia"
+download = "https://standardebooks.org/ebooks/charles-kingsley/hypatia/downloads/charles-kingsley_hypatia.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/charles-kingsley_hypatia.epub"]
+copyright = "Charles Kingsley, Hypatia (1853): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "WithinAndWithout"
+kind = "book"
+name = "Within and Without"
+author = "George MacDonald"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/george-macdonald/within-and-without"
+download = "https://standardebooks.org/ebooks/george-macdonald/within-and-without/downloads/george-macdonald_within-and-without.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/george-macdonald_within-and-without.epub"]
+copyright = "George MacDonald, Within and Without (1855): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "ThePortent"
+kind = "book"
+name = "The Portent"
+author = "George MacDonald"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/george-macdonald/the-portent"
+download = "https://standardebooks.org/ebooks/george-macdonald/the-portent/downloads/george-macdonald_the-portent.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/george-macdonald_the-portent.epub"]
+copyright = "George MacDonald, The Portent (1864): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "IfIHadAFather"
+kind = "book"
+name = "If I Had a Father"
+author = "George MacDonald"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/george-macdonald/if-i-had-a-father"
+download = "https://standardebooks.org/ebooks/george-macdonald/if-i-had-a-father/downloads/george-macdonald_if-i-had-a-father.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/george-macdonald_if-i-had-a-father.epub"]
+copyright = "George MacDonald, If I Had a Father (1882): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "HouseOfRimmon"
+kind = "book"
+name = "The House of Rimmon"
+author = "Henry van Dyke"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/henry-van-dyke-jr/the-house-of-rimmon"
+download = "https://standardebooks.org/ebooks/henry-van-dyke-jr/the-house-of-rimmon/downloads/henry-van-dyke-jr_the-house-of-rimmon.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/henry-van-dyke-jr_the-house-of-rimmon.epub"]
+copyright = "Henry van Dyke, The House of Rimmon (1908): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "VarietiesOfReligiousExperience"
+kind = "book"
+name = "The Varieties of Religious Experience"
+author = "William James"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/william-james/the-varieties-of-religious-experience"
+download = "https://standardebooks.org/ebooks/william-james/the-varieties-of-religious-experience/downloads/william-james_the-varieties-of-religious-experience.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/william-james_the-varieties-of-religious-experience.epub"]
+copyright = "William James, The Varieties of Religious Experience (1902): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "JesusTheSonOfMan"
+kind = "book"
+name = "Jesus the Son of Man"
+author = "Kahlil Gibran"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/kahlil-gibran/jesus-the-son-of-man"
+download = "https://standardebooks.org/ebooks/kahlil-gibran/jesus-the-son-of-man/downloads/kahlil-gibran_jesus-the-son-of-man.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/kahlil-gibran_jesus-the-son-of-man.epub"]
+copyright = "Kahlil Gibran, Jesus the Son of Man (1928): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
 # Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
 [disclaimers]
 commentary = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."

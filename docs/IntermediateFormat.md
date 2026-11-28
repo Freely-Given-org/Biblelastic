@@ -300,6 +300,8 @@ An item whose own text is only its title (e.g., Standard Ebooks' half-title page
 isn't an entry: the items under it are, and its title page goes with the first of them. A title may be split across lines (‘Part I’ and ‘On the Creature Called Man’),
 and a book's own half-title page may have a subtitle too (‘Lilith’ and ‘A Romance’). Where one item at a level is split like this, so is a sibling whose page is short (e.g., with an epigraph too),
 so that all of a book's chapters are entries (as in *Ben-Hur*). A chapter whose title is only a number takes its book's too (e.g., ‘Book II, III’ in *The Imitation of Christ*).
+A scene, or an item labelled with a number and a title, takes the name of the act or book that it's in (e.g., ‘Act I, Scene II’ in *The House of Rimmon*, or ‘Book II, 1: Time How Swift’ in *Olney Hymns*, whose books each number their hymns from 1).
+A half-title page's subtitle may be up to 200 characters long, as in *The Portent*.
 
 - **Paragraphs** are the book's blocks (paragraphs, list items, table cells), styled `h1`–`h3` (headings), `p`, `li`, or `note` (footnotes and endnotes;
     the footnote markers in the text are left out). A heading is an h1–h6 element, a block that the contents points to below its top level,
@@ -327,7 +329,7 @@ Sixty-two are from [books.freely.giving](https://books.freely.giving), and all C
 The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
 so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
 
-Thirty-seven more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
+Fifty more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
@@ -368,6 +370,19 @@ Thirty-seven more are public-domain classics from [Standard Ebooks](https://stan
 | `Resurrection` *Resurrection* (Leo Tolstoy (translated by Louise Maude), 1899) | `book` | 135 | 175,000 | 11 `cites` |
 | `MacDonaldShortFiction` *Short Fiction* (George MacDonald, 1858–1891: its numbered chapters are titled with their story's name, e.g., ‘A Double Story, III’) | `book` | 92 | 224,000 | 1 `cites` |
 | `VanDykePoetry` *Poetry* (Henry van Dyke, 1897–1927) | `book` | 231 | 69,000 | 7 `cites` |
+| `CityOfGod` *The City of God* (Augustine of Hippo (translated by Marcus Dods, George Wilson and J. J. Smith), 1871) | `book` | 30 | 457,000 | 1,288 `cites` |
+| `OnTheMakingOfMan` *On the Making of Man* (Gregory of Nyssa (translated by William Moore and Henry Austin Wilson), 1893) | `book` | 36 | 41,000 | 82 `cites` |
+| `OlneyHymns` *Olney Hymns* (John Newton and William Cowper, 1779: each book numbers its hymns from 1, so they're titled like ‘Book II, 1: Time How Swift’) | `book` | 353 | 67,000 | 8 `about` and 157 `cites` |
+| `ThePearl` *The Pearl* (anonymous, late 14th century (translated by Sophie Jewett), 1908) | `book` | 25 | 10,000 | none |
+| `WheatleyPoems` *Poems on Various Subjects, Religious and Moral* (Phillis Wheatley, 1773) | `book` | 67 | 15,000 | 1 `about` |
+| `WarAndChristianity` *An Inquiry Into the Accordancy of War with the Principles of Christianity* (Jonathan Dymond, 1823) | `book` | 9 | 48,000 | 24 `cites` |
+| `Hypatia` *Hypatia* (Charles Kingsley, 1853) | `book` | 36 | 170,000 | none |
+| `WithinAndWithout` *Within and Without* (George MacDonald, 1855) | `book` | 10 | 37,000 | none |
+| `ThePortent` *The Portent* (George MacDonald, 1864) | `book` | 31 | 41,000 | none |
+| `IfIHadAFather` *If I Had a Father* (George MacDonald, 1882) | `book` | 7 | 28,000 | none |
+| `HouseOfRimmon` *The House of Rimmon* (Henry van Dyke, 1908: its scenes are titled like ‘Act I, Scene II’) | `book` | 12 | 15,000 | none |
+| `VarietiesOfReligiousExperience` *The Varieties of Religious Experience* (William James, 1902) | `book` | 21 | 186,000 | 1 `cites` |
+| `JesusTheSonOfMan` *Jesus the Son of Man* (Kahlil Gibran, 1928) | `book` | 82 | 41,000 | none |
 
 The other fifty-seven are every English or Spanish book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
 (which `sources.toml` includes), written by

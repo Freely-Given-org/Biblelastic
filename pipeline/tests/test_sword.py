@@ -279,6 +279,18 @@ class TitlePageTests( unittest.TestCase ):
         starts, _headings = epub.entry_items( contents, blocks )
         self.assertEqual( starts, { 0:'A Double Story, I', 3:'A Double Story, II', 5:'Cross Purposes, I' } )
 
+    def test_volumes( self ):
+        """ A long subtitle on the half-title; a scene, or a numbered and titled item, gets the name of the act or book that it's in """
+        class Block:
+            def __init__( self, text:str ) -> None: self.text = text
+        blocks = [ Block( 'The House' ), Block( 'And an Examination of the Philosophical Reasoning by Which It Is Defended, with Observations on Its Causes' ),
+                   Block( 'Act I' ), Block( 'Scene I' ), Block( 'Text.' ), Block( 'Scene II' ), Block( 'Text.' ), Block( 'Act II' ), Block( 'Text.' ),
+                   Block( 'Book II: On Occasional Subjects' ), Block( '1' ), Block( 'Text.' ), Block( '2' ), Block( 'Text.' ) ]
+        contents = [ (1, 'The House', 0), (2, 'Act I', 2), (3, 'Scene I', 3), (3, 'Scene II', 5), (2, 'Act II', 7),
+                     (2, 'Book II: On Occasional Subjects', 9), (3, '1: Time How Swift', 10), (3, '2: Time How Short', 12) ]
+        starts, _headings = epub.entry_items( contents, blocks )
+        self.assertEqual( starts, { 0:'Act I, Scene I', 5:'Act I, Scene II', 7:'Act II', 9:'Book II, 1: Time How Swift', 12:'Book II, 2: Time How Short' } )
+
 
 if __name__ == '__main__':
     unittest.main()
