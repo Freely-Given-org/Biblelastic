@@ -218,13 +218,13 @@ So far there are two, both from [Tyndale Open Resources](https://tyndaleopenreso
 | `TOSN` Tyndale Open Study Notes | `commentary` | One for each of the 66 books (16,923 study notes), plus `Intros`, `Summaries`, `Profiles`, and `Themes` | 17,478 | 1.12 million | 17,478 `about` and 55,554 `cites` |
 | `TOBD` Tyndale Open Bible Dictionary | `dictionary` | `Articles`, `Textboxes`, `Charts`, `Maps`, and `Pictures` (captions only) | 6,431 | 1.53 million | 47,393 `cites` |
 
-Twenty-seven more are public-domain works from CrossWire's [SWORD](https://crosswire.org/sword) library, read from each module's zip file by `pipeline/biblelastic_ingest/sword.py`
+Thirty-six more are public-domain works from CrossWire's [SWORD](https://crosswire.org/sword) library, read from each module's zip file by `pipeline/biblelastic_ingest/sword.py`
 (the registry's `format = "SWORD"`): a dictionary module (zLD or RawLD) becomes one document, with an entry for each key, a general book (RawGenBook) a `Chapter` document like an EPUB book's,
 and a commentary module (zCom or zCom4, of the whole Bible or the New Testament, in blocks of a book or a chapter) a document for each book, with an entry for each note (named like `1:1`, or `3:1-8` for a note on several verses, which SWORD links to each of them, and `about` those verses).
 A note's type is the registry's `sword.notes` (`CrossReferences` by default). Their references are to the KJV's chapters and verses, which are taken from
 BibleOrgSys's versification table, and are checked against it.
 
-The two OSIS commentaries (Matthew Henry's and Jamieson, Fausset, and Brown's) keep what comes before a verse's note between ‘pre-verse’ milestones.
+The OSIS commentaries Matthew Henry's (both the concise and the complete) and Jamieson, Fausset, and Brown's keep what comes before a verse's note between ‘pre-verse’ milestones.
 At a book's first note, that's the book's introduction, which becomes an entry of its own (`Intro`, a `BookIntro` about the whole book), with the book's own slot
 (e.g., ‘Commentary by David Brown’) and, for a book of one chapter, its chapter's slot. At a chapter's first note, Matthew Henry's has the chapter's title and outline
 (up to the first note's ‘Verses 1-8’), which becomes an entry named like `3` (an `Outline` about the whole chapter); a chapter with only one note, and no ‘Verses’,
@@ -234,6 +234,29 @@ unless the chapter's opening has more, which becomes an `Introduction` about the
 In the ThML commentaries (the TSK, Barnes's, and the People's New Testament), a chapter's own slot is a copy of a note from elsewhere (e.g., Acts 27:44's, before Romans), so it's left out;
 Barnes's keeps a book's preface and introduction in its first verses' notes, which are `BookIntro`s about the book as well as those verses.
 Scofield's has two notes whose markup is cut between them (a list that starts in Genesis 4:1's note and ends in 4:2's): an end tag without its start tag is left out, and a start tag without its end is ended.
+
+Matthew Henry's complete commentary has the preface to its volume before the introduction at Genesis, Joshua, and Acts (‘PREFACE’, a title that isn't a chapter's): both go in the book's `Intro`.
+Keil and Delitzsch's has no milestones, and keeps each book's introduction in its first note (the registry's `sword.intros = "first-note"`). The introduction ends at the first title after
+its own (the last that says ‘Introduction’) that names a passage (‘The Creation of the World - Genesis 1:1-2:3’, ‘SUPERSCRIPTION AND MOTTO, 1. 1-7.’, ‘FIRST BOOK OF THE PSALTER Ps. I.-XLI.’),
+or else at the first paragraph that starts with a verse's reference (‘Jdg 1:1-2’), together with any titles just before it (less than 1,500 characters apart, e.g., ‘I. Laws and Ordinances…’ before ‘The Laws of Sacrifice - Leviticus 1-7’).
+Where there's neither (Deuteronomy, Isaiah, and Jeremiah), the whole note is the `BookIntro`, about the book and the note's verses.
+Spurgeon's *Treasury of David* keeps each psalm in one note (Psalm 119's has 264,000 words), so it's divided (`sword.sections = "verses"`) by the psalm's sections' titles into its overview
+(an `Overview` named like `23`, with its title and division), the books on it (`Works`), and each section's part on each verse, which starts with ‘Verse 1.’ (or ‘Ver. 3.’, ‘Verses 4, 5.’, ‘Ver. 42-43, 47.’):
+its `Exposition` (a `Commentary` named like `23:1`), *Explanatory Notes and Quaint Sayings* (`Notes`, `23:1Notes`), and *Hints to the Village Preacher* (`Hints`, `23:1Hints`), each `about` its verses.
+What comes before a section's first verse is an entry on the whole psalm (`23Notes`), except in a later section of the same kind (Psalm 119's stanzas each have their own), where it goes with the first verse.
+A part that's on the same verses as the one before goes with it; one that comes back to them later gets a number (`3:2Notes2`). A section's title is in the entry's title (‘Psalm 23:1: Explanatory Notes and Quaint Sayings’).
+Psalm 119's ‘HINTS TO PREACHERS.’ is often a paragraph rather than a title, and is taken as one, and the leftovers of its web pages (‘Psalms 119:2*’ and ‘Continued...See Psalms’) are left out.
+The module has no exposition of Psalm 119:1.
+Calvin's commentaries (`sword.sections = "milestones"`) have each note between OSIS milestones (`<div annotateType="commentary" sID=…/>`), but what comes after it in the printed volume
+is kept with it: usually the next note's heading and text (‘Jeremiah 1:13-14’, with Calvin's Latin), and a lecture's title (‘Lecture Third’). That goes with the next note in the book,
+except a lecture's closing prayer (‘PRAYER’, and ‘End of the Commentaries on Joel’), which stays, and more of the same chapter's text where the next note is on another chapter
+(Psalm 119:121-128's, whose commentary the module doesn't have). A volume's back matter (its indexes, the translation of Calvin's version, the editors' dissertations and appendices) is left out,
+from where it starts to the end of the note. At a book's end, a preface or argument (‘Calvin's Preface to Obadiah’, ‘THE ARGUMENT’, ‘THE AUTHOR'S DEDICATORY EPISTLE’) is the next book's in the printed volume's order,
+which isn't always the Bible's (1 Peter's ends with 1 John's argument, and 2 Peter's with Jude's): it goes to the book that its last heading names (‘1 John 1:1-2’, ‘Jude 1-2’), or else the next book, as its `Intro`.
+Genesis's first note is all front matter (the translator's preface, the dedications, and Calvin's argument), so it's Genesis's `Intro`, without CCEL's lines on its title page.
+The module has only the first passage of each psalm (each about the whole psalm, which SWORD links it to), and of each chapter of Zechariah, Malachi, 1 and 2 Timothy, and Titus,
+and nothing on Isaiah 49–66 or on Genesis 1:1. Calvin's harmonies keep their notes at one book's verses: the *Harmony of the Gospels* mostly at Matthew's, and the *Harmony of Moses* at Exodus's
+(with Leviticus's, Numbers's, and Deuteronomy's passages among them), as the module has them.
 
 The two devotionals are `book`s, with a document `Readings` of `Reading`s: Spurgeon's *Morning and Evening* keeps a day's two readings under one key, as sections with titles, and *Daily Light*
 keeps them as parts that start with ‘*Morning*:’ and ‘*Evening*:’, under a key like `01.31` (the registry's `sword.parts` and `sword.dates`); each reading is an entry, titled like ‘Morning, January 31’.
@@ -262,6 +285,15 @@ is a `note` paragraph. A reference that starts with a book's code (the Westminst
 | `Scofield` Scofield Reference Notes (1917) | `commentary` | One for each of the 66 books: its introduction, and each note | 3,269 | 0.14 million | 3,269 `about` and 11,005 `cites` |
 | `Barnes` Barnes' New Testament Notes | `commentary` | One for each of the 27 books of the New Testament | 7,431 | 2.74 million | 7,457 `about` and 45,038 `cites` |
 | `PNT` The People's New Testament (1891) | `commentary` | One for each book of the New Testament but Philemon, which the module has no notes on | 6,068 | 0.39 million | 6,068 `about` and 6,613 `cites` |
+| `MHC` Matthew Henry's Complete Commentary | `commentary` | One for each of the 66 books: like the concise commentary's | 5,418 | 7.31 million | 5,418 `about` and 72,425 `cites` |
+| `KeilDelitzsch` Keil and Delitzsch's Commentary on the Old Testament | `commentary` | One for each of the 39 books of the Old Testament: its introduction (`Intro`), and each note | 8,840 | 4.50 million | 8,844 `about` and 71,328 `cites` |
+| `TreasuryOfDavid` Spurgeon's *Treasury of David* | `commentary` | `PSA`: the preface, and each psalm's overview, and its exposition, notes, and hints on each verse | 7,516 | 2.16 million | 7,775 `about` and 7,151 `cites` |
+| `CatenaAurea` Thomas Aquinas's *Catena Aurea* | `commentary` | One for each of the Gospels: each verse's note (the Fathers' comments) | 821 | 1.10 million | 821 `about` and 1,033 `cites` |
+| `Burkitt` Burkitt's Expository Notes on the New Testament | `commentary` | One for each of the 27 books of the New Testament | 3,276 | 1.12 million | 3,276 `about` and 1,102 `cites` |
+| `GenevaNotes` The Geneva Bible's Notes | `commentary` | One for each book but Judges, Jonah, and Philemon, which the module has no notes on: each verse's note is the verse, with its notes' letters, and the notes | 14,695 | 0.83 million | 14,695 `about` and 2,811 `cites` |
+| `Calvin` Calvin's Commentaries | `commentary` | One for each of the 48 books the module has notes on: a few books' prefaces or arguments (`Intro`), and each note | 11,078 | 6.75 million | 11,078 `about` and 21,310 `cites` |
+| `Lightfoot` Lightfoot's Commentary from the Talmud and Hebraica | `commentary` | One for each of the Gospels: its introduction, and each note | 853 | 0.32 million | 853 `about` (its references aren't marked as links) |
+| `Abbott` Abbott's Illustrated New Testament (1878) | `commentary` | One for each of the 27 books of the New Testament: its introduction, and each note | 3,367 | 0.13 million | 3,367 `about` and 1,372 `cites` |
 | `Torrey` Torrey's New Topical Textbook (1897) | `dictionary` | `Topics`: like Nave's, without the ‘- ’ and ‘. ’ that start its lines | 628 | 0.20 million | 38,858 `cites` |
 | `Smith` Smith's Bible Dictionary (1884) | `dictionary` | `Articles` | 4,639 | 0.49 million | 16,831 `cites` |
 | `Hitchcock` Hitchcock's Bible Names | `dictionary` | `Names`: what each name means | 2,616 | 0.01 million | none |

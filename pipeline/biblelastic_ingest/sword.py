@@ -50,8 +50,13 @@ LINE_MARK_RE = re.compile( r'^\s*(?:→|[-.](?=\s))\s*' )
 PREVERSE_RE = re.compile( r'<div type="x-milestone" subType="x-preverse" sID="[^"]*"/>(.*?)<div type="x-milestone" subType="x-preverse" eID="[^"]*"/>', re.S )
 # How each of Matthew Henry's and Adam Clarke's notes starts (what's before it in a chapter's first verse is the chapter's title and outline), and their chapters' titles
 NOTE_START_RE = re.compile( r'<hi type="bold">Verses? \d' )
-CHAPTER_TITLE_RE = re.compile( r'<title type="x-s2">|<title type="x-s">Introduction</title>' )
+CHAPTER_TITLE_RE = re.compile( r'<title type="x-s2">(?!PREFACE<)|<title type="x-s">Introduction</title>' ) # (Not the preface to Matthew Henry's volumes, at Genesis, Joshua, and Acts)
 PREFACE_RE = re.compile( r'<title type="x-s">Preface' ) # (Adam Clarke's book's preface, at its first note, which runs on into its first chapter's outline)
+# Where a book's introduction is in its first note (`sword.intros = "first-note"`, e.g., Keil and Delitzsch's): its titles, a title that names a passage
+#   (‘The Creation of the World - Genesis 1:1-2:3’, ‘SUPERSCRIPTION AND MOTTO, 1. 1-7.’, ‘FIRST BOOK OF THE PSALTER Ps. I.-XLI.’), and a paragraph that starts with a verse's reference (‘Jdg 1:1-2’)
+TITLE_RE = re.compile( r'<title\b[^>]*>(.*?)</title>', re.S )
+PASSAGE_TITLE_RE = re.compile( r'\d+\s*[-–:.]\s*\d+|\s[-–]\s+(?:[1-3]\s?)?[A-Z][a-z]+\.?\s+\d|\b[IVXL]+\.\s*[-–]\s*[IVXL]+\.' )
+VERSE_HEADING_RE = re.compile( r'<div sID="[^"]*" type="x-p"/>\s*(?:<reference osisRef="[^"]*">[^<]*</reference>\s*<div eID="[^"]*" type="x-p"/>|(?:[1-3] ?)?[A-Z][a-z]{1,4}\.? \d+:\d+\b)' )
 SPANS = { 'hi':None, 'i':'italic', 'b':'bold', 'em':'italic', 'strong':'bold' }
 # What starts a paragraph (of this kind), and the other elements that are known (whose text is kept), in OSIS, ThML (whose HTML elements, e.g., Finney's <h2>), and TEI
 BLOCKS = { 'p':'p', 'item':'li', 'li':'li', 'row':'li', 'tr':'li', 'title':'h2', 'h1':'h2', 'h2':'h2', 'h3':'h3', 'h4':'h4', 'h5':'h4', 'h6':'h4', 'l':'p', 'note':'note' }
@@ -457,6 +462,163 @@ def parse_dictionary( edition:dict, entries:list, chapters:dict, sourceName:str 
     return parser.finish(), [sourceName]
 
 
+def intro_end( text:str ) -> int|None:
+    """
+    Where the introduction ends in a book's first note that starts with it (e.g., Keil and Delitzsch's), or None if it has no introduction (no title that says ‘Introduction’):
+    at the first title after the introduction's (last) title that names a passage, or else at the first paragraph that starts with a verse's reference,
+    with any titles just before it (less than 1,500 characters apart), or else at the end (the whole note is the introduction).
+    """
+    plain = lambda part: len(re.sub( r'\s+', ' ', re.sub( r'<[^>]*>', '', part ) ).strip())
+    titles = [ (match.start(), match.end(), re.sub( r'<[^>]*>', '', match.group( 1 ) )) for match in TITLE_RE.finditer( text ) ]
+    introductions = [ number for number, (_start, _end, title) in enumerate( titles ) if 'introduction' in title.lower() ]
+    if not introductions: return None
+    later = titles[introductions[-1]+1:]
+    found = next( (number for number, (_start, _end, title) in enumerate( later ) if PASSAGE_TITLE_RE.search( title )), None )
+    if found is None:
+        heading = VERSE_HEADING_RE.search( text, titles[introductions[-1]][1] )
+        if not heading: return len(text)
+        found = sum( 1 for start, _end, _title in later if start < heading.start() )
+        later = later[:found] + [(heading.start(), heading.start(), '')]
+    while found and plain( text[later[found-1][1]:later[found][0]] ) < 1500: found -= 1
+    return later[found][0]
+
+
+# Spurgeon's *Treasury of David* (`sword.sections = "verses"`): a psalm's sections (by their titles), and where each verse's part of a section starts
+#   (‘Verse 1.’, ‘Ver. 3.’, ‘Ver 43.’, ‘Verses 4, 5.’, ‘Verses 1-4.’, ‘Ver. 42-43, 47.’, ‘Verse 2 (second clause).’, in bold or not)
+SECTIONS = { 'EXPOSITION':('Exposition', ''), 'EXPLANATORY NOTES AND QUAINT SAYINGS':('Notes', 'Explanatory Notes and Quaint Sayings'),
+             'NOTES RELATING TO THE PSALM AS A WHOLE':('Notes', 'Explanatory Notes and Quaint Sayings'),
+             'HINTS TO THE VILLAGE PREACHER':('Hints', 'Hints to the Village Preacher'), 'HINTS TO PREACHERS':('Hints', 'Hints to Preachers'), 'WORKS UPON':('Works', 'Works upon the Psalm') }
+VERSE_PART_RE = re.compile( r'<div sID="[^"]*" type="x-p"/>\s*(?:<hi type="bold">)?\s*(?:Verses?|Ver\.?)\s*(\d+(?:\s*[-–,]\s*\d+)*)(?=\s*[.(<:]|\s+[A-Z])' )
+# Psalm 119's pages' leftovers (‘Psalms 119:2*’ and ‘Continued...See Psalms’), which are left out, and its sections' titles that are only paragraphs (‘HINTS TO PREACHERS.’)
+PAGE_MARK_RE = re.compile( r'<div sID="[^"]*" type="x-p"/>\s*(?:Continued\.\.\.[^<]*|Psalms \d+:\d+\*)\s*<div eID="[^"]*" type="x-p"/>' )
+SECTION_PARAGRAPH_RE = re.compile( r'<div sID="[^"]*" type="x-p"/>\s*((?:EXPOSITION|EXPLANATORY NOTES AND QUAINT SAYINGS|HINTS TO (?:THE VILLAGE )?PREACHERS?)\.?)\s*<div eID="[^"]*" type="x-p"/>' )
+
+
+def verse_sections( BBB:str, chapter:int, text:str, chapters:dict ) -> list:
+    """
+    A psalm's note in Spurgeon's *Treasury of David* (which SWORD keeps at its first verse) as entries: its overview (with its title and division) up to its first section,
+    then each section's part on each verse (its exposition, explanatory notes, and hints to preachers), named like `23:1`, `23:1Notes`, and `23:4-5Hints`,
+    with what comes before a section's first verse in an entry on the whole psalm (`23Notes`), or, in a later section of the same kind (as in Psalm 119's stanzas), with that first verse.
+    A section's title is the entry's title (with the psalm and verses), so it's left out of its text; the books on the psalm (‘WORKS UPON THE FIRST PSALM’) keep theirs.
+    """
+    whole, count = [f'{BBB} {chapter}:1-{chapter}:{chapters[BBB][chapter-1]}'], chapters[BBB][chapter-1]
+    text = SECTION_PARAGRAPH_RE.sub( r'<title type="x-s">\1</title>', PAGE_MARK_RE.sub( '', text ) )
+    titles = [ (match.start(), match.end(), re.sub( r'<[^>]*>', '', match.group( 1 ) ).strip().rstrip( '.' ).upper()) for match in TITLE_RE.finditer( text ) ]
+    sections = [] # (Kind, title, start, end of its text)
+    for start, end, title in titles:
+        kind = next( (value for key, value in SECTIONS.items() if title.startswith( key )), None )
+        if not kind: continue
+        sections.append( (*kind, start if kind[0] == 'Works' else end) )
+        if len(sections) == 1: overview = text[:start]
+        else: sections[-2] = (*sections[-2], start)
+    if not sections: return [ (f'{chapter}', 'Overview', whole, text, f'Psalm {chapter}') ]
+    sections[-1] = (*sections[-1], len(text))
+    parts, names, seen = [ (f'{chapter}', 'Overview', whole, overview, f'Psalm {chapter}: Overview') ], set(), set()
+    for kind, sectionTitle, start, end in sections:
+        suffix = '' if kind == 'Exposition' else kind
+        label = lambda verses: f'Psalm {chapter}:{verses}' + (f': {sectionTitle}' if sectionTitle else '')
+        marks = list( VERSE_PART_RE.finditer( text, start, end ) )
+        if kind == 'Works' or not marks: marks = []
+        pieces, carried = [], ''
+        lead = text[start:marks[0].start()] if marks else text[start:end]
+        if kind in seen and marks: carried = lead
+        elif re.sub( r'<[^>]*>', '', lead ).strip(): pieces.append( (None, lead) )
+        seen.add( kind )
+        for number, match in enumerate( marks ):
+            verses = [] # (Each range of verses that it's on)
+            for separator, digits in re.findall( r'([-–,]?)\s*(\d+)', match.group( 1 ) ):
+                if separator in '-–' and verses: verses[-1] = (verses[-1][0], int(digits))
+                else: verses.append( (int(digits), int(digits)) )
+            verses = tuple( (first, min( last, count )) for first, last in verses if first <= count ) or ((1, count),)
+            piece = carried + text[match.start():marks[number+1].start() if number+1 < len(marks) else end]
+            carried = ''
+            if pieces and pieces[-1][0] == verses: pieces[-1] = (verses, pieces[-1][1] + piece) # (The same verses again)
+            else: pieces.append( (verses, piece) )
+        for verses, piece in pieces:
+            if verses is None: name, about, title = f'{chapter}{suffix or kind}', whole, f'Psalm {chapter}: {sectionTitle or "Exposition"}'
+            else:
+                shown = ', '.join( f'{first}' if last == first else f'{first}-{last}' for first, last in verses )
+                about = [ f'{BBB} {chapter}:{first}' + ('' if last == first else f'-{chapter}:{last}') for first, last in verses ]
+                name, title = f'{chapter}:{shown.replace( ", ", "," )}{suffix}', label( shown ) if sectionTitle else ''
+            base, copy = name, 1
+            while name in names: copy += 1; name = f'{base}{copy}'
+            names.add( name )
+            parts.append( (name, kind if kind != 'Exposition' else 'Commentary', about, piece, title) )
+    return parts
+
+
+# Calvin's commentaries (`sword.sections = "milestones"`): each note is between OSIS milestones, and what comes after a note's (its next note's heading and text,
+#   or a printed volume's back matter, or the next book's preface) is moved or left out. A paragraph (or title) starts where these are, and its text says what it is.
+COMMENTARY_START_RE = re.compile( r'<div [^>]*annotateType="commentary"[^>]*sID="[^"]*"[^>]*/>' )
+COMMENTARY_END_RE = re.compile( r'<div [^>]*annotateType="commentary"[^>]*eID="[^"]*"[^>]*/>' )
+PARAGRAPH_START_RE = re.compile( r'<div sID="[^"]*"(?: type="x-p")?/>|<title\b[^>]*>' )
+BACK_MATTER_RE = re.compile( r'(?:Indexes|A TRANSLATION OF|APPENDIX|A LIST OF THE CHIEF INTERPRETERS|Dissertation \d|NOTES AND COMMENTS|The addenda to)\b', re.I )
+FRONT_MATTER_RE = re.compile( r'(?:Calvin.s Preface|THE ARGUMENT|THE AUTHOR.S DEDICATORY|PREFACE\b|Lecture (?:First|Forty))', re.I )
+PRAYER_RE = re.compile( r'(?:PRAYER|End of the Commentaries|Praise be to God|PRAISE TO GOD)\b', re.I )
+HEADING_RE = re.compile( r'((?:[1-3] )?[A-Z][a-z]+) (?:Chapter )?(\d+)(?:[:.]\d+)?(?:\s*[-–,]\s*\d+(?::\d+)?)*$' ) # (A paragraph that's a passage's heading: ‘1 John 1:1-2’, ‘Jude 1-2’, ‘Hebrews Chapter 2:16-18’)
+PUBLISHER_RE = re.compile( r'CHRISTIAN CLASSICS ETHEREAL LIBRARY|http://www\.ccel\.org' )
+
+
+def regroup_milestones( entries:list, chapters:dict ) -> list:
+    """
+    Calvin's notes (whose module has each between OSIS milestones, with what comes after it in the printed volumes kept with it) regrouped:
+    what's after a note (its next note's heading, the Bible's text, and a lecture's title) goes with its next note in the book, except a lecture's closing prayer
+    (‘PRAYER’, and ‘End of the Commentaries on Joel’), which stays; a volume's back matter (its indexes, translation of Calvin's version, dissertations, and appendices)
+    is left out, from where it starts to where the note ends; and at a book's end, a preface or argument (which is the next book's, in the printed volume's order)
+    goes to the book that its last heading is in (e.g., 1 Peter's ends with 1 John's argument, and ‘1 John 1:1-2’), or else the next book, as its introduction.
+    What's before the book's first note (Genesis's title page, preface, and argument) is its introduction too, without the publisher's lines (CCEL's).
+    """
+    plain = lambda part: re.sub( r'\s+', ' ', re.sub( r'<[^>]*>?', ' ', part ) ).strip()
+    def paragraphs( text:str ) -> list: # (Where each paragraph starts and ends, and its text)
+        starts = [ match.start() for match in PARAGRAPH_START_RE.finditer( text ) ]
+        return [ (start, end, plain( text[start:end] )) for start, end in zip( starts, starts[1:] + [len(text)] ) ]
+    def first( text:str, pattern:re.Pattern ) -> int|None:
+        return next( (start for start, _end, words in paragraphs( text ) if pattern.match( words )), None )
+    notes = [ number for number, entry in enumerate( entries ) if entry[2] ]
+    books = list( dict.fromkeys( entries[number][0] for number in notes ) )
+    intros, regrouped, carried = {}, {}, ''
+    for position, number in enumerate( notes ):
+        BBB, chapter, verse, lastVerse, text = entries[number]
+        following = entries[notes[position+1]] if position+1 < len(notes) else None
+        if not carried and (position == 0 or entries[notes[position-1]][0] != BBB): # (The book's first note)
+            if (start := COMMENTARY_START_RE.search( text )): intros[BBB] = intros.get( BBB, '' ) + text[:start.start()]; text = text[start.start():]
+            elif not COMMENTARY_END_RE.search( text ): intros[BBB] = intros.get( BBB, '' ) + text; text = '' # (Genesis's, which is all its translator's preface, the dedications, and the argument)
+        text, carried = carried + text, ''
+        ends = list( COMMENTARY_END_RE.finditer( text ) )
+        if ends:
+            after, text = text[ends[-1].end():], text[:ends[-1].end()]
+            if (back := first( after, BACK_MATTER_RE )) is not None: after = after[:back]
+            kept = 0 # (How much of what's after it stays with the note: its closing prayer)
+            for _start, end, words in paragraphs( after ):
+                if not words: continue
+                if PRAYER_RE.match( words ) or (kept and words.startswith( 'Grant' )): kept = end
+                else: break
+            text, after = text + after[:kept], after[kept:]
+            heading = next( (match for _start, _end, words in paragraphs( after ) if (match := HEADING_RE.match( words ))), None )
+            if following and following[0] == BBB and not (heading and book_code( heading.group( 1 ) ) == BBB and int(heading.group( 2 )) == chapter != following[1]):
+                carried = after # (Unless it's more of this chapter, though the next note is on another: e.g., Psalm 119:121-128's text, whose commentary the module doesn't have)
+            elif plain( after ):
+                front = first( after, FRONT_MATTER_RE )
+                if front is None: text += after
+                else:
+                    text += after[:front]
+                    headings = [ book_code( match.group( 1 ) ) for _start, _end, words in paragraphs( after[front:] ) if (match := HEADING_RE.match( words )) ]
+                    target = next( (code for code in reversed( headings ) if code in books and code != BBB), None )
+                    if not target: target = books[books.index( BBB )+1] if books.index( BBB )+1 < len(books) else None
+                    if target: intros[target] = after[front:] + intros.get( target, '' )
+        regrouped[number] = (BBB, chapter, verse, lastVerse, text)
+    result, introduced = [], set()
+    for number, entry in enumerate( entries ):
+        BBB = entry[0]
+        if BBB not in introduced and re.sub( r'<[^>]*>', '', intros.get( BBB, '' ) ).strip():
+            introduced.add( BBB )
+            intro, pieces = intros[BBB], paragraphs( intros[BBB] )
+            intro = intro[:pieces[0][0] if pieces else len(intro)] + ''.join( intro[start:end] for start, end, words in pieces if not PUBLISHER_RE.search( words ) )
+            result.append( (BBB, 0, 0, 0, intro) )
+        result.append( regrouped.get( number, entry ) )
+    return result
+
+
 def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str, osis:bool=False ) -> dict:
     """
     One document for each book, with an entry for each note (of the type that the registry's `sword.notes` says: `CrossReferences` by default, as for the TSK).
@@ -474,6 +636,7 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
     (e.g., Psalm 23's), though SWORD has it only at the chapter's first verse.
     """
     noteType = edition['sword'].get( 'notes', 'CrossReferences' )
+    if edition['sword'].get( 'sections' ) == 'milestones': entries = regroup_milestones( entries, chapters ) # (Calvin's)
     hasText = lambda text: bool( re.sub( r'<[^>]*>', '', re.sub( r'<title\b.*?</title>', '', text, flags=re.S ) ).strip() ) # (Outside its titles)
     parsers, bookSlots, introduced = {}, {}, set()
     notes = {}
@@ -495,7 +658,15 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
         wholeBook = f'{BBB} 1' if bookCount == 1 else f'{BBB} 1-{bookCount}'
         wholeChapter = f'{BBB} {chapter}:1-{chapter}:{chapters[BBB][chapter-1]}' if chapter else ''
         parts, opening = [], None # (Where what comes before the note starts and ends, and where the note starts, if it says)
-        if verse and (match := PREVERSE_RE.search( text )):
+        if first and edition['sword'].get( 'intros' ) == 'first-note' and (split := intro_end( text )) is not None:
+            verses = [f'{BBB} {chapter}:{verse}' + ('' if lastVerse == verse else f'-{chapter}:{lastVerse}')] if split == len(text) else [] # (A whole note that's the introduction is about its verses too)
+            parts.append( ('Intro', 'BookIntro', [wholeBook] + verses, bookSlot + text[:split]) )
+            text, bookSlot = text[split:], ''
+        if verse and edition['sword'].get( 'sections' ) == 'verses': # (Spurgeon's psalms: nothing's left for the note)
+            if first and hasText( bookSlot ): parts.append( ('Intro', 'BookIntro', [wholeBook], bookSlot) )
+            parts += verse_sections( BBB, chapter, text, chapters )
+            text, bookSlot = '', ''
+        elif verse and (match := PREVERSE_RE.search( text )):
             start, end = match.span( 1 )
             noteStart = NOTE_START_RE.search( text, match.start() )
             if noteStart and CHAPTER_TITLE_RE.search( text, start, noteStart.start() ): end = noteStart.start()
@@ -531,12 +702,12 @@ def parse_commentary( edition:dict, entries:list, chapters:dict, sourceName:str,
                 parts.append( (f'{chapter}:{verses}', 'BookIntro', [wholeBook] + about, text) ) # (Barnes's)
             else: parts.append( (f'{chapter}:{verses}', noteType, about, text) )
         elif hasText( text ): parts.append( (f'{chapter}:0', 'Introduction', [f'{BBB} {chapter}'], text) )
-        for name, entryType, about, part in parts:
+        for name, entryType, about, part, *title in parts:
             if not re.sub( r'<[^>]*>', '', part ).strip(): continue
             root = as_xml( part )
             parser.home = (BBB, chapter or None, verse or None)
             parser.context = Context( chapters, *parser.home )
-            parser.add_entry( name, entryType, '', root, about )
+            parser.add_entry( name, entryType, title[0] if title else '', root, about )
     return { BBB: (parser.finish(), [sourceName]) for BBB, parser in parsers.items() }
 
 

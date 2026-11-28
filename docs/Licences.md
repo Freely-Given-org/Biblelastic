@@ -237,6 +237,37 @@ Tolstoy's *Short Fiction* (with ‘What Men Live By’ and ‘Master and Man’)
 Bede's *Ecclesiastical History*, *Everyman*, *The Second Shepherds' Play*, Milton's shorter poems, and Hall Caine's *The Eternal City* are only on Standard Ebooks' wanted list, as are
 Augustine's *Confessions* and *On Christian Doctrine*, Calvin's *Institutes*, *Introduction to the Devout Life*, Hopkins's poems, and Benson's *Lord of the World*.
 
+## Commentaries on the verses of the Bible from CrossWire (added 28 November 2026)
+
+None is in the English starter set. Each was first published (or translated) before 1931, by an author (and translator) who died before 1956, except where it says otherwise below.
+The modules' settings files (`mods.d/*.conf`) are in the zip files in `build/downloads/crosswire/` (from https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/).
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| `MHC` *An Exposition of the Old and New Testaments* (Matthew Henry, died 1714; 1706–1721, finished from his notes, Romans to Revelation, by other ministers after his death) | Public domain | `mods.d/mhc.conf` in `MHC.zip` | `DistributionLicense=Public Domain`; ‘Public Domain--Copy Freely’; from CCEL, which had its text from Logos Research |
+| `KeilDelitzsch` *Biblical Commentary on the Old Testament* (Carl Friedrich Keil, died 1888, and Franz Delitzsch, died 1890; 1861–1875; translated for T. & T. Clark's Foreign Theological Library, 1864–1891, by James Martin, died 1891, and others) | Public domain | `mods.d/kd.conf` in `KD.zip` | `DistributionLicense=Public Domain`; `TextSource=https://en.wikisource.org/wiki/Biblical_commentary_the_Old_Testament` |
+| `TreasuryOfDavid` *The Treasury of David* (C. H. Spurgeon, died 1892; 1869–1885) | Public domain | `mods.d/tdavid.conf` in `TDavid.zip` | `DistributionLicense=Public Domain`; ‘It is now in the public domain’; `TextSource=http://archive.spurgeon.org/treasury/` |
+| `CatenaAurea` *Catena Aurea* on the Gospels (Thomas Aquinas, died 1274; translated under John Henry Newman's editorship, died 1890, 1841–1845) | Public domain | `mods.d/catena.conf` in `Catena.zip` | `DistributionLicense=Public Domain`; ‘Compiled from various public domain sources, checked against scans of the original publication’ (by Tom Lemmens) |
+| `Burkitt` *Expository Notes, with Practical Observations, on the New Testament* (William Burkitt, died 1703; 1700–1703) | Public domain | `mods.d/burkitt.conf` in `Burkitt.zip` | `DistributionLicense=Public Domain` |
+| `GenevaNotes` The notes of the Geneva Bible (1560–1599) | Public domain | `mods.d/geneva.conf` in `Geneva.zip` | No licence is given (the module is from 2001); the notes are over 400 years old |
+| `Calvin` *Commentaries* (John Calvin, died 1564; 1540–1564; translated for the Calvin Translation Society, 1843–1855, by John King (Genesis) and others) | Public domain | `mods.d/calvincommentaries.conf` in `CalvinCommentaries.zip` | `DistributionLicense=Public Domain`; from CCEL, converted by Luke Plant |
+| `Lightfoot` *Horae Hebraicae et Talmudicae* (John Lightfoot, died 1675; in Latin, 1658–1674), in the English of Robert Gandell's edition (died 1887; Oxford, 1859) | Public domain | `mods.d/lightfoot.conf` in `Lightfoot.zip` | `DistributionLicense=Public Domain`; from philologos.org |
+| `Abbott` The notes of the *Illustrated New Testament* (John S. C. Abbott, died 1877, and Jacob Abbott, died 1879; 1878) | Public domain | `mods.d/abbott.conf` in `Abbott.zip` | `DistributionLicense=Public Domain`; ‘Electronic edition by Ernie Stefanik’ |
+
+Things to weigh when they're checked: Keil and Delitzsch's translators besides James Martin aren't named in the module or in the catalogue records found, but the last of the translations
+was published in 1891, so to be in copyright anywhere that counts life plus 70 years, a translator would have had to live past 1956, 65 years or more later, which is very unlikely
+(and Wikisource, the module's source, takes it as public domain). Thirteen of its Greek words are in an old font's encoding (‘aÏrxiereuÃj’), as in Wikisource's text.
+The *Catena Aurea*'s translators (besides Newman, its editor) aren't named either, but the translation was published by 1845. Wikisource's text of Keil and Delitzsch, Tom Lemmens's of the *Catena*,
+and Ernie Stefanik's of Abbott's are transcriptions, which aren't creative work of their own. The Geneva Bible's notes are by several hands (Laurence Tomson's New Testament notes of 1576,
+and Franciscus Junius's on Revelation, were in the editions from 1599), all long dead. The module has no notes on Judges, Jonah, or Philemon, and *Treasury of David*'s has no exposition of Psalm 119:1.
+Calvin's translators besides John King aren't named in the module, but the Calvin Translation Society's volumes were all published by 1855, so the same holds for them, by a wider margin.
+The module has only the first passage of each psalm, and of each chapter of Zechariah, Malachi, 1 and 2 Timothy, and Titus, and nothing on Isaiah 49–66: what it has is about 6.7 million words
+(see [IntermediateFormat.md](IntermediateFormat.md)). CCEL's line on Genesis's title page (‘CHRISTIAN CLASSICS ETHEREAL LIBRARY GRAND RAPIDS, MI’) is left out.
+
+Left out: Luther's commentary (some of its translations are from the Holman edition's volumes of 1932 and 1933, which aren't in the US public domain yet);
+the Family Bible Notes (whose authors and source aren't given); *The Fourfold Gospel* and Darby's notes (their RawCom modules, in GBF markup, can't be read yet); and Robertson's *Word Pictures*
+and the King Comments (copyrighted).
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

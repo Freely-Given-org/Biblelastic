@@ -3,6 +3,7 @@ Tests for the SWORD modules' reader (sword.py), and for books whose contents hav
 Run from the pipeline/ folder with: python3 -m unittest discover tests
 """
 import io
+import re
 import struct
 import sys
 import unittest
@@ -246,6 +247,73 @@ class CommentaryTests( unittest.TestCase ):
         genesis = sword.parse_commentary( { 'id':'Clarke', 'sword':{ 'notes':'Commentary' } }, entries, { 'GEN':[2, 3] }, 'Clarke.zip', osis=True )['GEN'][0]
         self.assertEqual( [ (entry[2], entry[3]) for entry in genesis.entries ], [ ('Intro', 'BookIntro'), ('1:1', 'Commentary'), ('1:2', 'Commentary'), ('2', 'Outline'), ('2:1', 'Commentary') ] )
         self.assertEqual( genesis.text_differences, [] )
+
+    def test_intros_in_first_note( self ):
+        """ Keil and Delitzsch's: a book's introduction, in its first note, ends at the first title after it that names a passage (with any titles just before it),
+            or at a paragraph that starts with a verse's reference; a first note that's all introduction is about its verses too """
+        p = lambda n, text: f'<div sID="p{n}" type="x-p"/> {text} <div eID="p{n}" type="x-p"/>'
+        entries = [ ('GEN', 1, 1, 1, '<title type="x-ms">Genesis</title> <title type="x-s2">Introduction</title>' + p( 1, 'Genesis is about beginnings.' )
+                                     + '<title type="x-s">I. The Beginning</title> <title type="x-s2">The Creation - Genesis 1:1-2:3</title>' + p( 2, 'God speaks.' )
+                                     + p( 3, '<reference osisRef="Gen.1.1">Gen 1:1</reference>' ) + p( 4, 'In the beginning.' )),
+                    ('GEN', 1, 2, 2, p( 5, 'Without form.' )),
+                    ('EXO', 1, 1, 1, '<title type="x-ms">Exodus</title> <title type="x-s2">Introduction</title>' + p( 6, 'Exodus is about leaving Egypt.' )) ]
+        documents = sword.parse_commentary( { 'id':'KeilDelitzsch', 'sword':{ 'notes':'Commentary', 'intros':'first-note' } }, entries, { 'GEN':[2, 3], 'EXO':[2, 2] }, 'KD.zip', osis=True )
+        genesis, exodus = documents['GEN'][0], documents['EXO'][0]
+        self.assertEqual( [ (entry[2], entry[3]) for entry in genesis.entries ], [ ('Intro', 'BookIntro'), ('1:1', 'Commentary'), ('1:2', 'Commentary') ] )
+        tokens = genesis.doc.tokens
+        texts = [ ''.join( before+text+after for before,text,after,_features in tokens[start:end] ).strip() for _name, _kind, start, end, _text in genesis.doc.paragraphs if end > start ]
+        self.assertEqual( texts[:4], ['Genesis', 'Introduction', 'Genesis is about beginnings.', 'I. The Beginning'] ) # (The part's title goes with the note)
+        self.assertEqual( [ anchor[3] for anchor in exodus.anchors if anchor[2] == 'about' ], ['EXO 1-2', 'EXO 1:1'] )
+        self.assertEqual( genesis.text_differences + exodus.text_differences, [] )
+        heading = '<title type="x-s">Introduction</title>' + p( 1, 'About Judges.' ) + '<title type="x-s2">The Conquest</title>' + p( 2, 'Jdg 1:1-2 After Joshua died.' )
+        self.assertEqual( sword.intro_end( heading ), heading.index( '<title type="x-s2">' ) ) # (Its title, just before the verse's paragraph, goes with the note)
+        self.assertIsNone( sword.intro_end( p( 1, 'No introduction.' ) ) )
+
+    def test_psalm_sections( self ):
+        """ Spurgeon's *Treasury of David*: a psalm's note is divided into its overview and each section's part on each verse """
+        p = lambda n, text: f'<div sID="p{n}" type="x-p"/> {text} <div eID="p{n}" type="x-p"/>'
+        note = ('<title type="x-s">Psalm 23 OVERVIEW</title>' + p( 1, 'A pastoral.' ) + '<title type="x-s">EXPOSITION</title>'
+                + p( 2, '<hi type="bold">Verse 1.</hi> The Lord is my shepherd.' ) + p( 3, '<hi type="bold">Verse 2.</hi> Green pastures.' )
+                + '<title type="x-s">EXPLANATORY NOTES AND QUAINT SAYINGS</title>' + p( 4, '<hi type="italic">Whole Psalm.</hi> The nightingale.' )
+                + p( 5, '<hi type="bold">Verse 1.</hi> Shepherd.' ) + p( 6, '<hi type="bold">Verse 1.</hi> More.' ) + p( 7, 'Verses 4, 6. Rod and house.' )
+                + p( 8, 'Psalms 23:2*' ) + p( 9, 'HINTS TO PREACHERS.' ) + p( 10, '<hi type="bold">Ver. 1-3.</hi> Rest.' ))
+        entries = [ ('PSA', 0, 0, 0, '<title type="x-s">Preface</title> My preface.'), ('PSA', 23, 1, 1, note) ]
+        psalms = sword.parse_commentary( { 'id':'TreasuryOfDavid', 'sword':{ 'notes':'Commentary', 'sections':'verses' } }, entries, { 'PSA':[6]*150 }, 'TDavid.zip', osis=True )['PSA'][0]
+        self.assertEqual( [ entry[2:] for entry in psalms.entries ],
+                          [ ('Intro', 'BookIntro', ''), ('23', 'Overview', 'Psalm 23: Overview'), ('23:1', 'Commentary', ''), ('23:2', 'Commentary', ''),
+                            ('23Notes', 'Notes', 'Psalm 23: Explanatory Notes and Quaint Sayings'), ('23:1Notes', 'Notes', 'Psalm 23:1: Explanatory Notes and Quaint Sayings'),
+                            ('23:4,6Notes', 'Notes', 'Psalm 23:4, 6: Explanatory Notes and Quaint Sayings'), ('23:1-3Hints', 'Hints', 'Psalm 23:1-3: Hints to Preachers') ] )
+        self.assertEqual( [ anchor[3] for anchor in psalms.anchors if anchor[2] == 'about' ][-3:], ['PSA 23:4', 'PSA 23:6', 'PSA 23:1-23:3'] )
+        tokens = psalms.doc.tokens
+        text = ' '.join( ''.join( before+text+after for before,text,after,_features in tokens[start:end] ).strip() for _name, _kind, start, end, _text in psalms.doc.paragraphs if end > start )
+        self.assertIn( 'Verse 1. Shepherd. Verse 1. More.', text ) # (The same verse twice in a row is one entry)
+        self.assertNotIn( 'Psalms 23:2*', text )
+        self.assertNotIn( 'EXPOSITION', text )
+        self.assertEqual( psalms.text_differences, [] )
+
+    def test_milestones( self ):
+        """ Calvin's: what's after a note goes with the next, except its closing prayer; back matter is left out; a preface at a book's end goes to the book its last heading names """
+        p = lambda n, text: f'<div sID="p{n}" type="x-p"/>{text}<div eID="p{n}" type="x-p"/> '
+        note = lambda osis, n, text: (f'<div annotateRef="Bible:{osis}" annotateType="commentary" osisID="{osis}" sID="s{n}" type="section"/>{text}'
+                                      f'<div annotateRef="Bible:{osis}" annotateType="commentary" eID="s{n}" osisID="{osis}" type="section"/>')
+        entries = [ ('GEN', 1, 1, 1, '<title>COMMENTARIES ON GENESIS</title>' + p( 1, 'CHRISTIAN CLASSICS ETHEREAL LIBRARY' ) + p( 2, 'The translator’s preface.' )
+                                     + note( 'Gen.1.1', 1, 'Comment one.' ) + p( 3, 'PRAYER' ) + p( 4, 'Grant, Almighty God, that we may obey. Amen.' )
+                                     + p( 5, 'Lecture Second' ) + p( 6, 'Genesis 1:2' )),
+                    ('GEN', 1, 2, 2, note( 'Gen.1.2', 2, 'Comment two.' ) + p( 7, 'THE ARGUMENT' ) + p( 8, 'This Epistle is worthy of John.' ) + p( 9, '1 John 1:1-2' )
+                                     + p( 10, 'A TRANSLATION OF' ) + p( 11, '1 In the beginning' ) + '<a' ),
+                    ('EXO', 1, 1, 1, note( 'Exod.1.1', 3, 'Exodus comment.' )),
+                    ('JN1', 1, 1, 1, note( '1John.1.1', 4, 'John comment.' )) ]
+        regrouped = sword.regroup_milestones( entries, {} )
+        plain = { entry[:3]: ' '.join( re.sub( r'<[^>]*>?', ' ', entry[4] ).split() ) for entry in regrouped }
+        self.assertEqual( list( plain ), [ ('GEN', 0, 0), ('GEN', 1, 1), ('GEN', 1, 2), ('EXO', 1, 1), ('JN1', 0, 0), ('JN1', 1, 1) ] )
+        self.assertEqual( plain[('GEN', 0, 0)], 'COMMENTARIES ON GENESIS The translator’s preface.' ) # (Without CCEL's line)
+        self.assertEqual( plain[('GEN', 1, 1)], 'Comment one. PRAYER Grant, Almighty God, that we may obey. Amen.' )
+        self.assertEqual( plain[('GEN', 1, 2)], 'Lecture Second Genesis 1:2 Comment two.' ) # (Without the back matter, or the argument, which is 1 John's)
+        self.assertEqual( plain[('JN1', 0, 0)], 'THE ARGUMENT This Epistle is worthy of John. 1 John 1:1-2' )
+        documents = sword.parse_commentary( { 'id':'Calvin', 'sword':{ 'notes':'Commentary', 'sections':'milestones' } }, entries,
+                                            { 'GEN':[2, 3], 'EXO':[2], 'JN1':[10] }, 'CalvinCommentaries.zip', osis=True )
+        self.assertEqual( [ entry[2] for entry in documents['JN1'][0].entries ], ['Intro', '1:1'] )
+        self.assertEqual( documents['GEN'][0].text_differences, [] )
 
 
 class TitlePageTests( unittest.TestCase ):

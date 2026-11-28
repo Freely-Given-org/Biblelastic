@@ -2055,6 +2055,186 @@ redistributable = true
 licence_verified = true
 starter = false
 
+# Commentaries on the verses of the Bible from CrossWire (added 28 November 2026)
+[[edition]]
+id = "MHC"
+kind = "commentary"
+name = "Matthew Henry’s Complete Commentary"
+author = "Matthew Henry"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=MHC"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/MHC.zip"
+files = ["Biblelastic/build/downloads/crosswire/MHC.zip"]
+copyright = "Matthew Henry, An Exposition of the Old and New Testaments (1706–1721; Romans to Revelation were finished after his death, from his notes, by other ministers): public domain. The text is CrossWire's SWORD module (version 2.2, from the Christian Classics Ethereal Library's text): ‘Public Domain--Copy Freely’."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each book's introduction (at Genesis, Joshua, and Acts, after the preface to its volume) and each chapter's outline as entries of their own."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "KeilDelitzsch"
+kind = "commentary"
+name = "Keil and Delitzsch’s Commentary on the Old Testament"
+author = "Carl Friedrich Keil and Franz Delitzsch"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary", intros = "first-note" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=KD"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/KD.zip"
+files = ["Biblelastic/build/downloads/crosswire/KD.zip"]
+copyright = "Carl Friedrich Keil and Franz Delitzsch, Biblical Commentary on the Old Testament (1861–1875; translated for T. & T. Clark's Foreign Theological Library, 1864–1891): public domain. The text is CrossWire's SWORD module (version 2.0, from Wikisource's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each book's introduction (which the module keeps in the book's first note) as an entry of its own."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Calvin"
+kind = "commentary"
+name = "Calvin’s Commentaries"
+author = "John Calvin"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary", sections = "milestones" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=CalvinCommentaries"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/CalvinCommentaries.zip"
+files = ["Biblelastic/build/downloads/crosswire/CalvinCommentaries.zip"]
+copyright = "John Calvin, Commentaries (1540–1564; translated for the Calvin Translation Society, 1843–1855): public domain. The text is CrossWire's SWORD module (version 1.1, from the Christian Classics Ethereal Library's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with the heading and text that each note is on moved to it from the note before, each book's preface or argument as an entry of its own, and the printed volumes' indexes, translations of Calvin's version, and editors' dissertations and appendices left out. CrossWire's module has only the first passage of each psalm, and of each chapter of Zechariah, Malachi, 1 and 2 Timothy, and Titus, and has nothing on Isaiah 49–66 (nor on Genesis 1:1, where it has only the volume's prefaces)."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Lightfoot"
+kind = "commentary"
+name = "Lightfoot’s Commentary on the New Testament from the Talmud and Hebraica"
+author = "John Lightfoot"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Lightfoot"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Lightfoot.zip"
+files = ["Biblelastic/build/downloads/crosswire/Lightfoot.zip"]
+copyright = "John Lightfoot, Horae Hebraicae et Talmudicae (in Latin, 1658–1674), in the English of Robert Gandell's edition (Oxford, 1859): public domain. The text is CrossWire's SWORD module (version 1.0, from philologos.org)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each book's introduction as an entry of its own."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Burkitt"
+kind = "commentary"
+name = "Burkitt’s Expository Notes on the New Testament"
+author = "William Burkitt"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Burkitt"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Burkitt.zip"
+files = ["Biblelastic/build/downloads/crosswire/Burkitt.zip"]
+copyright = "William Burkitt, Expository Notes, with Practical Observations, on the New Testament (1700–1703): public domain. The text is CrossWire's SWORD module (version 1.0)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "GenevaNotes"
+kind = "commentary"
+name = "The Geneva Bible’s Notes"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Geneva"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Geneva.zip"
+files = ["Biblelastic/build/downloads/crosswire/Geneva.zip"]
+copyright = "The notes of the Geneva Bible (1560–1599): public domain. The text is CrossWire's SWORD module (version 1.1)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Abbott"
+kind = "commentary"
+name = "Abbott’s Illustrated New Testament"
+author = "John S. C. Abbott and Jacob Abbott"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Abbott"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Abbott.zip"
+files = ["Biblelastic/build/downloads/crosswire/Abbott.zip"]
+copyright = "John S. C. Abbott and Jacob Abbott, the notes of the Illustrated New Testament (1878): public domain. The text is CrossWire's SWORD module (version 1.1, from Ernie Stefanik's electronic edition)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each book's introduction as an entry of its own."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "CatenaAurea"
+kind = "commentary"
+name = "Catena Aurea"
+author = "Thomas Aquinas"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=Catena"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/Catena.zip"
+files = ["Biblelastic/build/downloads/crosswire/Catena.zip"]
+copyright = "Thomas Aquinas, Catena Aurea on the four Gospels (about 1264; translated under John Henry Newman's editorship, 1841–1845): public domain. The text is CrossWire's SWORD module (version 1.0.1, from Tom Lemmens's text, checked against scans of the printed translation)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org."
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "TreasuryOfDavid"
+kind = "commentary"
+name = "The Treasury of David"
+author = "C. H. Spurgeon"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "SWORD"
+sword = { notes = "Commentary", sections = "verses" }
+source = "https://crosswire.org/sword/modules/ModInfo.jsp?modName=TDavid"
+download = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/TDavid.zip"
+files = ["Biblelastic/build/downloads/crosswire/TDavid.zip"]
+copyright = "C. H. Spurgeon, The Treasury of David (1869–1885): public domain. The text is CrossWire's SWORD module (version 2.1, from the Spurgeon Archive's text)."
+licence = "Public domain"
+changes = "Converted to the Biblelastic module format by Freely-Given.org, with each psalm (which the module keeps in one note) divided into its overview and the exposition, explanatory notes, and hints to preachers on each of its verses, and with the leftovers of Psalm 119's web pages (‘Psalms 119:2*’ and ‘Continued...’) left out."
+redistributable = true
+licence_verified = true
+starter = false
+
 # Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
 [disclaimers]
 commentary = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."
