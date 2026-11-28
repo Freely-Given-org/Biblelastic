@@ -1,5 +1,5 @@
 #!/bin/sh
-# Make the app's icons, for Android and the web, and logo.png, from icon.svg and logo.svg (drawn with headless Chrome, which draws SVG accurately,
+# Make the app's icons, for Android, the web and Google Play's listing, Play's feature graphic, and logo.png, from icon.svg and logo.svg (drawn with headless Chrome, which draws SVG accurately,
 # then made smaller with ImageMagick).   app/design/make-icons.sh
 # Needs Google Chrome (or set CHROME) and ImageMagick (magick).
 set -e
@@ -58,6 +58,13 @@ cp "$work/icon.png" ../web/icons/Icon-512.png
 magick "$work/maskable.png" -resize 192x ../web/icons/Icon-maskable-192.png
 cp "$work/maskable.png" ../web/icons/Icon-maskable-512.png
 magick "$work/icon.png" -resize 32x ../web/favicon.png
+
+# Google Play's store listing: its icon (a full square, as Play rounds the corners itself) and its feature graphic
+mkdir -p play
+sed 's/<rect width="512" height="512" rx="112"/<rect width="512" height="512"/' icon.svg > "$work/square.svg"
+draw "$work/square.svg" 512 512 play/icon-512.png
+draw feature-graphic.svg 1024 500 "$work/feature.png"
+magick "$work/feature.png" -background '#FFFCF4' -alpha remove -alpha off play/feature-graphic.png # (Play wants no transparency)
 
 # The logo, with its name (cut to its edges)
 draw logo.svg 1400 440 "$work/logo.png"

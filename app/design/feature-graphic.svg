@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500">
+  <!-- Biblelastic's feature graphic for its Google Play listing (1024×500): the icon and name, as in logo.svg, on the pages' cream.
+       app/design/make-icons.sh makes play/feature-graphic.png from it. The text needs Ubuntu (or falls back to another sans-serif font). -->
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFCF4"/>
+      <stop offset="1" stop-color="#F3F0D8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#paper)"/>
+  <image href="icon.svg" x="70" y="110" width="280" height="280"/>
+  <text x="390" y="250" font-family="Ubuntu, 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="104" font-weight="700" letter-spacing="-1"><tspan fill="#4E7A2A">Bible</tspan><tspan fill="#8B5A2B">l</tspan><tspan fill="#D9A21E">astic</tspan></text>
+  <text x="395" y="318" font-family="Ubuntu, 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="40" font-weight="500" fill="#7A7A5A"><tspan>Fant</tspan><tspan fill="#D9A21E" font-weight="700">astic</tspan><tspan> </tspan><tspan fill="#4E7A2A" font-weight="700">Bible</tspan><tspan> study</tspan></text>
+  <text x="395" y="378" font-family="Ubuntu, 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="27" fill="#7A7A5A">Free · works offline · no ads · no tracking</text>
+</svg>

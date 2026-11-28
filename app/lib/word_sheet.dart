@@ -48,7 +48,7 @@ class WordSheet extends StatelessWidget {
                 if (meaning['definition'] != '') TextSpan(text: ': ${meaning['definition']}'),
                 if (meaning['code'] != '') TextSpan(text: '  (${meaning['code']})', style: theme.textTheme.bodySmall),
               ])),
-              if (meaning['note'] != '') Padding(padding: const EdgeInsets.only(top: 4), child: Text(meaning['note'] as String, style: theme.textTheme.bodySmall)),
+              if (meaning['note'] != '') Padding(padding: const EdgeInsets.only(top: 4), child: Text((meaning['note'] as String).replaceAll('|', '\n\n'), style: theme.textTheme.bodySmall)), // (The UBS dictionaries separate a comment's paragraphs with |)
               if ((meaning['domains'] as List<dynamic>).isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(strings.similarMeaning, style: theme.textTheme.bodySmall),

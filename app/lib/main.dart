@@ -1,6 +1,8 @@
 // The Biblelastic app: so far a minimal reader, with search, notes on a verse, and module installing.
 import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'engine/engine.dart';
@@ -16,7 +18,17 @@ String edition = 'OET-RV';
 /// The edition that can be shown with the OET-RV, for the same verses
 const literal = 'OET-LV';
 
-void main() => runApp(const BiblelasticApp());
+void main() {
+  // The licences of the Rust packages built into the engine, for the licence page (assets/engine-licences.txt, which app/build-engine.sh makes)
+  LicenseRegistry.addLicense(() async* {
+    final text = await rootBundle.loadString('assets/engine-licences.txt');
+    for (final entry in text.split(RegExp(r'^@@ ', multiLine: true)).skip(1)) {
+      final newline = entry.indexOf('\n');
+      yield LicenseEntryWithLineBreaks([entry.substring(0, newline).split(' ').first], entry.substring(newline + 1).trim());
+    }
+  });
+  runApp(const BiblelasticApp());
+}
 
 class BiblelasticApp extends StatelessWidget {
   const BiblelasticApp({super.key});

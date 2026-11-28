@@ -83,11 +83,16 @@ class AboutWorksPage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         itemCount: all.length + 1,
         itemBuilder: (context, index) => index == 0
-            // The app itself: its version, and its licence and source code
+            // The app itself: its version, its licence and source code, its privacy policy, and the licences of the software it's built with
             ? Padding(padding: const EdgeInsets.only(top: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('${strings.appName} $appVersion', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
                 SelectableText(strings.aboutApp, style: theme.textTheme.bodySmall),
+                const SizedBox(height: 4),
+                SelectableText(strings.privacy, style: theme.textTheme.bodySmall),
+                TextButton(style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                    onPressed: () => showLicensePage(context: context, applicationName: strings.appName, applicationVersion: appVersion, applicationLegalese: strings.aboutApp),
+                    child: Text(strings.openSourceLicences)),
               ]))
             : Padding(padding: const EdgeInsets.only(top: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(all[index - 1]['title'] as String? ?? all[index - 1]['edition'] as String, style: theme.textTheme.titleSmall),

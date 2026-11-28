@@ -99,7 +99,10 @@ class Strings {
   String get eachModule => _pick(['Each module', 'Cada módulo']);
   String get aboutApp => _pick(['Free software from Freely-Given.org, under the GNU General Public License, version 3. Its source code is at https://github.com/Freely-Given-org/Biblelastic',
       'Software libre de Freely-Given.org, bajo la Licencia Pública General de GNU, versión 3. Su código fuente está en https://github.com/Freely-Given-org/Biblelastic']);
-  String get toDownload => _pick(['To download', 'Para descargar']);
+  String get privacy => _pick(['Privacy: this app collects no personal information. Its privacy policy is at https://Freely-Given.org/Apps/PrivacyPolicy.html',
+      'Privacidad: esta aplicación no recoge ningún dato personal. Su política de privacidad (en inglés) está en https://Freely-Given.org/Apps/PrivacyPolicy.html']);
+  String get openSourceLicences => _pick(['Licences of the software it uses', 'Licencias del software que utiliza']);
+  String get toDownload =>_pick(['To download', 'Para descargar']);
 
   /// A book's name from its code (or the code itself, for one that isn't in the list)
   String book(String code) => _books[code]?[_column] ?? code;

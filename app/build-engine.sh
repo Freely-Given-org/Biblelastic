@@ -7,6 +7,24 @@ set -e
 cd "$(dirname "$0")/.."
 wanted="${*:-android linux web}"
 
+# The licences of the Rust packages that the engine is built with, for the app's licence page (see main() in app/lib/main.dart):
+# each one's name, version and licence on a line starting '@@ ', then its licence files
+mkdir -p app/assets
+python3 -I - > app/assets/engine-licences.txt <<'EOF'
+import json, pathlib, subprocess
+def run(*command): return subprocess.run(command, capture_output=True, text=True, check=True).stdout
+tree = run('cargo', 'tree', '-p', 'biblelastic-ffi', '-p', 'biblelastic-wasm', '--target', 'all', '-e', 'normal', '--prefix', 'none', '--format', '{p}')
+wanted = {tuple(line.split()[:2]) for line in tree.splitlines() if line.strip() and not line.startswith('biblelastic-')}
+for package in sorted(json.loads(run('cargo', 'metadata', '--format-version', '1'))['packages'], key=lambda package: package['name']):
+    if (package['name'], 'v' + package['version']) not in wanted: continue
+    folder = pathlib.Path(package['manifest_path']).parent
+    files = [folder / package['license_file']] if package['license_file'] else sorted(path for path in folder.iterdir() if path.name.upper().startswith(('LICENSE', 'LICENCE', 'COPYING')))
+    if not files: raise SystemExit(f"{package['name']} has no licence file, for the app's licence page")
+    print(f"@@ {package['name']} {package['version']} ({package['license']})")
+    for path in files: print(path.read_text().strip() + '\n')
+EOF
+echo "Licences: $(grep -c '^@@ ' app/assets/engine-licences.txt) Rust packages"
+
 case " $wanted " in *" linux "*)
     cargo build --release -p biblelastic-ffi
     mkdir -p app/linux/engine && cp target/release/libbiblelastic.so app/linux/engine/

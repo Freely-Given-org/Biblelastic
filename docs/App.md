@@ -35,6 +35,7 @@ It can:
 - read a whole article of a dictionary or handbook (from a word, or from a search result), and follow its links to others
 - browse the installed books, commentaries, and dictionaries (the Library, in the ⋮ menu), and read them entry by entry (e.g., a book chapter by chapter, with Previous and Next)
 - show each work's copyright, licence, and attribution under its contents, and all of them together (*Licences and sources*, from *About* in the menu, and in the Library)
+- show the app's version, its licence and source code, its privacy policy's address, and the licences of the software it's built with (Flutter's packages, and the engine's Rust packages from `app/assets/engine-licences.txt`, which `app/build-engine.sh` writes), at the top of *About*
 - show each book's and commentary's disclaimer wherever its words are shown: under the notes on a verse, at the end of an article or chapter, and with its contents
 - search: a subject (the articles about it, the passages they refer to most, the other side of the question, where the words themselves are found,
     and, if the model is installed, the passages, notes, articles, and book chapters that are about it by meaning: see [Meaning.md](Meaning.md)), words together in a sentence, the original-language terms behind English words, and dictionary entries. Choosing a result opens its section with that verse in view and marked.
@@ -94,13 +95,14 @@ Modules come from `http://localhost:8377/build/modules/` unless the app is built
 
 A release (the version is `version` in `pubspec.yaml`, shown at the top of *About*):
 
-    app/release.sh                      # → app/build/release/VERSION/: Biblelastic-VERSION-arm64.apk and -arm32.apk, and web/
+    app/release.sh                      # → app/build/release/VERSION/: Biblelastic-VERSION-arm64.apk and -arm32.apk, Biblelastic-VERSION.aab (for Google Play), and web/
 
-The APKs are signed with Freely-Given.org's key, which `app/android/key.properties` points to, with its passwords; neither the key nor that file is in git,
+The APKs and the app bundle are signed with Freely-Given.org's key, which `app/android/key.properties` points to, with its passwords; neither the key nor that file is in git,
 and without the passwords a release build is signed with the debug key (for testing only). `web/` is built for `https://Freely-Given.org/Software/Biblelastic/app/`,
 next to the modules (`../modules/`), and with CanvasKit served from there too rather than from Google's servers.
 The icon and logo are drawn in `app/design/` (`icon.svg`, an open Bible whose ribbon is stretched like a spring, and `logo.svg`, with the name, in Freely-Given.org's colours);
-`app/design/make-icons.sh` makes the Android icons (including Android 8's adaptive one), the web's, and `logo.png` from them.
+`app/design/make-icons.sh` makes the Android icons (including Android 8's adaptive one), the web's, and `logo.png` from them,
+and Google Play's 512-pixel icon and feature graphic (from `feature-graphic.svg`) in `app/design/play/`, where `listing.md` has the store listing's text and the answers to the Play Console's questions.
 A phone with a debug-signed build has to uninstall it (and so its modules) before a release-signed one can be installed.
 The Android build needs a full Java development kit: if Gradle says that the Java it found has no compiler,
 set `JAVA_HOME` to one that has (e.g., Android Studio's own, in its `jbr` folder).
@@ -114,6 +116,7 @@ Tapping a word (17 November) was checked in headless Chrome by screenshot (inclu
 The OET-LV with the OET-RV (19 November) was checked in headless Chrome by screenshot, on a phone-sized and a wide screen, and on the phone by screenshot.
 Choosing a Spanish Bible, and its notes (25 November), were checked in headless Chrome by screenshot, and on the phone (26 November), with meaning-based search in Spanish
 and tapping a Spanish word (e.g., *Verbo* in John 1:1 → λόγος).
+*About*'s privacy line and the licences of the software it uses (with the engine's ruzstd among Flutter's) were checked on the phone (release build) on 28 November, when the store's screenshots were taken.
 
 ## Known gaps
 
@@ -126,7 +129,7 @@ and tapping a Spanish word (e.g., *Verbo* in John 1:1 → λόγος).
 - **The marked words can be hidden** behind the word's sheet until it's closed, on a small screen.
 - **The disclaimer's link isn't followed** when it's tapped (it's only shown underlined), and a book's references aren't links to the passages yet.
 - **Search results and notes are plain text** (an article opened in full is too: its italics, tables, and pictures aren't shown). A passage that's opened from a search has only its first verse marked.
-- **No store listing yet.**
+- **Not on Google Play yet**: the listing is drafted (`app/design/play/`), but the developer account, the closed test, and the uploads are still to do (see [Publishing.md](Publishing.md)).
 - **Linux desktop is set up but untried**, and there's nothing for iOS, macOS, or Windows yet.
 - **The web build fetches its fonts from Google** when it starts, so it doesn't yet work offline, and there's no service worker for the engine and modules.
 - **Spanish covers the app's own words only**: the Bible, notes, and passage codes in notes are still English.

@@ -105,3 +105,16 @@ so that they list everything there is: `Bibles.html`, `Helps.html` (study notes,
 then change the version, date, and links in `index.html`, and remove the older APKs from `downloads/`.
 The web app is at `https://Freely-Given.org/Software/Biblelastic/app/`, and gets its modules from `../modules/`.
 Apache serves `.apk` files as `application/vnd.android.package-archive`, as they should be.
+
+## Google Play
+
+`app/release.sh play` builds `Biblelastic-VERSION.aab`, the app bundle that Play needs (with the arm64, arm32, and x86_64 engines; Play gives each phone only its own).
+It targets the Android version that Flutter does (API 36), which Play has required of new apps and updates since 31 August 2026,
+and its 64-bit engines are aligned for 16 KB memory pages, as Play requires. Each upload needs a higher build number (the `+N` of `version` in `pubspec.yaml`) than the last.
+
+The listing's text, its graphics, and the answers to the Play Console's questions are in `app/design/play/` (`listing.md`).
+The privacy policy is Freely-Given.org's for all its apps: `https://Freely-Given.org/Apps/PrivacyPolicy.html`.
+
+The bundle is signed with Freely-Given.org's key, as the APKs are. For Play App Signing, give Play that same key as the app signing key
+(rather than letting Play make one), so that the APKs from the website and the app from Play can update each other without uninstalling (which would lose the modules).
+A personal developer account (rather than an organisation's) has to run a closed test, with testers, for 14 days before it can publish to everyone.
