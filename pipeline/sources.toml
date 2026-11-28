@@ -1838,6 +1838,223 @@ redistributable = true
 licence_verified = true
 starter = false
 
+# A seventh batch of public-domain books from Standard Ebooks (added 28 November 2026)
+[[edition]]
+id = "Festus"
+kind = "book"
+name = "Festus"
+author = "Philip James Bailey"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/philip-james-bailey/festus"
+download = "https://standardebooks.org/ebooks/philip-james-bailey/festus/downloads/philip-james-bailey_festus.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/philip-james-bailey_festus.epub"]
+copyright = "Philip James Bailey, Festus (1839): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Necromancers"
+kind = "book"
+name = "The Necromancers"
+author = "Robert Hugh Benson"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/robert-hugh-benson/the-necromancers"
+download = "https://standardebooks.org/ebooks/robert-hugh-benson/the-necromancers/downloads/robert-hugh-benson_the-necromancers.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/robert-hugh-benson_the-necromancers.epub"]
+copyright = "Robert Hugh Benson, The Necromancers (1909): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "WaterBabies"
+kind = "book"
+name = "The Water-Babies"
+author = "Charles Kingsley"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/charles-kingsley/the-water-babies"
+download = "https://standardebooks.org/ebooks/charles-kingsley/the-water-babies/downloads/charles-kingsley_the-water-babies.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/charles-kingsley_the-water-babies.epub"]
+copyright = "Charles Kingsley, The Water-Babies (1863): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "HarperPoetry"
+kind = "book"
+name = "Frances Ellen Watkins Harper’s Poetry"
+author = "Frances Ellen Watkins Harper"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/frances-ellen-watkins-harper/poetry"
+download = "https://standardebooks.org/ebooks/frances-ellen-watkins-harper/poetry/downloads/frances-ellen-watkins-harper_poetry.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/frances-ellen-watkins-harper_poetry.epub"]
+copyright = "Frances Ellen Watkins Harper, poems (1853–1901): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "JohnsonPoetry"
+kind = "book"
+name = "James Weldon Johnson’s Poetry"
+author = "James Weldon Johnson"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/james-weldon-johnson/poetry"
+download = "https://standardebooks.org/ebooks/james-weldon-johnson/poetry/downloads/james-weldon-johnson_poetry.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/james-weldon-johnson_poetry.epub"]
+copyright = "James Weldon Johnson, poems (1899–1927): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "JoanOfArc"
+kind = "book"
+name = "Personal Recollections of Joan of Arc"
+author = "Mark Twain"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/mark-twain/personal-recollections-of-joan-of-arc"
+download = "https://standardebooks.org/ebooks/mark-twain/personal-recollections-of-joan-of-arc/downloads/mark-twain_personal-recollections-of-joan-of-arc.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/mark-twain_personal-recollections-of-joan-of-arc.epub"]
+copyright = "Mark Twain, Personal Recollections of Joan of Arc (1896): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "TheIdiot"
+kind = "book"
+name = "The Idiot"
+author = "Fyodor Dostoevsky"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/fyodor-dostoevsky/the-idiot/eva-m-martin"
+download = "https://standardebooks.org/ebooks/fyodor-dostoevsky/the-idiot/eva-m-martin/downloads/fyodor-dostoevsky_the-idiot_eva-m-martin.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/fyodor-dostoevsky_the-idiot_eva-m-martin.epub"]
+copyright = "Fyodor Dostoevsky, The Idiot (1868–1869), translated by Eva M. Martin (1914): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "PowerOfDarkness"
+kind = "book"
+name = "The Power of Darkness"
+author = "Leo Tolstoy"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/leo-tolstoy/the-power-of-darkness/louise-maude_aylmer-maude"
+download = "https://standardebooks.org/ebooks/leo-tolstoy/the-power-of-darkness/louise-maude_aylmer-maude/downloads/leo-tolstoy_the-power-of-darkness_louise-maude-aylmer-maude.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/leo-tolstoy_the-power-of-darkness_louise-maude-aylmer-maude.epub"]
+copyright = "Leo Tolstoy, The Power of Darkness (1886), translated by Louise and Aylmer Maude (1919): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "FaerieQueene"
+kind = "book"
+name = "The Faerie Queene"
+author = "Edmund Spenser"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/edmund-spenser/the-faerie-queene"
+download = "https://standardebooks.org/ebooks/edmund-spenser/the-faerie-queene/downloads/edmund-spenser_the-faerie-queene.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/edmund-spenser_the-faerie-queene.epub"]
+copyright = "Edmund Spenser, The Faerie Queene (1590–1596): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "SaintJoan"
+kind = "book"
+name = "Saint Joan"
+author = "George Bernard Shaw"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/george-bernard-shaw/saint-joan"
+download = "https://standardebooks.org/ebooks/george-bernard-shaw/saint-joan/downloads/george-bernard-shaw_saint-joan.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/george-bernard-shaw_saint-joan.epub"]
+copyright = "George Bernard Shaw, Saint Joan (1923): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "Manalive"
+kind = "book"
+name = "Manalive"
+author = "G. K. Chesterton"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/g-k-chesterton/manalive"
+download = "https://standardebooks.org/ebooks/g-k-chesterton/manalive/downloads/g-k-chesterton_manalive.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/g-k-chesterton_manalive.epub"]
+copyright = "G. K. Chesterton, Manalive (1912): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
+[[edition]]
+id = "ScarletLetter"
+kind = "book"
+name = "The Scarlet Letter"
+author = "Nathaniel Hawthorne"
+language = "eng"
+script = "Latn"
+versification = "eng"
+format = "EPUB"
+source = "https://standardebooks.org/ebooks/nathaniel-hawthorne/the-scarlet-letter"
+download = "https://standardebooks.org/ebooks/nathaniel-hawthorne/the-scarlet-letter/downloads/nathaniel-hawthorne_the-scarlet-letter.epub?source=download"
+files = ["Biblelastic/build/downloads/standardebooks/nathaniel-hawthorne_the-scarlet-letter.epub"]
+copyright = "Nathaniel Hawthorne, The Scarlet Letter (1850): public domain. This edition is Standard Ebooks', whose contributors have dedicated their work on it to the public domain (CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/)."
+licence = "Public domain (Standard Ebooks' edition: CC0 1.0)"
+redistributable = true
+licence_verified = true
+starter = false
+
 # Shown with what each work of these kinds says, wherever it's shown (HTML: <em> and <a> are allowed)
 [disclaimers]
 commentary = "This material is included in good faith, but the views expressed are those of the author(s) and don't necessarily equate with the design decisions of the <em><a href=\"https://OpenEnglishTranslation.Bible\">Open English Translation</a> of the Bible</em>."

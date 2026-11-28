@@ -300,7 +300,11 @@ An item whose own text is only its title (e.g., Standard Ebooks' half-title page
 isn't an entry: the items under it are, and its title page goes with the first of them. A title may be split across lines (‘Part I’ and ‘On the Creature Called Man’),
 and a book's own half-title page may have a subtitle too (‘Lilith’ and ‘A Romance’). Where one item at a level is split like this, so is a sibling whose page is short (e.g., with an epigraph too),
 so that all of a book's chapters are entries (as in *Ben-Hur*). A chapter whose title is only a number takes its book's too (e.g., ‘Book II, III’ in *The Imitation of Christ*).
-A scene, or an item labelled with a number and a title, takes the name of the act or book that it's in (e.g., ‘Act I, Scene II’ in *The House of Rimmon*, or ‘Book II, 1: Time How Swift’ in *Olney Hymns*, whose books each number their hymns from 1).
+A scene or canto, or an item labelled with a number and a title, takes the name of the act or book that it's in (e.g., ‘Act I, Scene II’ in *The House of Rimmon*, ‘Book II, 1: Time How Swift’ in *Olney Hymns*, whose books each number their hymns from 1,
+or ‘Book I, I: M. Myriel’ in *Les Misérables*), or else the name of the item it's under (‘Inferno, Canto I’ in *The Divine Comedy*, or ‘The Gospel Women, I: The Mother Mary’ in George MacDonald's *Poetry*).
+An item with items under it whose text is longer than 200,000 characters is divided into them too, even if its own page has more than its title
+(e.g., each book of *The Faerie Queene* begins with a proem, which goes with its first canto). Entries that would have the same title take the name of the item they're under
+(‘PART ONE, THE FIRST STAGE’ and ‘PART TWO, THE FIRST STAGE’ in *The Pilgrim's Progress*).
 A half-title page's subtitle may be up to 200 characters long, as in *The Portent*.
 
 - **Paragraphs** are the book's blocks (paragraphs, list items, table cells), styled `h1`–`h3` (headings), `p`, `li`, or `note` (footnotes and endnotes;
@@ -329,7 +333,7 @@ Sixty-two are from [books.freely.giving](https://books.freely.giving), and all C
 The Pritchard books quote several copyrighted Bible translations (CSB, ESV, NET, LEB, LSB, NLT, NASB), and *The Dorean Principle* the ESV and NASB, by those publishers' permission,
 so their notices are part of each manifest's `copyright`. *The Doctrine of Simony*'s translations are the author's own, and *Abolish the Jesus Trade* doesn't say which version it quotes.
 
-Fifty more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
+Sixty-two more are public-domain classics from [Standard Ebooks](https://standardebooks.org), which dedicates its own work on its editions to the public domain (CC0 1.0):
 
 | Edition | Kind | Entries | Words | Anchors |
 | --- | --- | --- | --- | --- |
@@ -349,7 +353,7 @@ Fifty more are public-domain classics from [Standard Ebooks](https://standardebo
 | `BackOfTheNorthWind` *At the Back of the North Wind* (George MacDonald, 1871) | `book` | 41 | 90,000 | none |
 | `PrincessAndTheGoblin` *The Princess and the Goblin* (George MacDonald, 1872) | `book` | 35 | 52,000 | none |
 | `PrincessAndCurdie` *The Princess and Curdie* (George MacDonald, 1883) | `book` | 38 | 57,000 | none |
-| `DivineComedy` *The Divine Comedy* (Dante Alighieri (translated by Henry Wadsworth Longfellow), 1867) | `book` | 12 | 315,000 | 176 `cites` |
+| `DivineComedy` *The Divine Comedy* (Dante Alighieri (translated by Henry Wadsworth Longfellow), 1867) | `book` | 109 | 315,000 | 176 `cites` |
 | `ParadiseLost` *Paradise Lost* (John Milton, 1667) | `book` | 15 | 83,000 | none |
 | `BenHur` *Ben-Hur: A Tale of the Christ* (Lew Wallace, 1880) | `book` | 87 | 201,000 | none |
 | `DonnePoetry` *Poetry* (John Donne, first collected in 1633) | `book` | 202 | 76,000 | none |
@@ -383,6 +387,18 @@ Fifty more are public-domain classics from [Standard Ebooks](https://standardebo
 | `HouseOfRimmon` *The House of Rimmon* (Henry van Dyke, 1908: its scenes are titled like ‘Act I, Scene II’) | `book` | 12 | 15,000 | none |
 | `VarietiesOfReligiousExperience` *The Varieties of Religious Experience* (William James, 1902) | `book` | 21 | 186,000 | 1 `cites` |
 | `JesusTheSonOfMan` *Jesus the Son of Man* (Kahlil Gibran, 1928) | `book` | 82 | 41,000 | none |
+| `Festus` *Festus* (Philip James Bailey, 1839) | `book` | 43 | 105,000 | none |
+| `Necromancers` *The Necromancers* (Robert Hugh Benson, 1909) | `book` | 51 | 81,000 | none |
+| `WaterBabies` *The Water-Babies* (Charles Kingsley, 1863) | `book` | 13 | 70,000 | none |
+| `HarperPoetry` *Poetry* (Frances Ellen Watkins Harper, 1853–1901) | `book` | 135 | 42,000 | none |
+| `JohnsonPoetry` *Poetry* (James Weldon Johnson, 1899–1927) | `book` | 75 | 19,000 | none |
+| `JoanOfArc` *Personal Recollections of Joan of Arc* (Mark Twain, 1896: its half-title page has a byline and a note, so it's divided for its length) | `book` | 83 | 153,000 | none |
+| `TheIdiot` *The Idiot* (Fyodor Dostoevsky (translated by Eva M. Martin), 1868–1869) | `book` | 54 | 245,000 | none |
+| `PowerOfDarkness` *The Power of Darkness* (Leo Tolstoy (translated by Louise and Aylmer Maude), 1886) | `book` | 11 | 29,000 | none |
+| `FaerieQueene` *The Faerie Queene* (Edmund Spenser, 1590–1596: each book begins with a proem, so it's divided for its length into cantos, like ‘Book I, Canto I’) | `book` | 98 | 281,000 | none |
+| `SaintJoan` *Saint Joan* (George Bernard Shaw, 1923) | `book` | 52 | 57,000 | none |
+| `Manalive` *Manalive* (G. K. Chesterton, 1912) | `book` | 13 | 59,000 | none |
+| `ScarletLetter` *The Scarlet Letter* (Nathaniel Hawthorne, 1850) | `book` | 30 | 85,000 | none |
 
 The other fifty-seven are every English or Spanish book in that library that's CC0 or in the public domain and has an EPUB. They're in `pipeline/books-freely-giving.toml`
 (which `sources.toml` includes), written by

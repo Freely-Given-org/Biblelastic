@@ -207,6 +207,36 @@ Left out: Hilaire Belloc's *The Path to Rome* (its text is one continuous chapte
 Harold Mattingly, died in 1964). Augustine's *Confessions* and *On Christian Doctrine*, Calvin's *Institutes*, *Introduction to the Devout Life*, Pascal's *Pensées* and *Provincial Letters*,
 Hopkins's poems, and Benson's *Lord of the World* are still only on Standard Ebooks' wanted list.
 
+## A seventh batch of books from Standard Ebooks (added 28 November 2026)
+
+None is in the English starter set. Each was first published (or translated) before 1931, by an author (and translator) who died before 1956, except where it says otherwise below.
+
+| Work | Registry | Where its source says so | What it says |
+| --- | --- | --- | --- |
+| `Festus` *Festus* (Philip James Bailey, died 1902; 1839) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/philip-james-bailey/festus) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `Necromancers` *The Necromancers* (Robert Hugh Benson, died 1914; 1909) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/robert-hugh-benson/the-necromancers) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `WaterBabies` *The Water-Babies* (Charles Kingsley, died 1875; 1863) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/charles-kingsley/the-water-babies) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `HarperPoetry` *Poetry* (Frances Ellen Watkins Harper, died 1911; 1853–1901) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/frances-ellen-watkins-harper/poetry) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `JohnsonPoetry` *Poetry* (James Weldon Johnson, died 1938; 1899–1927) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/james-weldon-johnson/poetry) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `JoanOfArc` *Personal Recollections of Joan of Arc* (Mark Twain, died 1910; 1896) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/mark-twain/personal-recollections-of-joan-of-arc) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `TheIdiot` *The Idiot* (Fyodor Dostoevsky, died 1881; translated by Eva M. Martin, died 1940 (see below), in 1914) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/fyodor-dostoevsky/the-idiot/eva-m-martin) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `PowerOfDarkness` *The Power of Darkness* (Leo Tolstoy, died 1910; translated by Louise Maude, died 1939, and Aylmer Maude, died 1938, in 1919) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/leo-tolstoy/the-power-of-darkness/louise-maude_aylmer-maude) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `FaerieQueene` *The Faerie Queene* (Edmund Spenser, died 1599; 1590–1596) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/edmund-spenser/the-faerie-queene) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `SaintJoan` *Saint Joan* (George Bernard Shaw, died 1950; 1923) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/george-bernard-shaw/saint-joan) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `Manalive` *Manalive* (G. K. Chesterton, died 1936; 1912) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/g-k-chesterton/manalive) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+| `ScarletLetter` *The Scarlet Letter* (Nathaniel Hawthorne, died 1864; 1850) | Public domain (Standard Ebooks' edition: CC0 1.0) | The EPUB's `uncopyright.xhtml` (https://standardebooks.org/ebooks/nathaniel-hawthorne/the-scarlet-letter) | Believed to be in the US public domain; Standard Ebooks' own work on it is CC0 1.0 |
+
+Things to weigh when they're checked: Eva M. Martin's dates (1883–1940) are from a single source (a blog post on the novel's English translations: https://www.goodreads.com/author_blog_posts/8422851-the-idiot-1-lost-and-found-in-translation),
+and nothing else about her life was found. Project Gutenberg's note on the same text says it may be a revision of Frederick Whishaw's translation of 1887.
+Shaw died in 1950, so *Saint Joan* is in the public domain in countries that count life plus 70 years only since 2021. Several of the books are literature rather than Christian writing:
+*The Idiot*, *The Scarlet Letter*, and *Manalive* are here (like *Crime and Punishment* and *Les Misérables*) for how they deal with sin, grace, and goodness, and Shaw's play (with its long preface) is a sceptic's view of a saint.
+
+Left out: Selma Lagerlöf's *Short Fiction*, which has her *Christ Legends*, because some of its stories are Pauline Bancroft Flach's translations, and she died in 1966 (https://runeberg.org/authors/flachpau.html);
+Tolstoy's *Short Fiction* (with ‘What Men Live By’ and ‘Master and Man’), because some of its stories are Rochelle S. Townsend's translations, and she died in 1970
+(https://www.patrickmileswriter.co.uk/calderonia/wp-content/uploads/2019/07/TownsendarticleEWR.pdf); and Gibran's *The Prophet*, which isn't Christian writing.
+Bede's *Ecclesiastical History*, *Everyman*, *The Second Shepherds' Play*, Milton's shorter poems, and Hall Caine's *The Eternal City* are only on Standard Ebooks' wanted list, as are
+Augustine's *Confessions* and *On Christian Doctrine*, Calvin's *Institutes*, *Introduction to the Devout Life*, Hopkins's poems, and Benson's *Lord of the World*.
+
 ## The books (62)
 
 Every book's page on books.freely.giving gives CC0 (that's how the survey chose them; the five in `sources.toml` were checked by hand when they were added),

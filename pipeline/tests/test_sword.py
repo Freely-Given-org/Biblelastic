@@ -257,7 +257,8 @@ class TitlePageTests( unittest.TestCase ):
         contents = [ (1, 'Imprint', 0), (1, 'Orthodoxy', 1), (2, 'I: Introduction', 2), (2, 'II: The Maniac', 4), (1, 'Part Two', 6), (2, 'III: Later', 8) ]
         starts, headings = epub.entry_items( contents, blocks )
         # ‘Orthodoxy’ is only a title page, so its chapters are entries (the title page goes with the first), but ‘Part Two’ has text of its own
-        self.assertEqual( starts, { 0:'Imprint', 1:'I: Introduction', 4:'II: The Maniac', 6:'Part Two' } )
+        # (and since two items at the top level have items under them, the chapters get the name of the one they're under, as in a collection)
+        self.assertEqual( starts, { 0:'Imprint', 1:'Orthodoxy, I: Introduction', 4:'Orthodoxy, II: The Maniac', 6:'Part Two' } )
         self.assertEqual( headings, { 8:2 } )
 
     def test_subtitles_and_books( self ):
@@ -290,6 +291,28 @@ class TitlePageTests( unittest.TestCase ):
                      (2, 'Book II: On Occasional Subjects', 9), (3, '1: Time How Swift', 10), (3, '2: Time How Short', 12) ]
         starts, _headings = epub.entry_items( contents, blocks )
         self.assertEqual( starts, { 0:'Act I, Scene I', 5:'Act I, Scene II', 7:'Act II', 9:'Book II, 1: Time How Swift', 12:'Book II, 2: Time How Short' } )
+
+    def test_long_items( self ):
+        """ A very long item is divided into the items under it (its proem going with the first); cantos get the name of their book, or of the item they're under
+            (‘Book II’ is divided because its own page is short and its sibling ‘Mutability’ is only a title page) """
+        class Block:
+            def __init__( self, text:str ) -> None: self.text = text
+        blocks = [ Block( 'The Poem' ), Block( 'Book I: Holiness' ), Block( 'Proem stanza.' ), Block( 'Canto I' ), Block( 'Text. ' * 40_000 ), Block( 'Canto II' ), Block( 'Text.' ),
+                   Block( 'Book II: Temperance' ), Block( 'Proem.' ), Block( 'I: Guyon' ), Block( 'Text.' ), Block( 'Mutability' ), Block( 'Canto VI' ), Block( 'Text.' ),
+                   Block( 'Book III' ), Block( 'I: Britomart' ), Block( 'Text.' ) ]
+        contents = [ (1, 'The Poem', 0), (2, 'Book I: Holiness', 1), (3, 'Canto I', 3), (3, 'Canto II', 5), (2, 'Book II: Temperance', 7), (3, 'I: Guyon', 9),
+                     (2, 'Mutability', 11), (3, 'Canto VI', 12), (2, 'Book III', 14), (3, 'I: Britomart', 15) ]
+        starts, _headings = epub.entry_items( contents, blocks )
+        self.assertEqual( starts, { 0:'Book I, Canto I', 5:'Book I, Canto II', 7:'Book II, I: Guyon', 11:'Mutability, Canto VI', 14:'Book III, I: Britomart' } )
+
+    def test_same_titles( self ):
+        """ Entries that would have the same title get the label of the item they're under """
+        class Block:
+            def __init__( self, text:str ) -> None: self.text = text
+        blocks = [ Block( 'Part One' ), Block( 'The First Stage' ), Block( 'Text.' ), Block( 'Part Two' ), Block( 'The First Stage' ), Block( 'Text.' ), Block( 'Conclusion' ), Block( 'Text.' ) ]
+        contents = [ (1, 'Part One', 0), (2, 'The First Stage', 1), (1, 'Part Two', 3), (2, 'The First Stage', 4), (1, 'Conclusion', 6) ]
+        starts, _headings = epub.entry_items( contents, blocks )
+        self.assertEqual( starts, { 0:'Part One, The First Stage', 3:'Part Two, The First Stage', 6:'Conclusion' } )
 
 
 if __name__ == '__main__':

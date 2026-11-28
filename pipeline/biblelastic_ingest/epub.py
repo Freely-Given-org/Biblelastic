@@ -8,6 +8,7 @@ Books (EPUB files): each top-level item of the book's table of contents becomes 
   or ‘1:21-28 Jesus heals’ in a chapter about Mark) makes the text under it, up to the next heading of the same or a higher level, ‘about’ that passage.
 - Footnote markers in the text are left out; the notes themselves are kept, as paragraphs of their own.
 """
+import collections
 import html
 import html.parser
 import posixpath
@@ -22,7 +23,9 @@ BLOCKS = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'dt', 'dd', 'td', 'th',
 SKIPPED = {'head', 'script', 'style', 'svg', 'math'}
 # Items of a book's contents that are volumes (e.g., ‘Book II’, ‘Act I’), and items under them whose labels don't say which volume they're in
 VOLUME_RE = re.compile( r'(?:Book|Part|Volume|Act)\s+(?:[IVXLC]+|\d+)\b(?!:?\s*\d)' )
-VOLUME_ITEM_RE = re.compile( r'(?:Scene\s+(?:[IVXLC]+|\d+)|\d+:\s)' )
+VOLUME_ITEM_RE = re.compile( r'(?:(?:Scene|Canto)\s+(?:[IVXLC]+|\d+)|(?:[IVXLC]+|\d+):\s)' )
+# An item with items under it whose whole text is longer than this (in characters) is divided into them, even if its own page has more than its title
+LONG_ITEM = 200_000
 NOTE_CONTAINERS = {'aside', 'dl'} # Footnotes are in these (with epub:type="footnote", or a footnote class)
 
 
@@ -205,8 +208,10 @@ def entry_items( contents:list, blocks:list ) -> tuple:
     ‘Lilith’ and ‘A Romance’, before all its chapters): the items under it are entries instead, and its title page goes with the first of them.
     An item labelled only with a number gets the label of the item it's under (e.g., ‘Book I, III’), except under a book's own half-title
     (the only item at the top level that has items under it; in a collection, e.g., George MacDonald's stories, there are several: ‘A Double Story, III’).
-    A scene, or an item labelled with a number and a title, gets the name of the act or book that it's in (e.g., ‘Act I, Scene II’, or ‘Book II, 1: Expostulation’
-    in a hymnbook whose books each number their hymns from 1).
+    A scene or canto, or an item labelled with a number and a title, gets the name of the act or book that it's in (e.g., ‘Act I, Scene II’, or ‘Book II, 1: Expostulation’
+    in a hymnbook whose books each number their hymns from 1), or else of the item it's under (‘Mutability, Canto VI’).
+    An item with items under it that's very long (over LONG_ITEM characters) is divided into them too, and its own page (e.g., a proem) goes with the first of them.
+    Entries that would have the same title get the label of the item they're under (‘PART ONE, THE FIRST STAGE’ and ‘PART TWO, THE FIRST STAGE’).
     """
     simple = lambda text: re.sub( r'\W', '', text ).casefold()
     def title_page( own:list, label:str, top:bool ) -> bool:
@@ -218,37 +223,44 @@ def entry_items( contents:list, blocks:list ) -> tuple:
                 rest = own[count:]
                 return not rest or (top and len(rest) == 1 and len(rest[0].strip()) <= 200 and not re.search( r'[.!?]$', rest[0].strip() ))
         return not own
-    tree, stack = [], []
-    for depth, label, index in contents:
+    tree, stack, ends = [], [], {}
+    for number, (depth, label, index) in enumerate( contents ):
         node = (depth, label, index, [])
+        ends[id(node)] = next( (later for laterDepth, _label, later in contents[number+1:] if laterDepth <= depth), len(blocks) )
         while stack and stack[-1][0] >= depth: stack.pop()
         (stack[-1][3] if stack else tree).append( node )
         stack.append( node )
-    starts, headings = {}, {}
+    starts, headings, under = {}, {}, {} # under: block index → the label of the item that an entry is under
     def descendants( node:tuple ):
         for child in node[3]: yield child; yield from descendants( child )
     def own_text( node:tuple ) -> list|None:
         """ The text of an item's own page (before the items under it), or None if it has none under it """
         _depth, _label, index, children = node
         return [ block.text for block in blocks[index:children[0][2]] if block.text.strip() ] if children and children[0][2] >= index else None
-    def visit( node:tuple, top:bool, prefix:str='', likeSiblings:bool=False, collection:bool=False, volume:str='' ) -> None:
+    def visit( node:tuple, top:bool, prefix:str='', likeSiblings:bool=False, collection:bool=False, volume:str='', parent:str='' ) -> None:
         depth, label, index, children = node
         if re.fullmatch( r'[IVXLC]+|\d+', label.strip().rstrip( '.' ) ) and prefix: label = f'{prefix}, {label.strip()}' # e.g., ‘Book I, III’ for chapter III of Book I
-        elif volume and VOLUME_ITEM_RE.match( label.strip() ): label = f'{volume}, {label.strip()}' # e.g., ‘Act I, Scene II’, or ‘Book II, 1: Expostulation’ in a hymnbook whose books each number from 1
+        elif (volume or prefix) and VOLUME_ITEM_RE.match( label.strip() ): label = f'{volume or prefix}, {label.strip()}' # e.g., ‘Act I, Scene II’, or ‘Book II, 1: Expostulation’ in a hymnbook whose books each number from 1
         volume = VOLUME_RE.match( label ).group( 0 ) if VOLUME_RE.match( label ) else volume
         own = own_text( node )
         # (Where one of its siblings is only a title page, one whose own page is short, e.g., with an epigraph too, is split in the same way)
-        if own is not None and (title_page( own, node[1], top ) or (likeSiblings and sum( len(text.strip()) for text in own ) <= 600)):
+        if own is not None and (title_page( own, node[1], top ) or (likeSiblings and sum( len(text.strip()) for text in own ) <= 600)
+                                or sum( len(block.text) for block in blocks[index:ends[id(node)]] ) > LONG_ITEM):
             before = set( starts )
             split = any( own_text( child ) is not None and title_page( own_text( child ), child[1], False ) for child in children )
-            for child in children: visit( child, False, label.split( ':' )[0].strip() if not top or collection else '', split, volume=volume )
+            for child in children: visit( child, False, label.split( ':' )[0].strip() if not top or collection else '', split, volume=volume, parent=label.split( ':' )[0].strip() )
             added = sorted( set( starts ) - before )
-            if added and index < added[0]: starts[index] = starts.pop( added[0] ) # (The title page goes with the first of them)
+            if added and index < added[0]: # (The title page goes with the first of them)
+                starts[index] = starts.pop( added[0] )
+                if added[0] in under: under[index] = under.pop( added[0] )
             return
-        starts.setdefault( index, label )
+        if index not in starts: starts[index] = label; under[index] = parent
         for descendant in descendants( node ): headings.setdefault( descendant[2], descendant[0] - depth + 1 ) # Lower levels of the contents are headings
     collection = sum( 1 for node in tree if node[3] ) > 1
     for node in tree: visit( node, True, collection=collection )
+    counts = collections.Counter( starts.values() )
+    for index, title in starts.items():
+        if counts[title] > 1 and under.get( index ): starts[index] = f'{under[index]}, {title}'
     return starts, headings
 
 
